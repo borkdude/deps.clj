@@ -3,7 +3,7 @@
 A port of the [clojure](https://github.com/clojure/brew-install/) bash script to
 Clojure.
 
-Can be run with [babashka](https://github.com/borkdude/babashka/) to improve startup time compared to running on the JVM. Note that this script is not faster than its original bash equivalent when ran with babashka.
+Can be run with [babashka](https://github.com/borkdude/babashka/) to improve startup time compared to running this script the JVM. Note that this script is not faster than its original bash equivalent when ran with babashka.
 
 ## Status
 
