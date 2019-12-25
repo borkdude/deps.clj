@@ -36,7 +36,7 @@ and `scripts/main.cljc`:
   (println "Hello from script!"))
 ```
 
-you can invoke `deps.clj` as follows:
+you can invoke `deps.clj` as follows to invoke [babashka](https://github.com/borkdude/babashka/):
 
 ``` shell
 $ deps.clj -Sdeps-file script-deps.edn -A:main -Scommand "bb -cp {{classpath}} {{main-opts}}"
