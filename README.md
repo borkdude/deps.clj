@@ -49,7 +49,7 @@ This can also be used with [planck](https://github.com/planck-repl/planck):
 
 ``` shell
 $ deps.clj -Sdeps-file script-deps.edn -A:main -Scommand "planck --classpath {{classpath}} {{main-opts}}"
-Hello from test script!
+Hello from script!
 ```
 
 ## License
