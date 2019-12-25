@@ -72,8 +72,8 @@ The dep-opts are used to build the java-opts and classpath:
 
 The following non-standard options are added:
 
- -Sdeps-file        Use this file instead of deps.edn
- -Scommand          A custom command that will be invoked. Substitutions: {{classpath}}, `{{main-opts}}`.
+ -Sdeps-file    Use this file instead of deps.edn
+ -Scommand      A custom command that will be invoked. Substitutions: {{classpath}}, {{main-opts}}.
 
 init-opt:
  -i, --init path     Load a file or resource

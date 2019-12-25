@@ -12,15 +12,15 @@ Extremely experimental, breaking changes will happen. Feedback is welcome.
 The `deps.clj` script adds the following non-standard options:
 
 ```
- -Sdeps-file        Use this file instead of deps.edn
- -Scommand          A custom command that will be invoked. Substitutions: {{classpath}}, `{{main-opts}}`.
+ -Sdeps-file    Use this file instead of deps.edn
+ -Scommand      A custom command that will be invoked. Substitutions: {{classpath}}, {{main-opts}}.
 ```
 
 ## Example usage
 
 Gives this `script-deps.edn` file:
 
-```
+``` clojure
 {:paths ["scripts"]
  :aliases
  {:main
@@ -29,7 +29,7 @@ Gives this `script-deps.edn` file:
 
 and `scripts/main.clj`:
 
-```
+``` clojure
 (ns scripts.main)
 
 (defn -main [& _args]
