@@ -1,7 +1,7 @@
 # deps.clj
 
-A port of the [clojure](https://github.com/clojure/brew-install/) bash script in
-clojure. Can be run with [babashka](https://github.com/borkdude/babashka/).
+A port of the [clojure](https://github.com/clojure/brew-install/) bash script to
+Clojure. Can be run with [babashka](https://github.com/borkdude/babashka/).
 
 ## Status
 
