@@ -188,10 +188,10 @@ For more info, see:
     (if (.exists f)
       (do (shell-command [java-cmd "-Xms256m" "-classpath" tools-cp
                           "clojure.main" "-m" "clojure.tools.deps.alpha.script.resolve-tags"
-                          "--deps-file=deps.edn"])
+                          (str "--deps-file=" deps-edn)])
           (System/exit 0))
       (binding [*out* *err*]
-        (println "deps.edn does not exist")
+        (println deps-edn "does not exist")
         (System/exit 1)))))
 
 (def config-dir
