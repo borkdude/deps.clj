@@ -20,7 +20,7 @@ The `deps.clj` script adds the following non-standard options:
 
 ## Example usage
 
-Gives this `script-deps.edn` file:
+Given this `script-deps.edn` file:
 
 ``` clojure
 {:paths ["scripts"]
