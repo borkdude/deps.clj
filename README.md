@@ -5,7 +5,7 @@ clojure. Can be run with [babashka](https://github.com/borkdude/babashka/).
 
 ## Status
 
-Extremely experimental, breaking changes will happen. Feedback is welcome.
+Experimental, breaking changes will happen. Feedback is welcome.
 
 ## Non-standard options
 
