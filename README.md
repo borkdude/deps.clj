@@ -5,6 +5,10 @@ Clojure.
 
 This script can be run on the JVM or with [babashka](https://github.com/borkdude/babashka/). The latter makes it go about as fast as the original bash version.
 
+## Rationale
+
+TBD.
+
 ## Status
 
 Experimental, breaking changes will happen. Feedback is welcome.
