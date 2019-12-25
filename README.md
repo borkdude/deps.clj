@@ -27,7 +27,7 @@ Gives this `script-deps.edn` file:
   {:main-opts ["-m" "scripts.main"]}}}
 ```
 
-and `scripts/main.clj`:
+and `scripts/main.cljc`:
 
 ``` clojure
 (ns scripts.main)
@@ -41,6 +41,13 @@ you can invoke `deps.clj` as follows:
 ``` shell
 $ deps.clj -Sdeps-file script-deps.edn -A:main -Scommand "bb -cp {{classpath}} {{main-opts}}"
 Hello from script!
+```
+
+This can also be used with [planck](https://github.com/planck-repl/planck):
+
+``` shell
+$ deps.clj -Sdeps-file script-deps.edn -A:main -Scommand "planck --classpath {{classpath}} {{main-opts}}"
+Hello from test script!
 ```
 
 ## License
