@@ -133,7 +133,11 @@ For more info, see:
   (prn (System/getProperty "os.name"))
   (prn (System/getProperty "os.arch"))
   (prn (System/getProperty "os.version"))
-  (let [args (loop [command-line-args (seq command-line-args)
+  (let [windows? (-> (System/getProperty "os.name")
+                     (str/lower-case)
+                     (str/includes? "win"))
+        _ (prn "windows?" windows?)
+        args (loop [command-line-args (seq command-line-args)
                     acc {}]
                (if command-line-args
                  (let [arg (first command-line-args)
