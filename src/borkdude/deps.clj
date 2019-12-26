@@ -130,6 +130,9 @@ For more info, see:
     (println "}")))
 
 (defn -main [& command-line-args]
+  (prn (System/getProperty "os.name"))
+  (prn (System/getProperty "os.arch"))
+  (prn (System/getProperty "os.version"))
   (let [args (loop [command-line-args (seq command-line-args)
                     acc {}]
                (if command-line-args
@@ -160,35 +163,37 @@ For more info, see:
             (println help-text)
             (System/exit 0))
         java-cmd
-          (let [java-cmd (str/trim (shell-command ["type" "-p" "java"] {:to-string? true}))]
-            (if (str/blank? java-cmd)
-              (let [java-home (System/getenv "JAVA_HOME")]
-                (if-not (str/blank? java-home)
-                  (let [f (io/file java-home "bin" "java")]
-                    (if (and (.exists f)
-                             (.canExecute f))
-                      (.getCanonicalPath f)
-                      (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-                  (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-              java-cmd))
-          install-dir
-          (let [clojure-on-path (str/trim (shell-command ["type" "-p" "clojure"] {:to-string? true}))
-                f (io/file clojure-on-path)
-                f (io/file (.getCanonicalPath f))
-                parent (.getParent f)
-                parent (.getParent (io/file parent))]
-            parent)
-          tools-cp
-          (let [files (.listFiles (io/file install-dir "libexec"))
-                jar (some #(let [name (.getName ^java.io.File %)]
-                             (when (and (str/starts-with? name "clojure-tools")
-                                        (str/ends-with? name ".jar"))
-                               %))
-                          files)]
-            (.getCanonicalPath ^java.io.File jar))
-          deps-edn
-          (or (:deps-file args)
-              "deps.edn")]
+        (let [java-cmd (str/trim (shell-command
+                                  
+                                  ["type" "-p" "java"] {:to-string? true}))]
+          (if (str/blank? java-cmd)
+            (let [java-home (System/getenv "JAVA_HOME")]
+              (if-not (str/blank? java-home)
+                (let [f (io/file java-home "bin" "java")]
+                  (if (and (.exists f)
+                           (.canExecute f))
+                    (.getCanonicalPath f)
+                    (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+                (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+            java-cmd))
+        install-dir
+        (let [clojure-on-path (str/trim (shell-command ["type" "-p" "clojure"] {:to-string? true}))
+              f (io/file clojure-on-path)
+              f (io/file (.getCanonicalPath f))
+              parent (.getParent f)
+              parent (.getParent (io/file parent))]
+          parent)
+        tools-cp
+        (let [files (.listFiles (io/file install-dir "libexec"))
+              jar (some #(let [name (.getName ^java.io.File %)]
+                           (when (and (str/starts-with? name "clojure-tools")
+                                      (str/ends-with? name ".jar"))
+                             %))
+                        files)]
+          (.getCanonicalPath ^java.io.File jar))
+        deps-edn
+        (or (:deps-file args)
+            "deps.edn")]
     (when (:resolve-tags args)
       (let [f (io/file deps-edn)]
         (if (.exists f)
