@@ -5,7 +5,7 @@
    [clojure.string :as str]
    [clojure.java.io :as io])
   (:import [java.lang ProcessBuilder$Redirect])
-  #_(:gen-class))
+  )
 
 (set! *warn-on-reflection* true)
 
