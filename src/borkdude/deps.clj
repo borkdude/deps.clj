@@ -130,13 +130,9 @@ For more info, see:
     (println "}")))
 
 (defn -main [& command-line-args]
-  (prn (System/getProperty "os.name"))
-  (prn (System/getProperty "os.arch"))
-  (prn (System/getProperty "os.version"))
   (let [windows? (-> (System/getProperty "os.name")
                      (str/lower-case)
-                     (str/includes? "win"))
-        _ (prn "windows?" windows?)
+                     (str/includes? "windows"))
         args (loop [command-line-args (seq command-line-args)
                     acc {}]
                (if command-line-args
@@ -168,8 +164,11 @@ For more info, see:
             (System/exit 0))
         java-cmd
         (let [java-cmd (str/trim (shell-command
-                                  
-                                  ["type" "-p" "java"] {:to-string? true}))]
+                                  (if windows?
+                                    ["type" "-p" "java"]
+                                    ["for" "%i" "in" "(java.exe)" "do" "@echo." "%~$PATH:i"])
+                                  {:to-string? true}))]
+          (prn "java cmd" java-cmd)
           (if (str/blank? java-cmd)
             (let [java-home (System/getenv "JAVA_HOME")]
               (if-not (str/blank? java-home)
