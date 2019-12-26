@@ -1,5 +1,8 @@
 # deps.clj
 
+[![CircleCI](https://circleci.com/gh/borkdude/deps.clj/tree/master.svg?style=shield)](https://circleci.com/gh/borkdude/deps.clj/tree/master)
+[![Clojars Project](https://img.shields.io/clojars/v/borkdude/deps.clj.svg)](https://clojars.org/borkdude/deps.clj)
+
 A port of the [clojure](https://github.com/clojure/brew-install/) bash script to
 Clojure.
 
