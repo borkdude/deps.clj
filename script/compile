@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+NATIVE_IMAGE=`which native-image` || true
+
+if [ -z "$NATIVE_IMAGE" ]; then
+  if [ -z "$GRAALVM_HOME" ]; then
+      echo "Please set GRAALVM_HOME"
+      exit 1
+  fi
+
+  "$GRAALVM_HOME/bin/gu" install native-image || true
+
+  NATIVE_IMAGE="$GRAALVM_HOME/bin/native-image"
+fi
+
+DEPS_CLJ_VERSION=$(cat resources/DEPS_CLJ_VERSION)
+
+lein do clean, uberjar
+
+$NATIVE_IMAGE \
+  -jar target/deps.clj-$DEPS_CLJ_VERSION-standalone.jar \
+  -H:Name=deps.exe \
+  -H:+ReportExceptionStackTraces \
+  -J-Dclojure.spec.skip-macros=true \
+  -J-Dclojure.compiler.direct-linking=true \
+  "-H:IncludeResources=DEPS_CLJ_VERSION" \
+  --initialize-at-build-time \
+  -H:Log=registerResource: \
+  --verbose \
+  --no-fallback \
+  --no-server \
+  "-J-Xmx3g"
+
+lein clean
