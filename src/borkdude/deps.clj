@@ -202,7 +202,7 @@ function Get-StringHash($str) {
         (let [java-cmd (str/trim (shell-command
                                   (if windows?
                                     ["where" "java"]
-                                    ["type" "-p" "java"])
+                                    ["which" "java"])
                                   {:to-string? true}))]
           (if (str/blank? java-cmd)
             (let [java-home (System/getenv "JAVA_HOME")]
@@ -220,7 +220,7 @@ function Get-StringHash($str) {
          (some-> (let [res (str/trim (shell-command
                                       (if windows?
                                         ["where" "clojure"]
-                                        ["type" "-p" "clojure"])
+                                        ["which" "clojure"])
                                       {:to-string? true
                                        ;; :throw? false
                                        }))]
