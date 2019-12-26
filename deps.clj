@@ -173,12 +173,12 @@ For more info, see:
 
 (def tools-cp
   (let [files (.listFiles (io/file install-dir "libexec"))
-        jar (some #(let [name (.getName %)]
+        jar (some #(let [name (.getName ^java.io.File %)]
                      (when (and (str/starts-with? name "clojure-tools")
                                 (str/ends-with? name ".jar"))
                        %))
                   files)]
-    (.getCanonicalPath jar)))
+    (.getCanonicalPath ^java.io.File jar)))
 
 (def deps-edn (or (:deps-file args)
                   "deps.edn"))
@@ -201,8 +201,9 @@ For more info, see:
       (.getPath (io/file (System/getProperty "user.home") ".clojure"))))
 
 ;; If user config directory does not exist, create it
-(when-not (.exists (io/file config-dir))
-  (.mkdirs config-dir))
+(let [config-dir (io/file config-dir)]
+  (when-not (.exists config-dir)
+    (.mkdirs config-dir)))
 
 (let [config-deps-edn (io/file config-dir "deps.edn")]
   (when-not (.exists config-deps-edn)
