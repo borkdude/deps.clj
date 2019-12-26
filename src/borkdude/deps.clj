@@ -183,27 +183,30 @@ For more info, see:
                 (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
             java-cmd))
         install-dir
-        (let [clojure-on-path (str/trim (shell-command
-                                         (if windows?
-                                           ["where" "clojure"]
-                                           ["type" "-p" "clojure"])
-                                         {:to-string? true
-                                          ;; :throw? false
-                                          }))
-              f (io/file clojure-on-path)
-              f (io/file (.getCanonicalPath f))
-              parent (.getParent f)
-              parent (.getParent (io/file parent))]
-          parent)
+        (or
+         (System/getenv "CLOJURE_HOME")
+         (let [clojure-on-path (str/trim (shell-command
+                                          (if windows?
+                                            ["where" "clojure"]
+                                            ["type" "-p" "clojure"])
+                                          {:to-string? true
+                                           ;; :throw? false
+                                           }))
+               f (io/file clojure-on-path)
+               f (io/file (.getCanonicalPath f))
+               parent (.getParent f)
+               parent (.getParent (io/file parent))]
+           parent))
         tools-cp
-        (or (System/getenv "DEPS_CLJ_TOOLS_CP")
-            (let [files (.listFiles (io/file install-dir "libexec"))
-                  jar (some #(let [name (.getName ^java.io.File %)]
-                               (when (and (str/starts-with? name "clojure-tools")
-                                          (str/ends-with? name ".jar"))
-                                 %))
-                            files)]
-              (.getCanonicalPath ^java.io.File jar)))
+        (let [files (.listFiles (if windows?
+                                  (io/file install-dir)
+                                  (io/file install-dir "libexec")))
+              jar (some #(let [name (.getName ^java.io.File %)]
+                           (when (and (str/starts-with? name "clojure-tools")
+                                      (str/ends-with? name ".jar"))
+                             %))
+                        files)]
+          (.getCanonicalPath ^java.io.File jar))
         deps-edn
         (or (:deps-file args)
             "deps.edn")]
