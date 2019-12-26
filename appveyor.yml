@@ -21,6 +21,15 @@ build_script:
     call lein self-install
 
 - cmd: >-
+    iwr -useb get.scoop.sh | iex
+
+    scoop bucket add java
+
+    scoop bucket add scoop-clojure https://github.com/littleli/scoop-clojure
+
+    scoop install clojure
+
+- cmd: >-
     call lein do clean, uberjar
 
     set /P DEPS_CLJ_VERSION=< resources\DEPS_CLJ_VERSION
