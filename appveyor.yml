@@ -24,11 +24,11 @@ build_script:
     powershell -Command "iwr -useb get.scoop.sh | iex"
 
 - cmd: >-
-    scoop bucket add java
+    powershell -Command "scoop bucket add java"
 
-    scoop bucket add scoop-clojure https://github.com/littleli/scoop-clojure
+    powershell -Command "scoop bucket add scoop-clojure https://github.com/littleli/scoop-clojure"
 
-    scoop install clojure
+    powershell -Command "scoop install clojure"
 
 - cmd: >-
     call lein do clean, uberjar
