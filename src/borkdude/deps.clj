@@ -134,7 +134,7 @@ For more info, see:
     (println "}")))
 
 (defn -main [& command-line-args]
-  (prn "USER HOME" (System/getProperty "user.home"))
+  (prn "!!!" (str/trim (shell-command ["echo" "%UserProfile%"] {:to-string? true})))
   (let [windows? (-> (System/getProperty "os.name")
                      (str/lower-case)
                      (str/includes? "windows"))
@@ -230,7 +230,9 @@ For more info, see:
           (or (System/getenv "CLJ_CONFIG")
               (when-let [xdg-config-home (System/getenv "XDG_CONFIG_HOME")]
                 (.getPath (io/file xdg-config-home "clojure")))
-              (.getPath (io/file (System/getProperty "user.home") ".clojure")))]
+              (.getPath (io/file (if windows?
+                                   (str/trim (shell-command ["echo" "%UserProfile%"] {:to-string? true}))
+                                   (System/getProperty "user.home")) ".clojure")))]
       (let [config-dir (io/file config-dir)]
         (when-not (.exists config-dir)
           (.mkdirs config-dir)))
