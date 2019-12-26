@@ -185,10 +185,11 @@ For more info, see:
         install-dir
         (let [clojure-on-path (str/trim (shell-command
                                          (if windows?
-                                           ["where clojure"]
+                                           ["where" "clojure"]
                                            ["type" "-p" "clojure"])
                                          {:to-string? true
-                                          :throw? false}))
+                                          ;; :throw? false
+                                          }))
               f (io/file clojure-on-path)
               f (io/file (.getCanonicalPath f))
               parent (.getParent f)
