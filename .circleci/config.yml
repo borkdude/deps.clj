@@ -46,7 +46,7 @@ jobs:
             mkdir -p /tmp/release
             lein do clean, uberjar
             VERSION=$(cat resources/DEPS_CLJ_VERSION)
-            cp target/clj-kondo-$VERSION-standalone.jar /tmp/release
+            cp target/deps.clj-$VERSION-standalone.jar /tmp/release
       - store_artifacts:
           path: /tmp/release
           destination: release
