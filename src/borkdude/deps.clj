@@ -169,7 +169,7 @@ function Get-StringHash($str) {
 
 (defn where [s]
   (-> (shell-command
-       (if windows?
+       (if (windows?)
          ["where" s]
          ["which" s])
        {:to-string? true})
