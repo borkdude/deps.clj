@@ -332,9 +332,9 @@ function Get-StringHash($str) {
                 (let [cp-file (io/file cp-file)]
                   (some (fn [config-path]
                           (let [f (io/file config-path)]
-                            (or (not (.exists f))
-                                (> (.lastModified f)
-                                   (.lastModified cp-file))))) config-paths)))
+                            (when (.exists f)
+                              (> (.lastModified f)
+                                 (.lastModified cp-file))))) config-paths)))
             tools-args
             (when (or stale (:pom args))
               (cond-> []
