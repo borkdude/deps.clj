@@ -207,7 +207,7 @@ For more info, see:
                                   (str/ends-with? name ".jar"))
                          %))
                     files)]
-          (if (.exists jar)
+          (if (and jar (.exists jar))
             (.getCanonicalPath jar)
             (binding [*out* *err*]
               (println "Could not find clojure tools jar. Set CLOJURE_INSTALL_DIR.")
