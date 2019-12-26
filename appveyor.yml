@@ -23,6 +23,7 @@ build_script:
 - cmd: >-
     powershell -Command "iwr -useb get.scoop.sh | iex"
 
+- cmd: >-
     scoop bucket add java
 
     scoop bucket add scoop-clojure https://github.com/littleli/scoop-clojure
