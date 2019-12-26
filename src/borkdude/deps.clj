@@ -140,7 +140,6 @@ For more info, see:
 
 (def powershell-cksum "
 function Get-StringHash($str) {
-  Write-Output \">\"$str\">\"
   $md5 = new-Object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider
   $utf8 = new-object -TypeName System.Text.UTF8Encoding
   return [System.BitConverter]::ToString($md5.ComputeHash($utf8.GetBytes($str)))
@@ -158,12 +157,15 @@ function Get-StringHash($str) {
   (if (windows?)
     (-> (shell-command
          ["PowerShell" "-Command" powershell-cksum
-          (format "(Get-StringHash %s)" (pr-str s))]
+          (format "Get-StringHash(%s)" (pr-str s))]
          {:to-string? true})
-        (str/replace "-" ""))
-    (shell-command
-     ["cksum"] {:input s
-                :to-string? true})))
+        (str/replace "-" "")
+        (str/trim))
+    (-> (shell-command
+         ["cksum"] {:input s
+                    :to-string? true})
+        (str/split #" ")
+        first)))
 
 (defn -main [& command-line-args]
   (let [windows? (windows?)
@@ -306,9 +308,7 @@ function Get-StringHash($str) {
                                        config-path
                                        "NIL"))
                                    config-paths)))
-            ck (-> (cksum val*)
-                   (str/split #" ")
-                   first)
+            ck (cksum val*)
             libs-file (.getPath (io/file cache-dir (str ck ".libs")))
             cp-file (.getPath (io/file cache-dir (str ck ".cp")))
             jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
