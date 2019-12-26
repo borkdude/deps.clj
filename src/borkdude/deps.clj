@@ -149,8 +149,7 @@ function Get-StringHash($str) {
 
 (defn double-quote [s]
   (if (windows?)
-    (do (prn "double quoting" (format "\"\"%s\"\"" s))
-        (format "\"\"%s\"\"" s))
+    (format "\"\"%s\"\"" s)
     s))
 
 (defn cksum
@@ -159,7 +158,7 @@ function Get-StringHash($str) {
   (if (windows?)
     (-> (shell-command
          ["PowerShell" "-Command" powershell-cksum
-          (format "(Get-StringHash %s)" (double-quote s))]
+          (format "(Get-StringHash %s)" (pr-str s))]
          {:to-string? true})
         (str/replace "-" ""))
     (shell-command
