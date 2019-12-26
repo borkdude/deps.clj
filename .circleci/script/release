@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+rm -rf /tmp/release
+mkdir -p /tmp/release
+cp bb /tmp/release
+
+VERSION=$(cat resources/DEPS_CLJ_VERSION)
+
+cd /tmp/release
+
+## release binary as zip archive
+
+zip "babashka-$VERSION-$DEPS_CLJ_PLATFORM-amd64.zip" deps.exe
+
+rm deps.exe
