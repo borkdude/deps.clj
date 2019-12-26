@@ -32,3 +32,6 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 
 echo Creating zip archive
 jar -cMf deps.clj-%DEPS_CLJ_VERSION%-windows-amd64.zip deps.exe
+
+echo Test run
+call deps.exe -Sdescribe
