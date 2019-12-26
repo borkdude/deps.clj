@@ -148,7 +148,8 @@ function Get-StringHash($str) {
 
 (defn double-quote [s]
   (if (windows?)
-    (format "\"\"%s\"\"" s)
+    (do (prn "double quoting" (format "\"\"%s\"\"" s))
+        (format "\"\"%s\"\"" s))
     s))
 
 (defn cksum
