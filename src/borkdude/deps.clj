@@ -157,7 +157,7 @@ function Get-StringHash($str) {
   (if (windows?)
     (-> (shell-command
          ["PowerShell" "-Command" powershell-cksum
-          (format "Get-StringHash(%s)" (pr-str s))]
+          (format "Get-StringHash(\"%s\")" (double-quote s))]
          {:to-string? true})
         (str/replace "-" "")
         (str/trim))
