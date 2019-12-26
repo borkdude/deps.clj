@@ -159,12 +159,15 @@ function Get-StringHash($str) {
   (if (windows?)
     (-> (shell-command
          ["PowerShell" "-Command" powershell-cksum
-          (format "(Get-StringHash %s)" (double-quote s))]
+          (format "Get-StringHash(\"%s\")" (double-quote s))]
          {:to-string? true})
-        (str/replace "-" ""))
-    (shell-command
-     ["cksum"] {:input s
-                :to-string? true})))
+        (str/replace "-" "")
+        (str/trim))
+    (-> (shell-command
+         ["cksum"] {:input s
+                    :to-string? true})
+        (str/split #" ")
+        first)))
 
 (defn -main [& command-line-args]
   (let [windows? (windows?)
@@ -307,9 +310,7 @@ function Get-StringHash($str) {
                                        config-path
                                        "NIL"))
                                    config-paths)))
-            ck (-> (cksum val*)
-                   (str/split #" ")
-                   first)
+            ck (cksum val*)
             libs-file (.getPath (io/file cache-dir (str ck ".libs")))
             cp-file (.getPath (io/file cache-dir (str ck ".cp")))
             jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
