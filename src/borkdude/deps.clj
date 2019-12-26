@@ -339,7 +339,9 @@ function Get-StringHash($str) {
             (when (or stale (:pom args))
               (cond-> []
                 (not (str/blank? (:deps-data args)))
-                (conj "--config-data" (pr-str (:deps-data args)))
+                (conj "--config-data" (if windows?
+                                        (pr-str (:deps-data args))
+                                        (:deps-data args)))
                 (:resolve-aliases args)
                 (conj (str "-R" (:resolve-aliases args)))
                 (:classpath-aliases args)

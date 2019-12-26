@@ -34,3 +34,5 @@ $NATIVE_IMAGE \
   "-J-Xmx3g"
 
 lein clean
+
+./deps.exe -Spath -Sdeps '{:deps {borkdude/deps.clj {:mvn/version "0.0.1"}}}'

@@ -34,4 +34,4 @@ echo Creating zip archive
 jar -cMf deps.clj-%DEPS_CLJ_VERSION%-windows-amd64.zip deps.exe
 
 echo Test run
-call deps.exe -Sverbose -Spath
+call deps.exe -Spath -Sdeps "{:deps {borkdude/deps.clj {:mvn/version ""0.0.1""}}}"
