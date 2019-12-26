@@ -31,7 +31,7 @@ build_script:
 
     set /P DEPS_CLJ_VERSION=< resources\DEPS_CLJ_VERSION
 
-    call java -jar "target/deps.clj-%DEPS_CLJ_VERSION%-standalone.jar" "-Sdescribe" "-Spath"
+    call java -jar "target/deps.clj-%DEPS_CLJ_VERSION%-standalone.jar" "-Sverbose" "-Spath"
 
 - cmd: >-
     choco install windows-sdk-7.1

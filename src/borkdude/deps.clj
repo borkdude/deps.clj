@@ -146,13 +146,18 @@ function Get-StringHash($str) {
 }
 ")
 
+(defn double-quote [s]
+  (if (windows?)
+    (format "\"\"%s\"\"" s)
+    s))
+
 (defn cksum
   "TODO: replace by native Java version instead of shelling out"
   [s]
   (if (windows?)
     (-> (shell-command
          ["PowerShell" "-Command" powershell-cksum
-          (format "(Get-StringHash \"\"\"%s\"\"\")" s)]
+          (format "(Get-StringHash %s)" (double-quote s))]
          {:to-string? true})
         (str/replace "-" ""))
     (shell-command
@@ -353,10 +358,10 @@ function Get-StringHash($str) {
                                       "clojure.main" "-m" "clojure.tools.deps.alpha.script.make-classpath2"
                                       "--config-user" config-user
                                       "--config-project" config-project
-                                      "--libs-file" libs-file
-                                      "--cp-file" cp-file
-                                      "--jvm-file" jvm-file
-                                      "--main-file" main-file]
+                                      "--libs-file" (double-quote libs-file)
+                                      "--cp-file" (double-quote cp-file)
+                                      "--jvm-file" (double-quote jvm-file)
+                                      "--main-file" (double-quote main-file)]
                                      tools-args)))
             cp
             (cond (:describe args) nil

@@ -5,7 +5,7 @@
    [clojure.string :as str]
    [clojure.java.io :as io])
   (:import [java.lang ProcessBuilder$Redirect])
-  (:gen-class))
+  #_(:gen-class))
 
 (set! *warn-on-reflection* true)
 
@@ -135,10 +135,39 @@ For more info, see:
       (print "\n ") (describe-line line))
     (println "}")))
 
+(defn windows? []
+  (-> (System/getProperty "os.name")
+      (str/lower-case)
+      (str/includes? "windows")))
+
+(def powershell-cksum "
+function Get-StringHash($str) {
+  $md5 = new-Object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider
+  $utf8 = new-object -TypeName System.Text.UTF8Encoding
+  return [System.BitConverter]::ToString($md5.ComputeHash($utf8.GetBytes($str)))
+}
+")
+
+(defn double-quote [s]
+  (if (windows?)
+    (format "\"\"%s\"\"" s)
+    s))
+
+(defn cksum
+  "TODO: replace by native Java version instead of shelling out"
+  [s]
+  (if (windows?)
+    (-> (shell-command
+         ["PowerShell" "-Command" powershell-cksum
+          (format "(Get-StringHash %s)" (double-quote s))]
+         {:to-string? true})
+        (str/replace "-" ""))
+    (shell-command
+     ["cksum"] {:input s
+                :to-string? true})))
+
 (defn -main [& command-line-args]
-  (let [windows? (-> (System/getProperty "os.name")
-                     (str/lower-case)
-                     (str/includes? "windows"))
+  (let [windows? (windows?)
         args (loop [command-line-args (seq command-line-args)
                     acc {}]
                (if command-line-args
@@ -209,7 +238,7 @@ For more info, see:
                                   (str/ends-with? name ".jar"))
                          %))
                     files)]
-          (if (.exists jar)
+          (if (and jar (.exists jar))
             (.getCanonicalPath jar)
             (binding [*out* *err*]
               (println "Could not find clojure tools jar. Set CLOJURE_INSTALL_DIR.")
@@ -231,11 +260,13 @@ For more info, see:
           (or (System/getenv "CLJ_CONFIG")
               (when-let [xdg-config-home (System/getenv "XDG_CONFIG_HOME")]
                 (.getPath (io/file xdg-config-home "clojure")))
-              (.getPath (io/file (System/getProperty "user.home") ".clojure")))]
+              (.getPath (io/file (if windows? ;; workaround for https://github.com/oracle/graal/issues/1630
+                                   (System/getenv "userprofile")
+                                   (System/getProperty "user.home")) ".clojure")))]
+      ;; If user config directory does not exist, create it
       (let [config-dir (io/file config-dir)]
         (when-not (.exists config-dir)
           (.mkdirs config-dir)))
-      ;; If user config directory does not exist, create it
       (let [config-deps-edn (io/file config-dir "deps.edn")]
         (when-not (.exists config-deps-edn)
           (io/copy (io/file install-dir "example-deps.edn")
@@ -276,8 +307,7 @@ For more info, see:
                                        config-path
                                        "NIL"))
                                    config-paths)))
-            ck (-> (shell-command ["cksum"] {:input val*
-                                             :to-string? true})
+            ck (-> (cksum val*)
                    (str/split #" ")
                    first)
             libs-file (.getPath (io/file cache-dir (str ck ".libs")))
@@ -330,15 +360,15 @@ For more info, see:
                                       "clojure.main" "-m" "clojure.tools.deps.alpha.script.make-classpath2"
                                       "--config-user" config-user
                                       "--config-project" config-project
-                                      "--libs-file" libs-file
-                                      "--cp-file" cp-file
-                                      "--jvm-file" jvm-file
-                                      "--main-file" main-file]
+                                      "--libs-file" (double-quote libs-file)
+                                      "--cp-file" (double-quote cp-file)
+                                      "--jvm-file" (double-quote jvm-file)
+                                      "--main-file" (double-quote main-file)]
                                      tools-args)))
             cp
             (cond (:describe args) nil
                   (not (str/blank? (:force-cp args))) (:force-cp args)
-                  :else (slurp cp-file))]
+                  :else (slurp (io/file cp-file)))]
         (cond (:pom args)
               (shell-command [java-cmd "-Xms256m"
                               "-classpath" tools-cp
