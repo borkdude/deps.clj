@@ -206,7 +206,11 @@ For more info, see:
                                       (str/ends-with? name ".jar"))
                              %))
                         files)]
-          (.getCanonicalPath ^java.io.File jar))
+          (if (.exists jar)
+            (.getCanonicalPath ^java.io.File jar)
+            (binding [*out* *err*]
+              (println "Could not find clojure tools jar. Set CLOJURE_INSTALL_DIR.")
+              (System/exit 1))))
         deps-edn
         (or (:deps-file args)
             "deps.edn")]
