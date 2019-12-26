@@ -256,10 +256,10 @@ function Get-StringHash($str) {
               (.getPath (io/file (if windows? ;; workaround for https://github.com/oracle/graal/issues/1630
                                    (System/getenv "userprofile")
                                    (System/getProperty "user.home")) ".clojure")))]
+      ;; If user config directory does not exist, create it
       (let [config-dir (io/file config-dir)]
         (when-not (.exists config-dir)
           (.mkdirs config-dir)))
-      ;; If user config directory does not exist, create it
       (let [config-deps-edn (io/file config-dir "deps.edn")]
         (when-not (.exists config-deps-edn)
           (io/copy (io/file install-dir "example-deps.edn")
@@ -361,7 +361,7 @@ function Get-StringHash($str) {
             cp
             (cond (:describe args) nil
                   (not (str/blank? (:force-cp args))) (:force-cp args)
-                  :else (slurp cp-file))]
+                  :else (slurp (io/file cp-file)))]
         (cond (:pom args)
               (shell-command [java-cmd "-Xms256m"
                               "-classpath" tools-cp
