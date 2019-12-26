@@ -1,10 +1,9 @@
-#!/usr/bin/env bb --verbose
-
 (ns borkdude.deps
   (:require
    [clojure.string :as str]
    [clojure.java.io :as io])
-  (:import [java.lang ProcessBuilder$Redirect]))
+  (:import [java.lang ProcessBuilder$Redirect])
+  (:gen-class))
 
 (set! *warn-on-reflection* true)
 
@@ -361,5 +360,3 @@ For more info, see:
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args args))]
                 (shell-command main-args)))))))
-
-(apply -main *command-line-args*)
