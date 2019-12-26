@@ -8,6 +8,7 @@ clone_folder: C:\projects\deps.clj
 
 environment:
   GRAALVM_HOME: C:\projects\deps.clj\graalvm\graalvm-ce-java8-19.3.0.2
+  CLOJURE_INSTALL_DIR: C:\ProgramData\ClojureTools
 
 cache:
   - C:\ProgramData\chocolatey\lib -> project.clj, appveyor.yml
@@ -21,11 +22,16 @@ build_script:
     call lein self-install
 
 - cmd: >-
+    powershell -Command "(New-Object Net.WebClient).DownloadFile('https://download.clojure.org/install/clojure-tools-1.10.1.492.zip', 'clojure-tools.zip')"
+
+    powershell -Command "Expand-Archive -Path clojure-tools.zip -DestinationPath c:\ProgramData
+
+- cmd: >-
     call lein do clean, uberjar
 
     set /P DEPS_CLJ_VERSION=< resources\DEPS_CLJ_VERSION
 
-    call java -jar "target/deps.clj-%DEPS_CLJ_VERSION%-standalone.jar" "-Sdescribe
+    call java -jar "target/deps.clj-%DEPS_CLJ_VERSION%-standalone.jar" "-Sverbose" "-Spath"
 
 - cmd: >-
     choco install windows-sdk-7.1

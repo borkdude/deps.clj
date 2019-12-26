@@ -4,20 +4,25 @@
   (:require
    [clojure.string :as str]
    [clojure.java.io :as io])
-  (:import [java.lang ProcessBuilder$Redirect]))
+  (:import [java.lang ProcessBuilder$Redirect])
+  )
 
 (set! *warn-on-reflection* true)
 
 (defn shell-command
-  "Executes shell command. Exits script when the shell-command has a non-zero exit code, propagating it.
+  "Executes shell command.
 
   Accepts the following options:
 
   `:input`: instead of reading from stdin, read from this string.
+
   `:to-string?`: instead of writing to stdoud, write to a string and
-  return it."
+  return it.
+
+  `:throw?`: Unless `false`, exits script when the shell-command has a
+  non-zero exit code, unless `throw?` is set to false."
   ([args] (shell-command args nil))
-  ([args {:keys [:input :to-string?]}]
+  ([args {:keys [:input :to-string? :throw?] :or {throw? false}}]
    (let [args (mapv str args)
          pb (cond-> (-> (ProcessBuilder. ^java.util.List args)
                         (.redirectError ProcessBuilder$Redirect/INHERIT))
@@ -36,7 +41,7 @@
                  (io/copy w sw))
                (str sw)))
            exit-code (.waitFor proc)]
-       (when-not (zero? exit-code)
+       (when (and throw? (zero? exit-code))
          (System/exit exit-code))
        string-out))))
 
@@ -130,8 +135,43 @@ For more info, see:
       (print "\n ") (describe-line line))
     (println "}")))
 
+(defn windows? []
+  (-> (System/getProperty "os.name")
+      (str/lower-case)
+      (str/includes? "windows")))
+
+(def powershell-cksum "
+function Get-StringHash($str) {
+  $md5 = new-Object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider
+  $utf8 = new-object -TypeName System.Text.UTF8Encoding
+  return [System.BitConverter]::ToString($md5.ComputeHash($utf8.GetBytes($str)))
+}
+")
+
+(defn double-quote [s]
+  (if (windows?)
+    (format "\"\"%s\"\"" s)
+    s))
+
+(defn cksum
+  "TODO: replace by native Java version instead of shelling out"
+  [s]
+  (if (windows?)
+    (-> (shell-command
+         ["PowerShell" "-Command" powershell-cksum
+          (format "Get-StringHash(\"%s\")" (double-quote s))]
+         {:to-string? true})
+        (str/replace "-" "")
+        (str/trim))
+    (-> (shell-command
+         ["cksum"] {:input s
+                    :to-string? true})
+        (str/split #" ")
+        first)))
+
 (defn -main [& command-line-args]
-  (let [args (loop [command-line-args (seq command-line-args)
+  (let [windows? (windows?)
+        args (loop [command-line-args (seq command-line-args)
                     acc {}]
                (if command-line-args
                  (let [arg (first command-line-args)
@@ -161,35 +201,58 @@ For more info, see:
             (println help-text)
             (System/exit 0))
         java-cmd
-          (let [java-cmd (str/trim (shell-command ["type" "-p" "java"] {:to-string? true}))]
-            (if (str/blank? java-cmd)
-              (let [java-home (System/getenv "JAVA_HOME")]
-                (if-not (str/blank? java-home)
-                  (let [f (io/file java-home "bin" "java")]
-                    (if (and (.exists f)
-                             (.canExecute f))
-                      (.getCanonicalPath f)
-                      (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-                  (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-              java-cmd))
-          install-dir
-          (let [clojure-on-path (str/trim (shell-command ["type" "-p" "clojure"] {:to-string? true}))
-                f (io/file clojure-on-path)
-                f (io/file (.getCanonicalPath f))
-                parent (.getParent f)
-                parent (.getParent (io/file parent))]
-            parent)
-          tools-cp
-          (let [files (.listFiles (io/file install-dir "libexec"))
-                jar (some #(let [name (.getName ^java.io.File %)]
-                             (when (and (str/starts-with? name "clojure-tools")
-                                        (str/ends-with? name ".jar"))
-                               %))
-                          files)]
-            (.getCanonicalPath ^java.io.File jar))
-          deps-edn
-          (or (:deps-file args)
-              "deps.edn")]
+        (let [java-cmd (str/trim (shell-command
+                                  (if windows?
+                                    ["where" "java"]
+                                    ["type" "-p" "java"])
+                                  {:to-string? true}))]
+          (if (str/blank? java-cmd)
+            (let [java-home (System/getenv "JAVA_HOME")]
+              (if-not (str/blank? java-home)
+                (let [f (io/file java-home "bin" "java")]
+                  (if (and (.exists f)
+                           (.canExecute f))
+                    (.getCanonicalPath f)
+                    (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+                (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+            java-cmd))
+        install-dir
+        (or
+         (System/getenv "CLOJURE_INSTALL_DIR")
+         (some-> (let [res (str/trim (shell-command
+                                      (if windows?
+                                        ["where" "clojure"]
+                                        ["type" "-p" "clojure"])
+                                      {:to-string? true
+                                       ;; :throw? false
+                                       }))]
+                   (when-not (str/blank? res)
+                     res))
+                 (io/file)
+                 (.getCanonicalFile)
+                 (.getParentFile)
+                 (.getParent))
+         (binding [*out* *err*]
+           (println "Could not find clojure tools jar. Set CLOJURE_INSTALL_DIR.")
+           (System/exit 1)))
+        tools-cp
+        (let [files (.listFiles (if windows?
+                                  (io/file install-dir)
+                                  (io/file install-dir "libexec")))
+              ^java.io.File jar
+              (some #(let [name (.getName ^java.io.File %)]
+                       (when (and (str/starts-with? name "clojure-tools")
+                                  (str/ends-with? name ".jar"))
+                         %))
+                    files)]
+          (if (and jar (.exists jar))
+            (.getCanonicalPath jar)
+            (binding [*out* *err*]
+              (println "Could not find clojure tools jar in" install-dir)
+              (System/exit 1))))
+        deps-edn
+        (or (:deps-file args)
+            "deps.edn")]
     (when (:resolve-tags args)
       (let [f (io/file deps-edn)]
         (if (.exists f)
@@ -204,11 +267,13 @@ For more info, see:
           (or (System/getenv "CLJ_CONFIG")
               (when-let [xdg-config-home (System/getenv "XDG_CONFIG_HOME")]
                 (.getPath (io/file xdg-config-home "clojure")))
-              (.getPath (io/file (System/getProperty "user.home") ".clojure")))]
+              (.getPath (io/file (if windows? ;; workaround for https://github.com/oracle/graal/issues/1630
+                                   (System/getenv "userprofile")
+                                   (System/getProperty "user.home")) ".clojure")))]
+      ;; If user config directory does not exist, create it
       (let [config-dir (io/file config-dir)]
         (when-not (.exists config-dir)
           (.mkdirs config-dir)))
-      ;; If user config directory does not exist, create it
       (let [config-deps-edn (io/file config-dir "deps.edn")]
         (when-not (.exists config-deps-edn)
           (io/copy (io/file install-dir "example-deps.edn")
@@ -249,10 +314,7 @@ For more info, see:
                                        config-path
                                        "NIL"))
                                    config-paths)))
-            ck (-> (shell-command ["cksum"] {:input val*
-                                             :to-string? true})
-                   (str/split #" ")
-                   first)
+            ck (cksum val*)
             libs-file (.getPath (io/file cache-dir (str ck ".libs")))
             cp-file (.getPath (io/file cache-dir (str ck ".cp")))
             jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
@@ -279,7 +341,7 @@ For more info, see:
             (when (or stale (:pom args))
               (cond-> []
                 (not (str/blank? (:deps-data args)))
-                (conj "--config-data" (:deps-data args))
+                (conj "--config-data" (pr-str (:deps-data args)))
                 (:resolve-aliases args)
                 (conj (str "-R" (:resolve-aliases args)))
                 (:classpath-aliases args)
@@ -303,15 +365,15 @@ For more info, see:
                                       "clojure.main" "-m" "clojure.tools.deps.alpha.script.make-classpath2"
                                       "--config-user" config-user
                                       "--config-project" config-project
-                                      "--libs-file" libs-file
-                                      "--cp-file" cp-file
-                                      "--jvm-file" jvm-file
-                                      "--main-file" main-file]
+                                      "--libs-file" (double-quote libs-file)
+                                      "--cp-file" (double-quote cp-file)
+                                      "--jvm-file" (double-quote jvm-file)
+                                      "--main-file" (double-quote main-file)]
                                      tools-args)))
             cp
             (cond (:describe args) nil
                   (not (str/blank? (:force-cp args))) (:force-cp args)
-                  :else (slurp cp-file))]
+                  :else (slurp (io/file cp-file)))]
         (cond (:pom args)
               (shell-command [java-cmd "-Xms256m"
                               "-classpath" tools-cp
