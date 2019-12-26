@@ -4,42 +4,52 @@
 #
 version: 2.1
 jobs:
-  # jvm:
-  #   docker:
-  #     # specify the version you desire here
-  #     - image: circleci/clojure:lein-2.8.1
-  #   working_directory: ~/repo
-  #   environment:
-  #     LEIN_ROOT: "true"
-  #   steps:
-  #     - checkout
-  #     - restore_cache:
-  #         keys:
-  #           - v1-dependencies-{{ checksum "project.clj" }}
-  #           # fallback to using the latest cache if no exact match is found
-  #           - v1-dependencies-
-  #     - run:
-  #         name: Install Clojure
-  #         command: |
-  #           wget -nc https://download.clojure.org/install/linux-install-1.10.1.447.sh
-  #           chmod +x linux-install-1.10.1.447.sh
-  #           sudo ./linux-install-1.10.1.447.sh
-  #     - run:
-  #         name: Install lsof
-  #         command: |
-  #           sudo apt-get install lsof
-  #     - run:
-  #         name: Run JVM tests
-  #         command: |
-  #           script/test
-  #     - run:
-  #         name: Run as lein command
-  #         command: |
-  #           .circleci/script/lein
-  #     - save_cache:
-  #         paths:
-  #           - ~/.m2
-  #         key: v1-dependencies-{{ checksum "project.clj" }}
+  jvm:
+    docker:
+      # specify the version you desire here
+      - image: circleci/clojure:lein-2.8.1
+    working_directory: ~/repo
+    environment:
+      LEIN_ROOT: "true"
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "deps.edn" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+      - run:
+          name: Install Clojure
+          command: |
+            wget -nc https://download.clojure.org/install/linux-install-1.10.1.447.sh
+            chmod +x linux-install-1.10.1.447.sh
+            sudo ./linux-install-1.10.1.447.sh
+      # - run:
+      #     name: Run JVM tests
+      #     command: |
+      #       script/test
+      # - run:
+      #     name: Run as tools.deps dependency
+      #     command: |
+      #       .circleci/script/tools.deps
+      # - run:
+      #     name: Run as lein command
+      #     command: |
+      #       .circleci/script/lein
+      - save_cache:
+          paths:
+            - ~/.m2
+          key: v1-dependencies-{{ checksum "deps.edn" }}
+      - run:
+          name: Create uberjar
+          command: |
+            mkdir -p /tmp/release
+            lein do clean, uberjar
+            VERSION=$(cat resources/DEPS_CLJ_VERSION)
+            cp target/clj-kondo-$VERSION-standalone.jar /tmp/release
+      - store_artifacts:
+          path: /tmp/release
+          destination: release
   linux:
     docker:
       - image: circleci/clojure:lein-2.8.1
