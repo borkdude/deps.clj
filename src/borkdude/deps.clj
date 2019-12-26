@@ -165,7 +165,7 @@ For more info, see:
         java-cmd
         (let [java-cmd (str/trim (shell-command
                                   (if windows?
-                                    ["for" "%i" "in" "(java.exe)" "do" "@echo." "%~$PATH:i"]
+                                    ["where" "java"]
                                     ["type" "-p" "java"])
                                   {:to-string? true}))]
           (prn "java cmd" java-cmd)
