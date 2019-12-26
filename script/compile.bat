@@ -18,7 +18,7 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 
 call %GRAALVM_HOME%\bin\native-image.cmd ^
   "-jar" "target/deps.clj-%DEPS_CLJ_VERSION%-standalone.jar" ^
-  "-H:Name=deps.exe" ^
+  "-H:Name=deps" ^
   "-H:+ReportExceptionStackTraces" ^
   "-J-Dclojure.spec.skip-macros=true" ^
   "-J-Dclojure.compiler.direct-linking=true" ^
@@ -31,7 +31,7 @@ call %GRAALVM_HOME%\bin\native-image.cmd ^
 if %errorlevel% neq 0 exit /b %errorlevel%
 
 echo Creating zip archive
-jar -cMf deps.clj-%DEPS_CLJ_VERSION%-windows-amd64.zip .\deps.exe
+jar -cMf deps.clj-%DEPS_CLJ_VERSION%-windows-amd64.zip deps.exe
 
 echo Test run
 call deps.exe -Sdescribe

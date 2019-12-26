@@ -184,7 +184,7 @@ For more info, see:
             java-cmd))
         install-dir
         (or
-         (System/getenv "CLOJURE_HOME")
+         (System/getenv "CLOJURE_INSTALL_DIR")
          (let [clojure-on-path (str/trim (shell-command
                                           (if windows?
                                             ["where" "clojure"]
