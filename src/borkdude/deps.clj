@@ -140,6 +140,7 @@ For more info, see:
 
 (def powershell-cksum "
 function Get-StringHash($str) {
+  Write-Output \">\"$str\">\"
   $md5 = new-Object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider
   $utf8 = new-object -TypeName System.Text.UTF8Encoding
   return [System.BitConverter]::ToString($md5.ComputeHash($utf8.GetBytes($str)))
