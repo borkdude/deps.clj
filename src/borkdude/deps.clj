@@ -253,6 +253,8 @@ function Get-StringHash($str) {
          (binding [*out* *err*]
            (println "Could not find clojure tools jar. Consider setting CLOJURE_TOOLS_CP.")
            (System/exit 1)))
+        _ (prn "INSTALL DIR" install-dir)
+        _ (prn "TOOLS_CP" tools-cp)
         deps-edn
         (or (:deps-file args)
             "deps.edn")]
