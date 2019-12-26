@@ -8,6 +8,7 @@ clone_folder: C:\projects\deps.clj
 
 environment:
   GRAALVM_HOME: C:\projects\deps.clj\graalvm\graalvm-ce-java8-19.3.0.2
+  DEPS_CLJ_TOOLS_CP: C:\ProgramData\ClojureTools\clojure-tools-1.10.1.492.jar
 
 cache:
   - C:\ProgramData\chocolatey\lib -> project.clj, appveyor.yml
@@ -21,14 +22,9 @@ build_script:
     call lein self-install
 
 - cmd: >-
-    powershell -Command "iwr -useb get.scoop.sh | iex"
+    powershell -Command "(New-Object Net.WebClient).DownloadFile('https://download.clojure.org/install/clojure-tools-1.10.1.492.zip', 'clojure-tools.zip')"
 
-- cmd: >-
-    powershell -Command "scoop bucket add java"
-
-    powershell -Command "scoop bucket add scoop-clojure https://github.com/littleli/scoop-clojure"
-
-    powershell -Command "scoop install clojure"
+    powershell -Command "Expand-Archive -Path clojure-tools.zip -DestinationPath c:\ProgramData
 
 - cmd: >-
     call lein do clean, uberjar

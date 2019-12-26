@@ -8,15 +8,19 @@
 (set! *warn-on-reflection* true)
 
 (defn shell-command
-  "Executes shell command. Exits script when the shell-command has a non-zero exit code, propagating it.
+  "Executes shell command.
 
   Accepts the following options:
 
   `:input`: instead of reading from stdin, read from this string.
+
   `:to-string?`: instead of writing to stdoud, write to a string and
-  return it."
+  return it.
+
+  `:throw?`: Unless `false`, exits script when the shell-command has a
+  non-zero exit code, unless `throw?` is set to false."
   ([args] (shell-command args nil))
-  ([args {:keys [:input :to-string?]}]
+  ([args {:keys [:input :to-string? :throw?] :or {:throw? true}}]
    (let [args (mapv str args)
          pb (cond-> (-> (ProcessBuilder. ^java.util.List args)
                         (.redirectError ProcessBuilder$Redirect/INHERIT))
@@ -35,7 +39,7 @@
                  (io/copy w sw))
                (str sw)))
            exit-code (.waitFor proc)]
-       (when-not (zero? exit-code)
+       (when (and throw? (zero? exit-code))
          (System/exit exit-code))
        string-out))))
 
@@ -183,20 +187,22 @@ For more info, see:
                                          (if windows?
                                            ["where clojure"]
                                            ["type" "-p" "clojure"])
-                                         {:to-string? true}))
+                                         {:to-string? true
+                                          :throw? false}))
               f (io/file clojure-on-path)
               f (io/file (.getCanonicalPath f))
               parent (.getParent f)
               parent (.getParent (io/file parent))]
           parent)
         tools-cp
-        (let [files (.listFiles (io/file install-dir "libexec"))
-              jar (some #(let [name (.getName ^java.io.File %)]
-                           (when (and (str/starts-with? name "clojure-tools")
-                                      (str/ends-with? name ".jar"))
-                             %))
-                        files)]
-          (.getCanonicalPath ^java.io.File jar))
+        (or (System/getenv "DEPS_CLJ_TOOLS_CP")
+            (let [files (.listFiles (io/file install-dir "libexec"))
+                  jar (some #(let [name (.getName ^java.io.File %)]
+                               (when (and (str/starts-with? name "clojure-tools")
+                                          (str/ends-with? name ".jar"))
+                                 %))
+                            files)]
+              (.getCanonicalPath ^java.io.File jar)))
         deps-edn
         (or (:deps-file args)
             "deps.edn")]
