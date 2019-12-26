@@ -168,7 +168,6 @@ For more info, see:
                                     ["where" "java"]
                                     ["type" "-p" "java"])
                                   {:to-string? true}))]
-          (prn "java cmd" java-cmd)
           (if (str/blank? java-cmd)
             (let [java-home (System/getenv "JAVA_HOME")]
               (if-not (str/blank? java-home)
@@ -180,7 +179,11 @@ For more info, see:
                 (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
             java-cmd))
         install-dir
-        (let [clojure-on-path (str/trim (shell-command ["type" "-p" "clojure"] {:to-string? true}))
+        (let [clojure-on-path (str/trim (shell-command
+                                         (if windows?
+                                           ["where clojure"]
+                                           ["type" "-p" "clojure"])
+                                         {:to-string? true}))
               f (io/file clojure-on-path)
               f (io/file (.getCanonicalPath f))
               parent (.getParent f)
