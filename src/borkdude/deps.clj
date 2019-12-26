@@ -134,6 +134,7 @@ For more info, see:
     (println "}")))
 
 (defn -main [& command-line-args]
+  (prn "USER HOME" (System/getProperty "user.home"))
   (let [windows? (-> (System/getProperty "os.name")
                      (str/lower-case)
                      (str/includes? "windows"))
