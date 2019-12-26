@@ -21,6 +21,13 @@ build_script:
     call lein self-install
 
 - cmd: >-
+    call lein do clean, uberjar
+
+    set /P DEPS_CLJ_VERSION=< resources\DEPS_CLJ_VERSION
+
+    call java -jar "target/deps.clj-%DEPS_CLJ_VERSION%-standalone.jar" "-Sdescribe
+
+- cmd: >-
     choco install windows-sdk-7.1
 
     call "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd"
