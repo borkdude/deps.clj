@@ -13,7 +13,7 @@ set PATH=%PATH%;%GRAALVM_HOME%\bin
 set /P DEPS_CLJ_VERSION=< resources\DEPS_CLJ_VERSION
 echo Building deps.exe %DEPS_CLJ_VERSION%
 
-call lein with-profiles +clojure-1.10.1 do clean, uberjar
+call lein do clean, uberjar
 if %errorlevel% neq 0 exit /b %errorlevel%
 
 call %GRAALVM_HOME%\bin\native-image.cmd ^
