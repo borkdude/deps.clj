@@ -21,7 +21,7 @@ build_script:
     call lein self-install
 
 - cmd: >-
-    iwr -useb get.scoop.sh | iex
+    powershell -Command "iwr -useb get.scoop.sh | iex"
 
     scoop bucket add java
 
