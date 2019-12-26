@@ -133,10 +133,34 @@ For more info, see:
       (print "\n ") (describe-line line))
     (println "}")))
 
+(defn windows? []
+  (-> (System/getProperty "os.name")
+      (str/lower-case)
+      (str/includes? "windows")))
+
+(def powershell-cksum "
+function Get-StringHash($str) {
+  $md5 = new-Object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider
+  $utf8 = new-object -TypeName System.Text.UTF8Encoding
+  return [System.BitConverter]::ToString($md5.ComputeHash($utf8.GetBytes($str)))
+}
+")
+
+(defn cksum
+  "TODO: replace by native Java version instead of shelling out"
+  [s]
+  (if (windows?)
+    (-> (shell-command
+         ["PowerShell" "-Command" powershell-cksum
+          (format "(Get-StringHash %s)" s)]
+         {:to-string? true})
+        (str/replace "-" ""))
+    (shell-command
+     ["cksum"] {:input s
+                :to-string? true})))
+
 (defn -main [& command-line-args]
-  (let [windows? (-> (System/getProperty "os.name")
-                     (str/lower-case)
-                     (str/includes? "windows"))
+  (let [windows? (windows?)
         args (loop [command-line-args (seq command-line-args)
                     acc {}]
                (if command-line-args
@@ -276,8 +300,7 @@ For more info, see:
                                        config-path
                                        "NIL"))
                                    config-paths)))
-            ck (-> (shell-command ["cksum"] {:input val*
-                                             :to-string? true})
+            ck (-> (cksum val*)
                    (str/split #" ")
                    first)
             libs-file (.getPath (io/file cache-dir (str ck ".libs")))
