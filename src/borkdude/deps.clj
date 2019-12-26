@@ -20,7 +20,7 @@
   `:throw?`: Unless `false`, exits script when the shell-command has a
   non-zero exit code, unless `throw?` is set to false."
   ([args] (shell-command args nil))
-  ([args {:keys [:input :to-string? :throw?] :or {:throw? true}}]
+  ([args {:keys [:input :to-string? :throw?] :or {throw? false}}]
    (let [args (mapv str args)
          pb (cond-> (-> (ProcessBuilder. ^java.util.List args)
                         (.redirectError ProcessBuilder$Redirect/INHERIT))
@@ -201,13 +201,14 @@ For more info, see:
         (let [files (.listFiles (if windows?
                                   (io/file install-dir)
                                   (io/file install-dir "libexec")))
-              jar (some #(let [name (.getName ^java.io.File %)]
-                           (when (and (str/starts-with? name "clojure-tools")
-                                      (str/ends-with? name ".jar"))
-                             %))
-                        files)]
+              ^java.io.File jar
+              (some #(let [name (.getName ^java.io.File %)]
+                       (when (and (str/starts-with? name "clojure-tools")
+                                  (str/ends-with? name ".jar"))
+                         %))
+                    files)]
           (if (.exists jar)
-            (.getCanonicalPath ^java.io.File jar)
+            (.getCanonicalPath jar)
             (binding [*out* *err*]
               (println "Could not find clojure tools jar. Set CLOJURE_INSTALL_DIR.")
               (System/exit 1))))
