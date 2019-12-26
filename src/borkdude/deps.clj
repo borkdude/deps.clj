@@ -217,18 +217,22 @@ function Get-StringHash($str) {
         install-dir
         (or
          (System/getenv "CLOJURE_INSTALL_DIR")
-         (let [clojure-on-path (str/trim (shell-command
-                                          (if windows?
-                                            ["where" "clojure"]
-                                            ["type" "-p" "clojure"])
-                                          {:to-string? true
-                                           ;; :throw? false
-                                           }))
-               f (io/file clojure-on-path)
-               f (io/file (.getCanonicalPath f))
-               parent (.getParent f)
-               parent (.getParent (io/file parent))]
-           parent))
+         (some-> (let [res (str/trim (shell-command
+                                      (if windows?
+                                        ["where" "clojure"]
+                                        ["type" "-p" "clojure"])
+                                      {:to-string? true
+                                       ;; :throw? false
+                                       }))]
+                   (when-not (str/blank? res)
+                     res))
+                 (io/file)
+                 (.getCanonicalFile)
+                 (.getParentFile)
+                 (.getParent))
+         (binding [*out* *err*]
+           (println "Could not find clojure tools jar. Set CLOJURE_INSTALL_DIR.")
+           (System/exit 1)))
         tools-cp
         (let [files (.listFiles (if windows?
                                   (io/file install-dir)
@@ -242,7 +246,7 @@ function Get-StringHash($str) {
           (if (and jar (.exists jar))
             (.getCanonicalPath jar)
             (binding [*out* *err*]
-              (println "Could not find clojure tools jar. Set CLOJURE_INSTALL_DIR.")
+              (println "Could not find clojure tools jar in" install-dir)
               (System/exit 1))))
         deps-edn
         (or (:deps-file args)
@@ -335,7 +339,7 @@ function Get-StringHash($str) {
             (when (or stale (:pom args))
               (cond-> []
                 (not (str/blank? (:deps-data args)))
-                (conj "--config-data" (:deps-data args))
+                (conj "--config-data" (pr-str (:deps-data args)))
                 (:resolve-aliases args)
                 (conj (str "-R" (:resolve-aliases args)))
                 (:classpath-aliases args)
