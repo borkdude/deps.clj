@@ -167,6 +167,16 @@ function Get-StringHash($str) {
         (str/split #" ")
         first)))
 
+(defn where [s]
+  (-> (shell-command
+       (if windows?
+         ["where" s]
+         ["which" s])
+       {:to-string? true})
+      (str/split #"\r?\n")
+      first
+      str/trim))
+
 (defn -main [& command-line-args]
   (let [windows? (windows?)
         args (loop [command-line-args (seq command-line-args)
@@ -199,11 +209,7 @@ function Get-StringHash($str) {
             (println help-text)
             (System/exit 0))
         java-cmd
-        (let [java-cmd (str/trim (shell-command
-                                  (if windows?
-                                    ["where" "java"]
-                                    ["which" "java"])
-                                  {:to-string? true}))]
+        (let [java-cmd (where "java")]
           (if (str/blank? java-cmd)
             (let [java-home (System/getenv "JAVA_HOME")]
               (if-not (str/blank? java-home)
@@ -217,13 +223,7 @@ function Get-StringHash($str) {
         install-dir
         (or
          (System/getenv "CLOJURE_INSTALL_DIR")
-         (some-> (let [res (str/trim (shell-command
-                                      (if windows?
-                                        ["where" "clojure"]
-                                        ["which" "clojure"])
-                                      {:to-string? true
-                                       ;; :throw? false
-                                       }))]
+         (some-> (let [res (where "clojure")]
                    (when-not (str/blank? res)
                      res))
                  (io/file)
