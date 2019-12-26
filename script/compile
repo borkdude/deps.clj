@@ -17,6 +17,8 @@ fi
 
 DEPS_CLJ_VERSION=$(cat resources/DEPS_CLJ_VERSION)
 
+lein deps.clj -Spath -Sdeps '{:deps {borkdude/deps.clj {:mvn/version "0.0.1"}}}'
+
 lein do clean, uberjar
 
 $NATIVE_IMAGE \
