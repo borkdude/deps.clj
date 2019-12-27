@@ -41,25 +41,25 @@ variable to the jar. The `clojure-tools` jar is normally downloaded by the
 
 ### Script
 
+``` shell
+$ ./deps.clj -Spath -Sdeps '...'
+```
+
 ### Linux / Mac
 
 ``` shell
-$ deps.exe -Spath -Sdeps '{:deps {borkdude/deps.clj {:mvn/version "0.0.1"}}}'
-
+$ ./deps.exe -Spath -Sdeps '...'
 ```
 
 ### Windows
 
-Deps.clj provides a Windows binary (see
-[releases](https://github.com/borkdude/deps.clj/releases)).
+An example of how to set `CLOJURE_TOOLS_CP` on Windows and how to pass an
+`-Sdeps` value. Note the double double quotes.
 
 ``` shell
 C:\Users\borkdude\Downloads>set CLOJURE_TOOLS_CP=c:\Users\borkdude\Downloads\clojure-tools-1.10.1.492\ClojureTools\clojure-tools-1.10.1.492.jar
 
 C:\Users\borkdude\Downloads>deps -Spath -Sdeps "{:deps {borkdude/deps.clj {:mvn/version ""0.0.1""}}}"
-Downloading: borkdude/deps.clj/0.0.1/deps.clj-0.0.1.pom from https://repo.clojars.org/
-Downloading: borkdude/deps.clj/0.0.1/deps.clj-0.0.1.jar from https://repo.clojars.org/
-src;C:\Users\borkdude\.m2\repository\org\clojure\clojure\1.10.1\clojure-1.10.1.jar;C:\Users\borkdude\.m2\repository\borkdude\deps.clj\0.0.1\deps.clj-0.0.1.jar;C:\Users\borkdude\.m2\repository\org\clojure\spec.alpha\0.2.176\spec.alpha-0.2.176.jar;C:\Users\borkdude\.m2\repository\org\clojure\core.specs.alpha\0.2.44\core.specs.alpha-0.2.44.jar
 ```
 
 ## Non-standard options
