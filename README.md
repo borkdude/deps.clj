@@ -30,7 +30,7 @@ To get better startup, comparable to the original bash version, this project can
 
 ## Status
 
-Experimental, breaking changes will happen. Feedback is welcome.
+Experimental, but in a usable state. Breaking changes might happen to the non-standard functionality. Feedback and PRs are welcome.
 
 ## Installation
 
