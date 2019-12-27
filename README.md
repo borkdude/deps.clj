@@ -39,6 +39,10 @@ You don't need `clojure` to run this project, but you will need a
 download it. You can override the location of the jar with the
 `CLOJURE_TOOLS_CP` environment variable.
 
+### Windows
+
+On Windows, you might want to install `deps.clj` using [scoop](https://github.com/littleli/scoop-clojure).
+
 ## Usage
 
 ### Script
