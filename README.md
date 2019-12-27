@@ -9,6 +9,9 @@ Clojure.
 
 ## Rationale
 
+If your `clojure` installation works well for you, then you don't need this.
+This repo can be seen as a proof of concept of what is possible with GraalVM and Clojure.
+
 Arguably Bash and Powershell are less attractive languages for Clojure
 developers than Clojure itself. This repo provides the `clojure` bash script as
 a port in Clojure. It can be used as a JVM Clojure script (`deps.clj`), uberjar
