@@ -1,11 +1,12 @@
 #!/usr/bin/env bb --verbose
 
+;; Generated with script/gen_script.clj. Do not edit directly.
+
 (ns borkdude.deps
   (:require
    [clojure.string :as str]
    [clojure.java.io :as io])
-  (:import [java.lang ProcessBuilder$Redirect])
-  )
+  (:import [java.lang ProcessBuilder$Redirect]))
 
 (set! *warn-on-reflection* true)
 
