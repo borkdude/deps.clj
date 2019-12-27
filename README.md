@@ -54,7 +54,10 @@ On Windows, you might want to install `deps.clj` using
 [scoop](https://github.com/littleli/scoop-clojure).  When you get a message
 about a missing `MSVCR100.dll`, also install the [Microsoft Visual C++ 2010
 Redistributable Package
-(x64)](https://www.microsoft.com/en-us/download/details.aspx?id=14632).
+(x64)](https://www.microsoft.com/en-us/download/details.aspx?id=14632) which is
+also available in the
+[extras](https://github.com/lukesampson/scoop-extras/blob/master/bucket/vcredist2010.json)
+Scoop bucket.
 
 ## Usage
 
