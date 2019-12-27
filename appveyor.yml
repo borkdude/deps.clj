@@ -8,7 +8,7 @@ clone_folder: C:\projects\deps.clj
 
 environment:
   GRAALVM_HOME: C:\projects\deps.clj\graalvm\graalvm-ce-java8-19.3.0.2
-  CLOJURE_TOOLS_CP: C:\ProgramData\ClojureTools\clojure-tools-1.10.1.492.jar
+#  CLOJURE_TOOLS_CP: C:\ProgramData\ClojureTools\clojure-tools-1.10.1.492.jar
 
 cache:
   - C:\ProgramData\chocolatey\lib -> project.clj, appveyor.yml

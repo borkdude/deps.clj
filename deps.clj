@@ -10,6 +10,9 @@
 
 (set! *warn-on-reflection* true)
 
+(def version "1.10.1.492")
+(def deps-clj-version "0.0.3-SNAPSHOT")
+
 (defn shell-command
   "Executes shell command.
 
@@ -26,6 +29,7 @@
   ([args {:keys [:input :to-string? :throw? :show-errors?] :or {throw? false
                                                                 show-errors? true}}]
    (let [args (mapv str args)
+         ;; _ (println args)
          pb (cond-> (ProcessBuilder. ^java.util.List args)
               show-errors? (.redirectError ProcessBuilder$Redirect/INHERIT)
               (not to-string?) (.redirectOutput ProcessBuilder$Redirect/INHERIT)
@@ -46,9 +50,6 @@
        (when (and throw? (zero? exit-code))
          (System/exit exit-code))
        string-out))))
-
-(def project-version "0.0.1-SNAPSHOT") ;; TODO: should this reflect tools.deps
-;; version, this script version, both?
 
 (def help-text (str/trim "
 Usage: clojure [dep-opt*] [init-opt*] [main-opt] [arg*]
@@ -150,7 +151,10 @@ function Get-StringHash($str) {
 }
 ")
 
-(defn double-quote [s]
+(defn double-quote
+  "Double quotes shell arguments on Windows. On other platforms it just
+  passes through the string."
+  [s]
   (if (windows?)
     (format "\"\"%s\"\"" s)
     s))
@@ -181,6 +185,35 @@ function Get-StringHash($str) {
       (str/split #"\r?\n")
       first
       str/trim))
+
+(defn home-dir []
+  (if (windows?)
+    ;; workaround for https://github.com/oracle/graal/issues/1630
+    (System/getenv "userprofile")
+    (System/getProperty "user.home")))
+
+(defn download [source dest]
+  (if (windows?)
+    (shell-command ["PowerShell" "-Command"
+                    (format "Invoke-WebRequest -Uri %s -Outfile %s" source dest)])
+    (shell-command ["curl" "-o" dest source])))
+
+(defn unzip [file destination-dir]
+  (if (windows?)
+    (shell-command
+     ["PowerShell" "-Command"
+      (format "Expand-Archive -LiteralPath %s -DestinationPath %s" file destination-dir)])
+    (shell-command ["unzip" file "-d" destination-dir])))
+
+(defn clojure-tools-jar-download
+  "Downloads clojure tools jar into deps-clj-config-dir."
+  [^java.io.File deps-clj-config-dir]
+  (let [dest (io/file deps-clj-config-dir "tools.zip")]
+    (.mkdirs deps-clj-config-dir)
+    (download (format "https://download.clojure.org/install/clojure-tools-%s.zip" version)
+              dest)
+    (unzip dest (.getPath deps-clj-config-dir))
+    (.delete dest)))
 
 (defn -main [& command-line-args]
   (let [windows? (windows?)
@@ -234,28 +267,19 @@ function Get-StringHash($str) {
                       (with-open [reader (io/reader clojure-file)]
                         (let [lines (line-seq reader)]
                           (second (some #(re-matches #"^install_dir=(.*)" %) lines)))))
+        downloaded-jar (io/file (home-dir)
+                                ".deps.clj"
+                                "ClojureTools"
+                                (format "clojure-tools-%s.jar" version))
         tools-cp
         (or
          (System/getenv "CLOJURE_TOOLS_CP")
-         (when install-dir
-           (let [files (.listFiles (if windows?
-                                     (io/file install-dir)
-                                     (io/file install-dir "libexec")))
-                 ^java.io.File jar
-                 (some #(let [name (.getName ^java.io.File %)]
-                          (when (and (str/starts-with? name "clojure-tools")
-                                     (str/ends-with? name ".jar"))
-                            %))
-                       files)]
-             (if (and jar (.exists jar))
-               (.getCanonicalPath jar)
-               (binding [*out* *err*]
-                 (println "Could not find clojure tools jar in"
-                          (str install-dir ". Consider setting CLOJURE_TOOLS_CP."))
-                 (System/exit 1)))))
+         (when (.exists downloaded-jar) (.getPath downloaded-jar))
          (binding [*out* *err*]
-           (println "Could not find clojure tools jar. Consider setting CLOJURE_TOOLS_CP.")
-           (System/exit 1)))
+           (println (format "Could not find clojure-tools-%s.jar. Attempting download."
+                            version))
+           (clojure-tools-jar-download (io/file (home-dir) ".deps.clj"))
+           downloaded-jar))
         deps-edn
         (or (:deps-file args)
             "deps.edn")]
@@ -273,9 +297,7 @@ function Get-StringHash($str) {
           (or (System/getenv "CLJ_CONFIG")
               (when-let [xdg-config-home (System/getenv "XDG_CONFIG_HOME")]
                 (.getPath (io/file xdg-config-home "clojure")))
-              (.getPath (io/file (if windows? ;; workaround for https://github.com/oracle/graal/issues/1630
-                                   (System/getenv "userprofile")
-                                   (System/getProperty "user.home")) ".clojure")))]
+              (.getPath (io/file (home-dir) ".clojure")))]
       ;; If user config directory does not exist, create it
       (let [config-dir (io/file config-dir)]
         (when-not (.exists config-dir)
@@ -326,12 +348,13 @@ function Get-StringHash($str) {
             jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
             main-file (.getPath (io/file cache-dir (str ck ".main")))
             _ (when (:verbose args)
-                (println "version      =" project-version)
-                (println "install_dir  =" install-dir)
-                (println "config_dir   =" config-dir)
-                (println "config_paths =" (str/join " " config-paths))
-                (println "cache_dir    =" cache-dir)
-                (println "cp_file      =" cp-file)
+                (println "deps.clj version =" deps-clj-version)
+                (println "version          =" version)
+                (println "install_dir      =" install-dir)
+                (println "config_dir       =" config-dir)
+                (println "config_paths     =" (str/join " " config-paths))
+                (println "cache_dir        =" cache-dir)
+                (println "cp_file          =" cp-file)
                 (println))
             stale
             (or (:force args)
@@ -392,7 +415,8 @@ function Get-StringHash($str) {
               (:print-classpath args)
               (println cp)
               (:describe args)
-              (describe [[:version project-version]
+              (describe [[:deps-clj-version deps-clj-version]
+                         [:version version]
                          [:config-files (filterv #(.exists (io/file %)) config-paths)]
                          [:config-user config-user]
                          [:config-project config-project]
