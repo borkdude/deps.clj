@@ -66,6 +66,8 @@ also available in the
 [extras](https://github.com/lukesampson/scoop-extras/blob/master/bucket/vcredist2010.json)
 Scoop bucket.
 
+<img src="assets/windows-scoop.png">
+
 ## Usage
 
 ### Script
