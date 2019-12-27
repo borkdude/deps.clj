@@ -10,7 +10,7 @@ Clojure.
 ## Rationale
 
 If your `clojure` installation works well for you, then you don't need this.
-This repo can be seen as a proof of concept of what is possible with GraalVM and Clojure. Windows users might find the `deps.exe` executable of value if they have trouble getting their system up and running. This repro might also be a place to experiment with features that are not available in the original `clojure` command.
+This repo can be seen as a proof of concept of what is possible with GraalVM and Clojure. Windows users might find the `deps.exe` executable of value if they have trouble getting their system up and running. This repo might also be a place to experiment with features that are not available in the original `clojure` command.
 
 Arguably Bash and Powershell are less attractive languages for Clojure
 developers than Clojure itself. This repo provides the `clojure` bash script as
