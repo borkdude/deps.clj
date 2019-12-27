@@ -18,8 +18,7 @@ a port in Clojure. It can be used as a JVM Clojure script (`deps.clj`), uberjar
 or library.
 
 To get better startup, comparable to the original bash version, the `deps.clj`
-script can be run with [babashka](https://github.com/borkdude/babashka/) or as a
-binary called `deps.exe`.
+script can be run as a binary called `deps.exe` or with [babashka](https://github.com/borkdude/babashka/).
 
 ## Status
 
