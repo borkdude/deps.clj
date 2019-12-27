@@ -9,14 +9,15 @@ Clojure.
 
 ## Rationale
 
+If your `clojure` installation works well for you, then you don't need this.
+This repo can be seen as a proof of concept of what is possible with GraalVM and Clojure. Windows users might find the `deps.exe` executable of value if they have trouble getting their system up and running. This repo might also be a place to experiment with features that are not available in the original `clojure` command.
+
 Arguably Bash and Powershell are less attractive languages for Clojure
 developers than Clojure itself. This repo provides the `clojure` bash script as
 a port in Clojure. It can be used as a JVM Clojure script (`deps.clj`), uberjar
 or library.
 
-To get better startup, comparable to the original bash version, the `deps.clj`
-script can be run with [babashka](https://github.com/borkdude/babashka/) or as a
-binary called `deps.exe`.
+To get better startup, comparable to the original bash version, this project can be run as a binary called `deps.exe` or as a script called `deps.clj` with [babashka](https://github.com/borkdude/babashka/).
 
 ## Status
 
