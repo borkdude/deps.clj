@@ -17,9 +17,7 @@ developers than Clojure itself. This repo provides the `clojure` bash script as
 a port in Clojure. It can be used as a JVM Clojure script (`deps.clj`), uberjar
 or library.
 
-To get better startup, comparable to the original bash version, this project can be run as a binary called `deps.exe` or as a script called `with [babashka](https://github.com/borkdude/babashka/).
-can be run as a binary called `deps.exe` or deps.clj`with [babashka](https://github.com/borkdude/babashka/).
-can be run as a binary called `deps.exe` or  with [babashka](https://github.com/borkdude/babashka/).
+To get better startup, comparable to the original bash version, this project can be run as a binary called `deps.exe` or as a script called `deps.clj` with [babashka](https://github.com/borkdude/babashka/).
 
 ## Status
 
