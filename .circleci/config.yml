@@ -21,9 +21,9 @@ jobs:
       - run:
           name: Install Clojure
           command: |
-            wget -nc https://download.clojure.org/install/linux-install-1.10.1.447.sh
-            chmod +x linux-install-1.10.1.447.sh
-            sudo ./linux-install-1.10.1.447.sh
+            wget -nc https://download.clojure.org/install/linux-install-1.10.1.492.sh
+            chmod +x linux-install-1.10.1.492.sh
+            sudo ./linux-install-1.10.1.492.sh
       # - run:
       #     name: Run JVM tests
       #     command: |
@@ -67,9 +67,9 @@ jobs:
       - run:
           name: Install Clojure
           command: |
-            wget https://download.clojure.org/install/linux-install-1.10.1.447.sh
-            chmod +x linux-install-1.10.1.447.sh
-            sudo ./linux-install-1.10.1.447.sh
+            wget https://download.clojure.org/install/linux-install-1.10.1.492.sh
+            chmod +x linux-install-1.10.1.492.sh
+            sudo ./linux-install-1.10.1.492.sh
       - run:
           name: Install lsof
           command: |
