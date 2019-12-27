@@ -205,7 +205,9 @@ function Get-StringHash($str) {
       (format "Expand-Archive -LiteralPath %s -DestinationPath %s" file destination-dir)])
     (shell-command ["unzip" file "-d" destination-dir])))
 
-(defn tools-download []
+(defn clojure-tools-jar-download
+  "Downloads clojure tools jar into <home>/.deps.clj and returns the path."
+  []
   (let [home-dir (io/file (home-dir))
         tools-dir (io/file home-dir ".deps.clj")
         dest (io/file tools-dir "tools.zip")]
@@ -213,7 +215,7 @@ function Get-StringHash($str) {
     (download "https://download.clojure.org/install/clojure-tools-1.10.1.492.zip" dest)
     (unzip dest (.getPath tools-dir))
     (.delete dest)
-    (io/file tools-dir "ClojureTools" "clojure-tools-1.10.1.492.jar")))
+    (.getPath (io/file tools-dir "ClojureTools" "clojure-tools-1.10.1.492.jar"))))
 
 (defn -main [& command-line-args]
   (let [windows? (windows?)
@@ -287,9 +289,8 @@ function Get-StringHash($str) {
                           (str install-dir ". Consider setting CLOJURE_TOOLS_CP."))
                  (System/exit 1)))))
          (binding [*out* *err*]
-           (println "Could not find clojure tools jar. Consider setting CLOJURE_TOOLS_CP.")
-           (tools-download)
-           (System/exit 1)))
+           (println "Could not find clojure tools jar. Attempting download.")
+           (clojure-tools-jar-download)))
         deps-edn
         (or (:deps-file args)
             "deps.edn")]
