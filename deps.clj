@@ -22,10 +22,11 @@
   `:throw?`: Unless `false`, exits script when the shell-command has a
   non-zero exit code, unless `throw?` is set to false."
   ([args] (shell-command args nil))
-  ([args {:keys [:input :to-string? :throw?] :or {throw? false}}]
+  ([args {:keys [:input :to-string? :throw? :show-errors?] :or {throw? false
+                                                                show-errors? true}}]
    (let [args (mapv str args)
-         pb (cond-> (-> (ProcessBuilder. ^java.util.List args)
-                        (.redirectError ProcessBuilder$Redirect/INHERIT))
+         pb (cond-> (ProcessBuilder. ^java.util.List args)
+              show-errors? (.redirectError ProcessBuilder$Redirect/INHERIT)
               (not to-string?) (.redirectOutput ProcessBuilder$Redirect/INHERIT)
               (not input) (.redirectInput ProcessBuilder$Redirect/INHERIT))
          proc (.start pb)]
@@ -169,6 +170,17 @@ function Get-StringHash($str) {
         (str/split #" ")
         first)))
 
+(defn where [s]
+  (-> (shell-command
+       (if (windows?)
+         ["where" s]
+         ["which" s])
+       {:to-string? true
+        :show-errors? false})
+      (str/split #"\r?\n")
+      first
+      str/trim))
+
 (defn -main [& command-line-args]
   (let [windows? (windows?)
         args (loop [command-line-args (seq command-line-args)
@@ -201,11 +213,7 @@ function Get-StringHash($str) {
             (println help-text)
             (System/exit 0))
         java-cmd
-        (let [java-cmd (str/trim (shell-command
-                                  (if windows?
-                                    ["where" "java"]
-                                    ["type" "-p" "java"])
-                                  {:to-string? true}))]
+        (let [java-cmd (where "java")]
           (if (str/blank? java-cmd)
             (let [java-home (System/getenv "JAVA_HOME")]
               (if-not (str/blank? java-home)
@@ -216,40 +224,37 @@ function Get-StringHash($str) {
                     (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
                 (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
             java-cmd))
-        install-dir
-        (or
-         (System/getenv "CLOJURE_INSTALL_DIR")
-         (some-> (let [res (str/trim (shell-command
-                                      (if windows?
-                                        ["where" "clojure"]
-                                        ["type" "-p" "clojure"])
-                                      {:to-string? true
-                                       ;; :throw? false
-                                       }))]
-                   (when-not (str/blank? res)
-                     res))
-                 (io/file)
-                 (.getCanonicalFile)
-                 (.getParentFile)
-                 (.getParent))
-         (binding [*out* *err*]
-           (println "Could not find clojure tools jar. Set CLOJURE_INSTALL_DIR.")
-           (System/exit 1)))
+        clojure-file
+        (some-> (let [res (where "clojure")]
+                  (when-not (str/blank? res)
+                    res))
+                (io/file))
+        install-dir (when clojure-file
+                      (with-open [reader (io/reader clojure-file)]
+                        (let [lines (line-seq reader)]
+                          (second (some #(re-matches #"^install_dir=(.*)" %) lines)))))
         tools-cp
-        (let [files (.listFiles (if windows?
-                                  (io/file install-dir)
-                                  (io/file install-dir "libexec")))
-              ^java.io.File jar
-              (some #(let [name (.getName ^java.io.File %)]
-                       (when (and (str/starts-with? name "clojure-tools")
-                                  (str/ends-with? name ".jar"))
-                         %))
-                    files)]
-          (if (and jar (.exists jar))
-            (.getCanonicalPath jar)
-            (binding [*out* *err*]
-              (println "Could not find clojure tools jar in" install-dir)
-              (System/exit 1))))
+        (or
+         (System/getenv "CLOJURE_TOOLS_CP")
+         (when install-dir
+           (let [files (.listFiles (if windows?
+                                     (io/file install-dir)
+                                     (io/file install-dir "libexec")))
+                 ^java.io.File jar
+                 (some #(let [name (.getName ^java.io.File %)]
+                          (when (and (str/starts-with? name "clojure-tools")
+                                     (str/ends-with? name ".jar"))
+                            %))
+                       files)]
+             (if (and jar (.exists jar))
+               (.getCanonicalPath jar)
+               (binding [*out* *err*]
+                 (println "Could not find clojure tools jar in"
+                          (str install-dir ". Consider setting CLOJURE_TOOLS_CP."))
+                 (System/exit 1)))))
+         (binding [*out* *err*]
+           (println "Could not find clojure tools jar. Consider setting CLOJURE_TOOLS_CP.")
+           (System/exit 1)))
         deps-edn
         (or (:deps-file args)
             "deps.edn")]
@@ -275,7 +280,7 @@ function Get-StringHash($str) {
         (when-not (.exists config-dir)
           (.mkdirs config-dir)))
       (let [config-deps-edn (io/file config-dir "deps.edn")]
-        (when-not (.exists config-deps-edn)
+        (when (and (not (.exists config-deps-edn)) install-dir)
           (io/copy (io/file install-dir "example-deps.edn")
                    config-deps-edn)))
       ;; Determine user cache directory
@@ -341,7 +346,9 @@ function Get-StringHash($str) {
             (when (or stale (:pom args))
               (cond-> []
                 (not (str/blank? (:deps-data args)))
-                (conj "--config-data" (pr-str (:deps-data args)))
+                (conj "--config-data" (if windows?
+                                        (pr-str (:deps-data args))
+                                        (:deps-data args)))
                 (:resolve-aliases args)
                 (conj (str "-R" (:resolve-aliases args)))
                 (:classpath-aliases args)
