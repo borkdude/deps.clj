@@ -205,15 +205,14 @@ function Get-StringHash($str) {
       (format "Expand-Archive -LiteralPath %s -DestinationPath %s" file destination-dir)])
     (shell-command ["unzip" file "-d" destination-dir])))
 
-(defn tools-download []
-  (let [home-dir (io/file (home-dir))
-        tools-dir (io/file home-dir ".deps.clj")
-        dest (io/file tools-dir "tools.zip")]
-    (.mkdirs tools-dir)
+(defn clojure-tools-jar-download
+  "Downloads clojure tools jar into deps-clj-config-dir."
+  [^java.io.File deps-clj-config-dir]
+  (let [dest (io/file deps-clj-config-dir "tools.zip")]
+    (.mkdirs deps-clj-config-dir)
     (download "https://download.clojure.org/install/clojure-tools-1.10.1.492.zip" dest)
-    (unzip dest (.getPath tools-dir))
-    (.delete dest)
-    (io/file tools-dir "ClojureTools" "clojure-tools-1.10.1.492.jar")))
+    (unzip dest (.getPath deps-clj-config-dir))
+    (.delete dest)))
 
 (defn -main [& command-line-args]
   (let [windows? (windows?)
@@ -267,29 +266,18 @@ function Get-StringHash($str) {
                       (with-open [reader (io/reader clojure-file)]
                         (let [lines (line-seq reader)]
                           (second (some #(re-matches #"^install_dir=(.*)" %) lines)))))
+        downloaded-jar (io/file (home-dir)
+                                ".deps.clj"
+                                "ClojureTools"
+                                "clojure-tools-1.10.1.492.jar")
         tools-cp
         (or
          (System/getenv "CLOJURE_TOOLS_CP")
-         (when install-dir
-           (let [files (.listFiles (if windows?
-                                     (io/file install-dir)
-                                     (io/file install-dir "libexec")))
-                 ^java.io.File jar
-                 (some #(let [name (.getName ^java.io.File %)]
-                          (when (and (str/starts-with? name "clojure-tools")
-                                     (str/ends-with? name ".jar"))
-                            %))
-                       files)]
-             (if (and jar (.exists jar))
-               (.getCanonicalPath jar)
-               (binding [*out* *err*]
-                 (println "Could not find clojure tools jar in"
-                          (str install-dir ". Consider setting CLOJURE_TOOLS_CP."))
-                 (System/exit 1)))))
+         (when (.exists downloaded-jar) (.getPath downloaded-jar))
          (binding [*out* *err*]
-           (println "Could not find clojure tools jar. Consider setting CLOJURE_TOOLS_CP.")
-           (tools-download)
-           (System/exit 1)))
+           (println "Could not find clojure tools jar. Attempting download.")
+           (clojure-tools-jar-download (io/file (home-dir) ".deps.clj"))
+           downloaded-jar))
         deps-edn
         (or (:deps-file args)
             "deps.edn")]
@@ -358,12 +346,13 @@ function Get-StringHash($str) {
             jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
             main-file (.getPath (io/file cache-dir (str ck ".main")))
             _ (when (:verbose args)
-                (println "version      =" version)
-                (println "install_dir  =" install-dir)
-                (println "config_dir   =" config-dir)
-                (println "config_paths =" (str/join " " config-paths))
-                (println "cache_dir    =" cache-dir)
-                (println "cp_file      =" cp-file)
+                (println "deps.clj version =" deps-clj-version)
+                (println "version          =" version)
+                (println "install_dir      =" install-dir)
+                (println "config_dir       =" config-dir)
+                (println "config_paths     =" (str/join " " config-paths))
+                (println "cache_dir        =" cache-dir)
+                (println "cp_file          =" cp-file)
                 (println))
             stale
             (or (:force args)
@@ -424,7 +413,8 @@ function Get-StringHash($str) {
               (:print-classpath args)
               (println cp)
               (:describe args)
-              (describe [[:version version]
+              (describe [[:deps-clj-version deps-clj-version]
+                         [:version version]
                          [:config-files (filterv #(.exists (io/file %)) config-paths)]
                          [:config-user config-user]
                          [:config-project config-project]
