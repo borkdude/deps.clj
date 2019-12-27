@@ -10,6 +10,9 @@
 
 (set! *warn-on-reflection* true)
 
+(def version "1.10.1.492")
+(def deps-clj-version "0.0.3-SNAPSHOT")
+
 (defn shell-command
   "Executes shell command.
 
@@ -26,6 +29,7 @@
   ([args {:keys [:input :to-string? :throw? :show-errors?] :or {throw? false
                                                                 show-errors? true}}]
    (let [args (mapv str args)
+         ;; _ (println args)
          pb (cond-> (ProcessBuilder. ^java.util.List args)
               show-errors? (.redirectError ProcessBuilder$Redirect/INHERIT)
               (not to-string?) (.redirectOutput ProcessBuilder$Redirect/INHERIT)
@@ -46,9 +50,6 @@
        (when (and throw? (zero? exit-code))
          (System/exit exit-code))
        string-out))))
-
-(def project-version "0.0.1-SNAPSHOT") ;; TODO: should this reflect tools.deps
-;; version, this script version, both?
 
 (def help-text (str/trim "
 Usage: clojure [dep-opt*] [init-opt*] [main-opt] [arg*]
@@ -150,7 +151,10 @@ function Get-StringHash($str) {
 }
 ")
 
-(defn double-quote [s]
+(defn double-quote
+  "Double quotes shell arguments on Windows. On other platforms it just
+  passes through the string."
+  [s]
   (if (windows?)
     (format "\"\"%s\"\"" s)
     s))
@@ -181,6 +185,35 @@ function Get-StringHash($str) {
       (str/split #"\r?\n")
       first
       str/trim))
+
+(defn home-dir []
+  (if (windows?)
+    ;; workaround for https://github.com/oracle/graal/issues/1630
+    (System/getenv "userprofile")
+    (System/getProperty "user.home")))
+
+(defn download [source dest]
+  (if (windows?)
+    (shell-command ["PowerShell" "-Command"
+                    (format "Invoke-WebRequest -Uri %s -Outfile %s" source dest)])
+    (shell-command ["curl" "-o" dest source])))
+
+(defn unzip [file destination-dir]
+  (if (windows?)
+    (shell-command
+     ["PowerShell" "-Command"
+      (format "Expand-Archive -LiteralPath %s -DestinationPath %s" file destination-dir)])
+    (shell-command ["unzip" file "-d" destination-dir])))
+
+(defn tools-download []
+  (let [home-dir (io/file (home-dir))
+        tools-dir (io/file home-dir ".deps.clj")
+        dest (io/file tools-dir "tools.zip")]
+    (.mkdirs tools-dir)
+    (download "https://download.clojure.org/install/clojure-tools-1.10.1.492.zip" dest)
+    (unzip dest (.getPath tools-dir))
+    (.delete dest)
+    (io/file tools-dir "ClojureTools" "clojure-tools-1.10.1.492.jar")))
 
 (defn -main [& command-line-args]
   (let [windows? (windows?)
@@ -255,6 +288,7 @@ function Get-StringHash($str) {
                  (System/exit 1)))))
          (binding [*out* *err*]
            (println "Could not find clojure tools jar. Consider setting CLOJURE_TOOLS_CP.")
+           (tools-download)
            (System/exit 1)))
         deps-edn
         (or (:deps-file args)
@@ -273,9 +307,7 @@ function Get-StringHash($str) {
           (or (System/getenv "CLJ_CONFIG")
               (when-let [xdg-config-home (System/getenv "XDG_CONFIG_HOME")]
                 (.getPath (io/file xdg-config-home "clojure")))
-              (.getPath (io/file (if windows? ;; workaround for https://github.com/oracle/graal/issues/1630
-                                   (System/getenv "userprofile")
-                                   (System/getProperty "user.home")) ".clojure")))]
+              (.getPath (io/file (home-dir) ".clojure")))]
       ;; If user config directory does not exist, create it
       (let [config-dir (io/file config-dir)]
         (when-not (.exists config-dir)
@@ -326,7 +358,7 @@ function Get-StringHash($str) {
             jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
             main-file (.getPath (io/file cache-dir (str ck ".main")))
             _ (when (:verbose args)
-                (println "version      =" project-version)
+                (println "version      =" version)
                 (println "install_dir  =" install-dir)
                 (println "config_dir   =" config-dir)
                 (println "config_paths =" (str/join " " config-paths))
@@ -392,7 +424,7 @@ function Get-StringHash($str) {
               (:print-classpath args)
               (println cp)
               (:describe args)
-              (describe [[:version project-version]
+              (describe [[:version version]
                          [:config-files (filterv #(.exists (io/file %)) config-paths)]
                          [:config-user config-user]
                          [:config-project config-project]

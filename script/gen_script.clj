@@ -6,12 +6,22 @@
             [clojure.string :as str]))
 
 (def raw-script (io/file "src" "borkdude" "deps.clj"))
+(def version (-> (io/file "resources" "DEPS_CLJ_VERSION")
+                 (slurp)
+                 (str/trim)))
+
+(def version-code "(def deps-clj-version
+  (-> (io/resource \"DEPS_CLJ_VERSION\")
+      (slurp)
+      (str/trim)))")
 
 (def script
   (str
    "#!/usr/bin/env bb --verbose\n\n"
    ";; Generated with script/gen_script.clj. Do not edit directly.\n\n"
-   (str/replace (slurp raw-script) #"(?i)\s*\(:gen-class\)" "")
+   (-> (slurp raw-script)
+       (str/replace #"(?i)\s*\(:gen-class\)" "")
+       (str/replace version-code (format "(def deps-clj-version %s)" (pr-str version))))
    "\n(apply -main *command-line-args*)\n"))
 
 (spit "deps.clj" script)
