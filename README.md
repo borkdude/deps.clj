@@ -30,13 +30,14 @@ binary or uberjar, go to
 [releases](https://github.com/borkdude/deps.clj/releases).
 
 You don't need `clojure` to run this project, but you will need a
-`clojure-tools` jar. This project will try to resolve the location of the
-`clojure-tools` jar using the location of the `clojure` command. If you don't
-have `clojure` installed, try setting the `CLOJURE_TOOLS_CP` environment
-variable to the jar. The `clojure-tools` jar is normally downloaded by the
+`clojure-tools` jar. The `clojure-tools` jar is normally downloaded by the
 `clojure` installer itself
 ([gz](https://download.clojure.org/install/clojure-tools-1.10.1.492.tar.gz),
-[zip](https://download.clojure.org/install/clojure-tools-1.10.1.492.zip)).
+[zip](https://download.clojure.org/install/clojure-tools-1.10.1.492.zip)). The
+`deps.clj` tool will try to resolve the jar in the directory
+`$HOME/.deps.clj/ClojureTools`. If it cannot it find it there, it will try to
+download it. You can override the location of the jar with the
+`CLOJURE_TOOLS_CP` environment variable.
 
 ## Usage
 

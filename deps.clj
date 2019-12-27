@@ -210,7 +210,8 @@ function Get-StringHash($str) {
   [^java.io.File deps-clj-config-dir]
   (let [dest (io/file deps-clj-config-dir "tools.zip")]
     (.mkdirs deps-clj-config-dir)
-    (download "https://download.clojure.org/install/clojure-tools-1.10.1.492.zip" dest)
+    (download (format "https://download.clojure.org/install/clojure-tools-%s.zip" version)
+              dest)
     (unzip dest (.getPath deps-clj-config-dir))
     (.delete dest)))
 
@@ -269,13 +270,14 @@ function Get-StringHash($str) {
         downloaded-jar (io/file (home-dir)
                                 ".deps.clj"
                                 "ClojureTools"
-                                "clojure-tools-1.10.1.492.jar")
+                                (format "clojure-tools-%s.jar" version))
         tools-cp
         (or
          (System/getenv "CLOJURE_TOOLS_CP")
          (when (.exists downloaded-jar) (.getPath downloaded-jar))
          (binding [*out* *err*]
-           (println "Could not find clojure tools jar. Attempting download.")
+           (println (format "Could not find clojure-tools-%s.jar. Attempting download."
+                            version))
            (clojure-tools-jar-download (io/file (home-dir) ".deps.clj"))
            downloaded-jar))
         deps-edn
