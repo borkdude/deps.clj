@@ -50,7 +50,11 @@ download it. You can override the location of the jar with the
 
 ### Windows
 
-On Windows, you might want to install `deps.clj` using [scoop](https://github.com/littleli/scoop-clojure).
+On Windows, you might want to install `deps.clj` using
+[scoop](https://github.com/littleli/scoop-clojure).  When you get a message
+about a missing `MSVCR100.dll`, also install the [Microsoft Visual C++ 2010
+Redistributable Package
+(x64)](https://www.microsoft.com/en-us/download/details.aspx?id=14632).
 
 ## Usage
 
