@@ -23,6 +23,18 @@ To get better startup, comparable to the original bash version, this project can
 
 Experimental, breaking changes will happen. Feedback is welcome.
 
+## Quickstart
+
+``` shellsession
+$ curl -sL https://github.com/borkdude/deps.clj/releases/download/v0.0.3/deps.clj-0.0.3-linux-amd64.zip -o deps.clj.zip
+$ unzip deps.clj.zip
+$ ./deps.exe -Sdescribe
+{:deps-clj-version "0.0.3"
+ :version "1.10.1.492"
+...
+}
+```
+
 ## Installation
 
 The `deps.clj` script can simply be downloaded from this repo. If you want a
