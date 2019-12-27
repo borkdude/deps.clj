@@ -7,6 +7,15 @@
 A port of the [clojure](https://github.com/clojure/brew-install/) bash script to
 Clojure.
 
+## Quickstart
+
+``` shellsession
+$ curl -sL https://github.com/borkdude/deps.clj/releases/download/v0.0.3/deps.clj-0.0.3-linux-amd64.zip -o deps.clj.zip
+$ unzip deps.clj.zip
+$ ./deps.exe -Spath
+src:/Users/borkdude/.m2/repository/org/clojure/clojure/1.10.1/clojure-1.10.1.jar:...
+```
+
 ## Rationale
 
 If your `clojure` installation works well for you, then you don't need this.
@@ -22,18 +31,6 @@ To get better startup, comparable to the original bash version, this project can
 ## Status
 
 Experimental, breaking changes will happen. Feedback is welcome.
-
-## Quickstart
-
-``` shellsession
-$ curl -sL https://github.com/borkdude/deps.clj/releases/download/v0.0.3/deps.clj-0.0.3-linux-amd64.zip -o deps.clj.zip
-$ unzip deps.clj.zip
-$ ./deps.exe -Sdescribe
-{:deps-clj-version "0.0.3"
- :version "1.10.1.492"
-...
-}
-```
 
 ## Installation
 
