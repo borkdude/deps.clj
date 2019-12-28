@@ -40,12 +40,12 @@ Reasons why I made this:
 trouble getting their system up and running. It works with `cmd.exe` unlike the
 current Powershell based approach.
 
-- This repo might also be a place to experiment with features that are not
-available in the original `clojure` command. Most notable it offers an
-`-Scommand` option which allows other programs to be started than just the JVM
-version of Clojure, e.g. babaska or planck.
+- This repo might be a place to experiment with features that are not available
+in the original `clojure` command. Most notable it offers an `-Scommand` option
+which allows other programs to be started than just the JVM version of Clojure,
+e.g. `babashka` or `planck`.
 
-- Arguably Bash and Powershell are less attractive languages for Clojure
+- Arguably bash and Powershell are less attractive languages for Clojure
 developers than Clojure itself. This repo provides the `clojure` bash script as
 a port in Clojure. It can be used as a JVM Clojure script (`deps.clj`), uberjar
 or library.
