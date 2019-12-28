@@ -25,9 +25,6 @@ user=>
 
 ## Rationale
 
-If your `clojure` installation works well for you, then you don't need
-this. It's awesome and has been serving me well for years.
-
 Reasons why I made this:
 
 - The port was done as proof of concept for
