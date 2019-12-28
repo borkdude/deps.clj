@@ -48,7 +48,9 @@ $installed_exe_file_backup = "$deps_clj_dir\deps.exe.bak"
 
 Make-Dir($deps_clj_dir)
 Write-Output "Installing deps.exe to $deps_clj_dir..."
-Move-Item -Path "$installed_exe_file" -Destination "$installed_exe_file_backup" -Force
+if (Test-Path -Path "$installed_exe_file") {
+  Move-Item -Path "$installed_exe_file" -Destination "$installed_exe_file_backup" -Force
+}
 Move-Item -Path "$tmp_exe_file" -Destination "$installed_exe_file" -Force
 
 function env($name,$global,$val='__get') {
