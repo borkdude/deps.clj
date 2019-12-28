@@ -6,7 +6,7 @@ print_help() {
     echo "Installs latest version of deps.clj. Installation directory defaults to /usr/local/bin."
     echo -e
     echo "Usage:"
-    echo "installer.sh [<dir>]"
+    echo "install [<dir>]"
     exit 1
 }
 
