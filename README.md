@@ -54,8 +54,8 @@ current Powershell based approach.
 - This repo might be a place to experiment with features that are not available
 in the original `clojure` command. Most notably it offers an `-Scommand` option
 which allows other programs to be started than just the JVM version of Clojure,
-e.g. `[babashka]`(https://github.com/borkdude/babashka/) or
-`[planck]`(https://github.com/planck-repl/planck/).
+e.g. [`babashka`](https://github.com/borkdude/babashka/) or
+[`planck`](https://github.com/planck-repl/planck/).
 
 - Arguably bash and Powershell are less attractive languages for Clojure
 developers than Clojure itself. This repo provides the `clojure` bash script as
