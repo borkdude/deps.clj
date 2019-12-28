@@ -40,7 +40,7 @@ trouble getting their system up and running. It works with `cmd.exe` unlike the
 current Powershell based approach.
 
 - This repo might be a place to experiment with features that are not available
-in the original `clojure` command. Most notable it offers an `-Scommand` option
+in the original `clojure` command. Most notably it offers an `-Scommand` option
 which allows other programs to be started than just the JVM version of Clojure,
 e.g. `babashka` or `planck`.
 
