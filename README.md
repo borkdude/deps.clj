@@ -30,13 +30,14 @@ this. It's awesome and has been serving me well for years.
 
 Reasons why I made this:
 
-- The port was done as proof of concept for [babashka](https://github.com/borkdude/babashka/). The entire bash script was
+- The port was done as proof of concept for
+  [babashka](https://github.com/borkdude/babashka/). The entire bash script was
   ported to Clojure succesfully and runs just as fast with `bb`.
 
 - This offers an arguably easier way to get going with `deps.edn` based projects
-  in CI. Just curl a script and be done. Works on both linux and macOS operating
-  systems. I could not get the official installer script working on CircleCI
-  with macOS and brew was too slow.
+  in CI. Just curl an installer script and run. Works on both linux and macOS
+  operating systems. I could not get the official installer script working on
+  CircleCI with macOS and brew was too slow.
 
 - Windows users might find the `deps.exe` executable of value if they have
 trouble getting their system up and running. It works with `cmd.exe` unlike the
