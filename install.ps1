@@ -84,3 +84,4 @@ Write-Output "Cleaning up..."
 Remove-Item "$tmp_zip_file"
 
 Write-Output "Succesfully installed deps.exe."
+Write-Output "Restart cmd.exe for changes to the path to take effect."
