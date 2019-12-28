@@ -106,7 +106,7 @@ Clojure 1.10.1
 user=>
 ```
 
-It's automatically added to your path, but you might have to re-open a new `cmd.exe`.
+It's automatically added to your path. In Powershell you can use it right away. In `cmd.exe` you'll have to restart the session for it to become available on the path.
 
 When you get a message about a missing `MSVCR100.dll`, also install the
 [Microsoft Visual C++ 2010 Redistributable Package
