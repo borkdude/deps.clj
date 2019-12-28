@@ -28,7 +28,6 @@ user=>
 Windows:
 
 ``` shell
-``` shell
 C:\> PowerShell -Command "iwr -useb https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1 | iex"
 C:\> deps.exe
 Clojure 1.10.1
