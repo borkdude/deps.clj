@@ -27,7 +27,7 @@ user=>
 
 If your `clojure` installation works well for you, then you don't need
 this. This is not a criticism on the official implementation of the `clojure`
-runner. It's awesome and has served me well for years.
+runner. It's awesome and has been serving me well for years.
 
 Reasons why I made this:
 
