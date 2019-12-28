@@ -88,12 +88,13 @@ user=>
 On Windows you might want to install `deps.clj` using
 [scoop](https://github.com/littleli/scoop-clojure).
 
-Alternatively you can install `deps.exe` using by executing this line in
-Powershell:
+Alternatively you can install `deps.exe` using by executing the following line:
 
 ``` shell
-iwr -useb https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1 | iex
+C:\> PowerShell -Command "iwr -useb https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1 | iex"
 ```
+
+It's automatically added to your path, but you might have to re-open a new `cmd.exe`.
 
 When you get a message about a missing `MSVCR100.dll`, also install the
 [Microsoft Visual C++ 2010 Redistributable Package
