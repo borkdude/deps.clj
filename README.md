@@ -46,7 +46,7 @@ e.g. `babashka` or `planck`.
 
 - Arguably bash and Powershell are less attractive languages for Clojure
 developers than Clojure itself. This repo provides the `clojure` bash script as
-a port in Clojure. It can be used as a JVM Clojure script (`deps.clj`), uberjar
+a port in Clojure. It can be used as a binary, script (`deps.clj`), uberjar
 or library.
 
 - This repo can be seen as a proof of concept of what is possible with GraalVM
