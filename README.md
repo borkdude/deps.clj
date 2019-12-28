@@ -25,15 +25,6 @@ Clojure 1.10.1
 user=>
 ```
 
-On Windows using the Powershell installer:
-
-``` shell
-iwr -useb https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1 | iex
-deps.exe
-Clojure 1.10.1
-user=>
-```
-
 ## Rationale
 
 Reasons why I made this:
