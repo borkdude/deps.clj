@@ -16,14 +16,14 @@ Clojure itself.
 
 ## Quickstart
 
-On Linux and macOS using the bash install script:
-
 ``` shellsession
 $ bash <(curl -s https://raw.githubusercontent.com/borkdude/deps.clj/master/install)
 $ deps.exe
 Clojure 1.10.1
 user=>
 ```
+
+Check the one-line installer for Windows below.
 
 ## Rationale
 
