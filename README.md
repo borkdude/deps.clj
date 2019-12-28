@@ -18,7 +18,7 @@ Clojure itself.
 
 Linux and macOS:
 
-``` shellsession
+``` shell
 $ bash <(curl -s https://raw.githubusercontent.com/borkdude/deps.clj/master/install)
 $ deps.exe
 Clojure 1.10.1
