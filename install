@@ -35,7 +35,7 @@ unzip -qqo "deps.clj-$latest_release-$platform-amd64.zip"
 rm "deps.clj-$latest_release-$platform-amd64.zip"
 
 cd "$install_dir"
-if [ -f deps.clj ]; then
+if [ -f deps.exe ]; then
     echo "Moving $install_dir/deps.exe to $install_dir/deps.exe.old"
 fi
 

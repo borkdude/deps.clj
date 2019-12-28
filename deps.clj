@@ -11,7 +11,7 @@
 (set! *warn-on-reflection* true)
 
 (def version "1.10.1.492")
-(def deps-clj-version "0.0.3-SNAPSHOT")
+(def deps-clj-version "0.0.4-SNAPSHOT")
 
 (defn shell-command
   "Executes shell command.
