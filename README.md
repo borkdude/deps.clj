@@ -16,9 +16,20 @@ Clojure itself.
 
 ## Quickstart
 
+On Linux and macOS using the bash install script:
+
 ``` shellsession
-$ bash <(curl -s https://raw.githubusercontent.com/borkdude/deps.clj/master/install) /tmp
-$ /tmp/deps.exe
+$ bash <(curl -s https://raw.githubusercontent.com/borkdude/deps.clj/master/install)
+$ deps.exe
+Clojure 1.10.1
+user=>
+```
+
+On Windows using the Powershell installer:
+
+``` shell
+iwr -useb https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1 | iex
+deps.exe
 Clojure 1.10.1
 user=>
 ```
@@ -83,10 +94,18 @@ user=>
 
 #### Windows
 
-On Windows, you might want to install `deps.clj` using
-[scoop](https://github.com/littleli/scoop-clojure).  When you get a message
-about a missing `MSVCR100.dll`, also install the [Microsoft Visual C++ 2010
-Redistributable Package
+On Windows you might want to install `deps.clj` using
+[scoop](https://github.com/littleli/scoop-clojure).
+
+Alternatively you can install `deps.exe` using by executing this line in
+Powershell:
+
+``` shell
+iwr -useb https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1 | iex
+```
+
+When you get a message about a missing `MSVCR100.dll`, also install the
+[Microsoft Visual C++ 2010 Redistributable Package
 (x64)](https://www.microsoft.com/en-us/download/details.aspx?id=14632) which is
 also available in the
 [extras](https://github.com/lukesampson/scoop-extras/blob/master/bucket/vcredist2010.json)
