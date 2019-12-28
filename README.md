@@ -16,6 +16,8 @@ Clojure itself.
 
 ## Quickstart
 
+Linux and macOS:
+
 ``` shellsession
 $ bash <(curl -s https://raw.githubusercontent.com/borkdude/deps.clj/master/install)
 $ deps.exe
@@ -23,7 +25,15 @@ Clojure 1.10.1
 user=>
 ```
 
-Check the one-line installer for Windows below.
+Windows:
+
+``` shell
+``` shell
+C:\> PowerShell -Command "iwr -useb https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1 | iex"
+C:\> deps.exe
+Clojure 1.10.1
+user=>
+```
 
 ## Rationale
 
@@ -92,6 +102,9 @@ Alternatively you can install `deps.exe` using by executing the following line:
 
 ``` shell
 C:\> PowerShell -Command "iwr -useb https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1 | iex"
+C:\> deps.exe
+Clojure 1.10.1
+user=>
 ```
 
 It's automatically added to your path, but you might have to re-open a new `cmd.exe`.
