@@ -17,13 +17,10 @@ Clojure itself.
 ## Quickstart
 
 ``` shellsession
-# Install babashka
-$ bash <(curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install)
-# Download deps.clj script
-$ curl -sL https://raw.githubusercontent.com/borkdude/deps.clj/master/deps.clj -o /tmp/deps.clj
-# Run!
-$ bb deps.clj
-Clojure 1.10.1
+$ curl -sL https://github.com/borkdude/deps.clj/releases/download/v0.0.3/deps.clj-0.0.3-linux-amd64.zip -o deps.clj.zip
+$ unzip deps.clj.zip
+$ ./deps.exe -Spath
+src:/Users/borkdude/.m2/repository/org/clojure/clojure/1.10.1/clojure-1.10.1.jar:...
 ```
 
 ## Rationale
