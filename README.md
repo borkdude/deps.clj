@@ -30,6 +30,9 @@ this. It's awesome and has been serving me well for years.
 
 Reasons why I made this:
 
+- The port was done as proof of concept for [babashka](https://github.com/borkdude/babashka/). The entire bash script was
+  ported to Clojure succesfully and runs just as fast with `bb`.
+
 - This offers an arguably easier way to get going with `deps.edn` based projects
   in CI. Just curl a script and be done. Works on both linux and macOS operating
   systems. I could not get the official installer script working on CircleCI
@@ -42,7 +45,8 @@ current Powershell based approach.
 - This repo might be a place to experiment with features that are not available
 in the original `clojure` command. Most notably it offers an `-Scommand` option
 which allows other programs to be started than just the JVM version of Clojure,
-e.g. `babashka` or `planck`.
+e.g. `[babashka]`(https://github.com/borkdude/babashka/) or
+`[planck]`(https://github.com/planck-repl/planck/).
 
 - Arguably bash and Powershell are less attractive languages for Clojure
 developers than Clojure itself. This repo provides the `clojure` bash script as
@@ -95,7 +99,7 @@ Scoop bucket.
 #### Script
 
 The script, `deps.clj`, requires a working installation of `java` and
-additionally `bb` (babashka) or `clojure`.
+additionally [`bb`](https://github.com/borkdude/babashka/) or `clojure`.
 
 It can simply be downloaded from this repo:
 
@@ -144,7 +148,8 @@ and `scripts/main.cljc`:
   (println "Hello from script!"))
 ```
 
-you can invoke `deps.clj` as follows to invoke [babashka](https://github.com/borkdude/babashka/):
+you can invoke `deps.clj` as follows to invoke
+[babashka](https://github.com/borkdude/babashka/):
 
 ``` shell
 $ deps.clj -Sdeps-file script-deps.edn -A:main -Scommand "bb -cp {{classpath}} {{main-opts}}"
