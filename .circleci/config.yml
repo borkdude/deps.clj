@@ -114,7 +114,7 @@ jobs:
       - run:
           name: Run tests
           command: |
-            script/exe-test
+            script/exe_test
       - run:
           name: Release
           command: |
@@ -163,7 +163,7 @@ jobs:
       - run:
           name: Run tests
           command: |
-            script/exe-test
+            script/exe_test
       - run:
           name: Release
           command: |
@@ -210,6 +210,7 @@ workflows:
   ci:
     jobs:
       - jvm
+      - babashka
       - linux
       - mac
       - deploy:
@@ -218,6 +219,7 @@ workflows:
               only: master
           requires:
             - jvm
+            - babashka
             - linux
             - mac
       # - docker:
