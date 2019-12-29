@@ -24,18 +24,10 @@ jobs:
             wget -nc https://download.clojure.org/install/linux-install-1.10.1.492.sh
             chmod +x linux-install-1.10.1.492.sh
             sudo ./linux-install-1.10.1.492.sh
-      # - run:
-      #     name: Run JVM tests
-      #     command: |
-      #       script/test
-      # - run:
-      #     name: Run as tools.deps dependency
-      #     command: |
-      #       .circleci/script/tools.deps
-      # - run:
-      #     name: Run as lein command
-      #     command: |
-      #       .circleci/script/lein
+      - run:
+          name: Run JVM tests
+          command: |
+            script/jvm_test
       - save_cache:
           paths:
             - ~/.m2
@@ -50,6 +42,33 @@ jobs:
       - store_artifacts:
           path: /tmp/release
           destination: release
+  babashka:
+    docker:
+      # specify the version you desire here
+      - image: circleci/clojure:lein-2.8.1
+    working_directory: ~/repo
+    environment:
+      LEIN_ROOT: "true"
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "deps.edn" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+      - run:
+          name: Install babashka
+          command: |
+            bash <(curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install) ~
+            sudo mv ~/bb /usr/local/bin/bb
+      - run:
+          name: Run babashka tests
+          command: |
+            script/babashka_test
+      - save_cache:
+          paths:
+            - ~/.m2
+          key: v1-dependencies-{{ checksum "deps.edn" }}
   linux:
     docker:
       - image: circleci/clojure:lein-2.8.1
@@ -92,10 +111,10 @@ jobs:
           command: |
             script/compile
           no_output_timeout: 30m
-      # - run:
-      #     name: Run tests
-      #     command: |
-      #       script/test
+      - run:
+          name: Run tests
+          command: |
+            script/exe-test
       - run:
           name: Release
           command: |
@@ -141,10 +160,10 @@ jobs:
           command: |
             script/compile
           no_output_timeout: 30m
-      # - run:
-      #     name: Run tests
-      #     command: |
-      #       script/test
+      - run:
+          name: Run tests
+          command: |
+            script/exe-test
       - run:
           name: Release
           command: |
