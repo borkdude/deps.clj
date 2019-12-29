@@ -26,10 +26,10 @@
   `:throw?`: Unless `false`, exits script when the shell-command has a
   non-zero exit code, unless `throw?` is set to false."
   ([args] (shell-command args nil))
-  ([args {:keys [:input :to-string? :throw? :show-errors?] :or {throw? false
-                                                                show-errors? true}}]
+  ([args {:keys [:input :to-string? :throw? :show-errors?]
+          :or {throw? true
+               show-errors? true}}]
    (let [args (mapv str args)
-         ;; _ (println args)
          pb (cond-> (ProcessBuilder. ^java.util.List args)
               show-errors? (.redirectError ProcessBuilder$Redirect/INHERIT)
               (not to-string?) (.redirectOutput ProcessBuilder$Redirect/INHERIT)
@@ -47,7 +47,7 @@
                  (io/copy w sw))
                (str sw)))
            exit-code (.waitFor proc)]
-       (when (and throw? (zero? exit-code))
+       (when (and throw? (not (zero? exit-code)))
          (System/exit exit-code))
        string-out))))
 
@@ -181,6 +181,7 @@ function Get-StringHash($str) {
          ["where" s]
          ["which" s])
        {:to-string? true
+        :throw? false
         :show-errors? false})
       (str/split #"\r?\n")
       first
