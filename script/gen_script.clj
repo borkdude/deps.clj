@@ -17,7 +17,7 @@
 
 (def script
   (str
-   "#!/usr/bin/env bb --verbose\n\n"
+   "#!/usr/bin/env bb\n\n"
    ";; Generated with script/gen_script.clj. Do not edit directly.\n\n"
    (-> (slurp raw-script)
        (str/replace #"(?i)\s*\(:gen-class\)" "")

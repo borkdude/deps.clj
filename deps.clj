@@ -1,4 +1,4 @@
-#!/usr/bin/env bb --verbose
+#!/usr/bin/env bb
 
 ;; Generated with script/gen_script.clj. Do not edit directly.
 
