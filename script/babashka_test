@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+./deps.clj -A:test -Scommand "bb -cp {{classpath}} {{main-opts}}"

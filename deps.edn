@@ -1,1 +1,6 @@
-{}
+{:paths ["src" "resources"]
+ :aliases
+ {:test
+  {:extra-paths ["test"]
+   :extra-deps {borkdude/spartan.test {:mvn/version "0.0.4"}}
+   :main-opts ["-m" "spartan.test" "-n" "borkdude.deps-test"]}}}
