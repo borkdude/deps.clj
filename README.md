@@ -130,7 +130,7 @@ It can simply be downloaded from this repo:
 ``` shell
 $ curl -sL https://raw.githubusercontent.com/borkdude/deps.clj/master/deps.clj -o /tmp/deps.clj
 $ chmod +x /tmp/deps.clj
-$ bb /tmp/deps.exe
+$ bb /tmp/deps.clj
 Clojure 1.10.1
 user=>
 ```
