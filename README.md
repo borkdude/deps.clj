@@ -69,6 +69,11 @@ Experimental, but in a usable state. Breaking changes might happen to the non-st
 
 ## Installation
 
+There are three ways of running:
+
+- as a compiled binary called `deps.exe` which is tailored to your OS
+- as a script file called `deps.clj` using [`bb`](https://github.com/borkdude/babashka/) or `clojure`
+
 ### Binary
 
 The binary version of deps.clj, called `deps.exe`, only requires a working
