@@ -115,7 +115,7 @@ Scoop bucket.
 
 <img src="assets/windows-scoop.png">
 
-#### Script
+### Script
 
 The script, `deps.clj`, requires a working installation of `java` and
 additionally [`bb`](https://github.com/borkdude/babashka/) or `clojure`.
