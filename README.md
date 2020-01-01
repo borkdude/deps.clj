@@ -152,40 +152,55 @@ The `deps.clj` script adds the following non-standard options:
  -Scommand      A custom command that will be invoked. Substitutions: {{classpath}}, {{main-opts}}.
 ```
 
-### Example usage
+### -Scommand
 
-Given this `script-deps.edn` file:
+One of the use cases for `deps.clj` is invoking a different command than a JVM Clojure.
 
-``` clojure
-{:paths ["scripts"]
- :aliases
- {:main
-  {:main-opts ["-m" "scripts.main"]}}}
-```
-
-and `scripts/main.cljc`:
+Given this `deps.edn`:
 
 ``` clojure
-(ns scripts.main)
-
-(defn -main [& _args]
-  (println "Hello from script!"))
+{:aliases
+ {:test
+  {:extra-paths ["test"]
+   :extra-deps {borkdude/spartan.test {:mvn/version "0.0.4"}}
+   :main-opts ["-m" "spartan.test" "-n" "borkdude.deps-test"]}}}
 ```
 
-you can invoke `deps.clj` as follows to invoke
-[babashka](https://github.com/borkdude/babashka/):
+you can invoke [`bb`](https://github.com/borkdude/babashka/) like this:
 
 ``` shell
-$ deps.clj -Sdeps-file script-deps.edn -A:main -Scommand "bb -cp {{classpath}} {{main-opts}}"
-Hello from script!
+$ deps.clj -A:test -Scommand "bb -cp {{classpath}} {{main-opts}}"
+Ran 3 tests containing 3 assertions.
+0 failures, 0 errors.
+```
+
+If you use `-Scommand` often, an alias can be helpful:
+
+``` shell
+$ alias babashka='deps.clj -Scommand "bb -cp {{classpath}}"'
+```
+
+Addition commands are passed along to the command:
+
+``` shell
+$ babashka -A:test -e "(require '[spartan.test :as t]) (t/deftest foo) (t/-main)"
+WARNING: no assertions were made in test user/foo
+
+Ran 1 tests containing 0 assertions.
+0 failures, 0 errors.
 ```
 
 This can also be used with [planck](https://github.com/planck-repl/planck):
 
 ``` shell
-$ deps.clj -Sdeps-file script-deps.edn -A:main -Scommand "planck --classpath {{classpath}} {{main-opts}}"
-Hello from script!
+$ alias plk2='deps.clj -Scommand "planck -c {{classpath}}"'
+$ plk2 -Sdeps '{:deps {medley {:mvn/version "1.2.0"}}}' -e "(require '[medley.core :refer [index-by]]) (index-by :id [{:id 1} {:id 2}])"
+{1 {:id 1}, 2 {:id 2}}
 ```
+
+### -Sdeps-file
+
+The  `-Sdeps-file` option may be used to load a different project file than `deps.edn`.
 
 ## License
 
