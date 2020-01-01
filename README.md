@@ -177,23 +177,23 @@ Ran 3 tests containing 3 assertions.
 If you use `-Scommand` often, an alias can be helpful:
 
 ``` shell
-$ alias babashka='deps.clj -Scommand "bb -cp {{classpath}}"'
+$ alias babashka='deps.clj -Scommand "bb -cp {{classpath}} {{main-opts}}"'
+$ babashka -A:test
+Ran 3 tests containing 3 assertions.
+0 failures, 0 errors.
 ```
 
 Addition commands are passed along to the command:
 
 ``` shell
-$ babashka -A:test -e "(require '[spartan.test :as t]) (t/deftest foo) (t/-main)"
-WARNING: no assertions were made in test user/foo
-
-Ran 1 tests containing 0 assertions.
-0 failures, 0 errors.
+$ babashka -e '(+ 1 2 3)'
+6
 ```
 
 This can also be used with [planck](https://github.com/planck-repl/planck):
 
 ``` shell
-$ alias plk2='deps.clj -Scommand "planck -c {{classpath}}"'
+$ alias plk2='deps.clj -Scommand "planck -c {{classpath}} {{main-opts}}"'
 $ plk2 -Sdeps '{:deps {medley {:mvn/version "1.2.0"}}}' -e "(require '[medley.core :refer [index-by]]) (index-by :id [{:id 1} {:id 2}])"
 {1 {:id 1}, 2 {:id 2}}
 ```
