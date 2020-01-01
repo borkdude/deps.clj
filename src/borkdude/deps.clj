@@ -445,7 +445,6 @@ function Get-StringHash($str) {
                     command (str/replace command "{{main-opts}}" (str main-cache-opts))
                     command (str/split command #"\s+")
                     command (into command (:args args))]
-                (prn "shell command" command)
                 (shell-command command))
               :else
               (let [jvm-cache-opts (when (.exists (io/file jvm-file))
