@@ -183,7 +183,7 @@ Ran 3 tests containing 3 assertions.
 0 failures, 0 errors.
 ```
 
-Addition commands are passed along to the command:
+Additional commands are passed along to the command:
 
 ``` shell
 $ babashka -e '(+ 1 2 3)'
