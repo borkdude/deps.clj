@@ -190,11 +190,13 @@ $ babashka -e '(+ 1 2 3)'
 6
 ```
 
-This can also be used with [planck](https://github.com/planck-repl/planck):
+This can also be used with [planck](https://github.com/planck-repl/planck) or
+[lumo](https://github.com/anmonteiro/lumo):
 
 ``` shell
-$ alias plk2='deps.clj -Scommand "planck -c {{classpath}} {{main-opts}}"'
-$ plk2 -Sdeps '{:deps {medley {:mvn/version "1.2.0"}}}' -e "(require '[medley.core :refer [index-by]]) (index-by :id [{:id 1} {:id 2}])"
+$ alias lm='deps.clj -Scommand "lumo -c {{classpath}} {{main-opts}}"'
+$ lm -Sdeps '{:deps {medley {:mvn/version "1.2.0"}}}' -K \
+  -e "(require '[medley.core :refer [index-by]]) (index-by :id [{:id 1} {:id 2}])"
 {1 {:id 1}, 2 {:id 2}}
 ```
 
