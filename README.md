@@ -177,7 +177,7 @@ Ran 3 tests containing 3 assertions.
 If you use `-Scommand` often, an alias can be helpful:
 
 ``` shell
-$ alias babashka='deps.clj -Scommand "rlwrap bb -cp {{classpath}} {{main-opts}}"'
+$ alias babashka='rlwrap deps.clj -Scommand "bb -cp {{classpath}} {{main-opts}}"'
 $ babashka -A:test
 Ran 3 tests containing 3 assertions.
 0 failures, 0 errors.
