@@ -177,7 +177,7 @@ Ran 3 tests containing 3 assertions.
 If you use `-Scommand` often, an alias can be helpful:
 
 ``` shell
-$ alias babashka='deps.clj -Scommand "bb -cp {{classpath}} {{main-opts}}"'
+$ alias babashka='deps.clj -Scommand "rlwrap bb -cp {{classpath}} {{main-opts}}"'
 $ babashka -A:test
 Ran 3 tests containing 3 assertions.
 0 failures, 0 errors.
@@ -190,7 +190,18 @@ $ babashka -e '(+ 1 2 3)'
 6
 ```
 
-This can also be used with [planck](https://github.com/planck-repl/planck) or
+By using `rlwrap` you'll get a better REPL experience:
+
+``` shell
+$ babashka --repl
+Babashka v0.0.57 REPL.
+Use :repl/quit or :repl/exit to quit the REPL.
+Clojure rocks, Bash reaches.
+
+user=>
+```
+
+This approach can also be used with [planck](https://github.com/planck-repl/planck) or
 [lumo](https://github.com/anmonteiro/lumo):
 
 ``` shell
