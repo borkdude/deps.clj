@@ -154,7 +154,7 @@ The `deps.clj` script adds the following non-standard options:
 
 ### -Scommand
 
-One of the use cases for `deps.clj` is invoking a different command than a JVM Clojure.
+One of the use cases for `deps.clj` is invoking a different command than `java`.
 
 Given this `deps.edn`:
 
