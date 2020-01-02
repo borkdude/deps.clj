@@ -12,7 +12,7 @@ command line tool for:
 - Evaluating Clojure expressions
 
 The `clojure` tool is written in bash. This is a port of that tool written in
-Clojure itself and comes in two flavors:
+Clojure itself. It comes in two flavors:
 
 - as a script: `deps.clj`
 - as an executable: `deps.exe`
