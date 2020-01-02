@@ -190,15 +190,10 @@ $ babashka -e '(+ 1 2 3)'
 6
 ```
 
-By using `rlwrap` you'll get a better REPL experience:
+Note that we included `rlwrap` for a better REPL experience. Of course you can create another alias without `rlwrap` for CI:
 
 ``` shell
-$ babashka --repl
-Babashka v0.0.57 REPL.
-Use :repl/quit or :repl/exit to quit the REPL.
-Clojure rocks, Bash reaches.
-
-user=>
+$ alias bbk='deps.clj -Scommand "bb -cp {{classpath}} {{main-opts}}"'
 ```
 
 This approach can also be used with [planck](https://github.com/planck-repl/planck) or
