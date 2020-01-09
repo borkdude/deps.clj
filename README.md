@@ -43,7 +43,7 @@ Reasons why I made this:
 
 - The port was done as proof of concept for
   [babashka](https://github.com/borkdude/babashka/). The entire bash script was
-  ported to Clojure succesfully and runs just as fast with `bb`.
+  ported to Clojure successfully and runs just as fast with `bb`.
 
 - This offers an arguably easier way to get going with `deps.edn` based projects
   in CI. Just download an installer script, execute it with bash or Powershell and you're set. Installer scripts are provided for linux, macOS and Windows.
