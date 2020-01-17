@@ -76,6 +76,8 @@ There are three ways of running:
 
 - as a compiled binary called `deps.exe` which is tailored to your OS
 - as a script file called `deps.clj` using [`bb`](https://github.com/borkdude/babashka/) or `clojure`
+- as a JVM library or uberjar (see [Github
+releases](https://github.com/borkdude/deps.clj/releases)).
 
 ### Binary
 
