@@ -7,7 +7,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def version "1.10.1.492")
+(def version "1.10.1.496")
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
       (slurp)
@@ -203,8 +203,8 @@ function Get-StringHash($str) {
   (if (windows?)
     (shell-command
      ["PowerShell" "-Command"
-      (format "Expand-Archive -LiteralPath %s -DestinationPath %s" file destination-dir)])
-    (shell-command ["unzip" file "-d" destination-dir])))
+      (format "Expand-Archive -LiteralPath %s -DestinationPath %s -Force" file destination-dir)])
+    (shell-command ["unzip" "-o" file "-d" destination-dir])))
 
 (defn clojure-tools-jar-download
   "Downloads clojure tools jar into deps-clj-config-dir."
