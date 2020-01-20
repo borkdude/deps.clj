@@ -1,0 +1,1 @@
+{:lint-as {spartan.test/deftest clojure.test/deftest}}
