@@ -36,6 +36,8 @@
          (System/exit exit-code))
        string-out))))
 
+(shell-command ["script/gen_script.clj"])
+
 (def version-file (io/file "resources" "DEPS_CLJ_VERSION"))
 (def released-version-file (io/file "resources" "DEPS_CLJ_RELEASED_VERSION"))
 

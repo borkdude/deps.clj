@@ -10,7 +10,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def version "1.10.1.496")
+(def version "1.10.1.502")
 (def deps-clj-version "0.0.7-SNAPSHOT")
 
 (defn shell-command
@@ -51,7 +51,8 @@
          (System/exit exit-code))
        string-out))))
 
-(def help-text (str/trim "
+(def help-text (str "Version: " version "
+
 Usage: clojure [dep-opt*] [init-opt*] [main-opt] [arg*]
        clj     [dep-opt*] [init-opt*] [main-opt] [arg*]
 
@@ -134,7 +135,8 @@ For more info, see:
 (defn describe [lines]
   (let [[first-line & lines] lines]
     (print "{") (describe-line first-line)
-    (doseq [line lines]
+    (doseq [line lines
+            :when line]
       (print "\n ") (describe-line line))
     (println "}")))
 
@@ -349,7 +351,7 @@ function Get-StringHash($str) {
         (when-not (.exists config-dir)
           (.mkdirs config-dir)))
       (let [config-deps-edn (io/file config-dir "deps.edn")]
-        (when (and (not (.exists config-deps-edn)) install-dir)
+        (when (and install-dir (not (.exists config-deps-edn)))
           (io/copy (io/file install-dir "example-deps.edn")
                    config-deps-edn)))
       ;; Determine user cache directory
@@ -365,10 +367,14 @@ function Get-StringHash($str) {
             config-project deps-edn
             config-paths
             (if (:repro args)
-              [(.getPath (io/file install-dir "deps.edn")) deps-edn]
-              [(.getPath (io/file install-dir "deps.edn"))
-               (.getPath (io/file config-dir "deps.edn"))
-               deps-edn])
+              (if install-dir [(.getPath (io/file install-dir "deps.edn")) deps-edn]
+                  [])
+              (if install-dir
+                [(.getPath (io/file install-dir "deps.edn"))
+                 (.getPath (io/file config-dir "deps.edn"))
+                 deps-edn]
+                [(.getPath (io/file config-dir "deps.edn"))
+                 deps-edn]))
             ;; Determine whether to use user or project cache
             cache-dir
             (if (.exists (io/file "deps.edn"))
@@ -396,7 +402,7 @@ function Get-StringHash($str) {
             _ (when (:verbose args)
                 (println "deps.clj version =" deps-clj-version)
                 (println "version          =" version)
-                (println "install_dir      =" install-dir)
+                (when install-dir (println "install_dir      =" install-dir))
                 (println "config_dir       =" config-dir)
                 (println "config_paths     =" (str/join " " config-paths))
                 (println "cache_dir        =" cache-dir)
@@ -465,10 +471,10 @@ function Get-StringHash($str) {
                          [:config-files (filterv #(.exists (io/file %)) config-paths)]
                          [:config-user config-user]
                          [:config-project config-project]
-                         [:install-dir install-dir]
+                         (when install-dir [:install-dir install-dir])
                          [:cache-dir cache-dir]
-                         [:force (str (:force args))]
-                         [:repro (str (:repro args))]
+                         [:force (boolean (:force args))]
+                         [:repro (boolean (:repro args))]
                          [:resolve-aliases (str (:resolve-aliases args))]
                          [:classpath-aliases (str (:claspath-aliases args))]
                          [:jvm-aliases (str (:jvm-aliases args))]
