@@ -7,7 +7,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def version "1.10.1.496")
+(def version "1.10.1.502")
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
       (slurp)
