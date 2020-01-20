@@ -51,7 +51,8 @@
          (System/exit exit-code))
        string-out))))
 
-(def help-text (str/trim "
+(def help-text (str "Version: " version "
+
 Usage: clojure [dep-opt*] [init-opt*] [main-opt] [arg*]
        clj     [dep-opt*] [init-opt*] [main-opt] [arg*]
 
