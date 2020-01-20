@@ -36,8 +36,6 @@
          (System/exit exit-code))
        string-out))))
 
-(shell-command ["script/gen_script.clj"])
-
 (def version-file (io/file "resources" "DEPS_CLJ_VERSION"))
 (def released-version-file (io/file "resources" "DEPS_CLJ_RELEASED_VERSION"))
 
@@ -47,6 +45,7 @@
                   patch (str/replace patch "-SNAPSHOT" "")
                   new-version (str/join "." [major minor patch])]
               (spit version-file new-version)
+              (shell-command ["script/gen_script.clj"])
               (shell-command ["git" "commit" "-a" "-m" (str "v" new-version)])
               (shell-command ["git" "diff" "HEAD^" "HEAD"]))
   "post-release" (do
@@ -57,6 +56,7 @@
                          patch (str (inc patch) "-SNAPSHOT")
                          new-version (str/join "." [major minor patch])]
                      (spit version-file new-version)
+                     (shell-command ["script/gen_script.clj"])
                      (shell-command ["git" "commit" "-a" "-m" "Version bump"])
                      (shell-command ["git" "diff" "HEAD^" "HEAD"])))
   (println "Expected: release | post-release."))
