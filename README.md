@@ -148,14 +148,18 @@ from [this](https://download.clojure.org/install/clojure-tools-1.10.1.492.zip)
 location. You can override the location of the jar with the `CLOJURE_TOOLS_CP`
 environment variable.
 
-## Non-standard options
+## Extra features
 
-The `deps.clj` script adds the following non-standard options:
+The `deps.clj` script adds the following features compared to the `clojure`
+tool:
 
 ```
  -Sdeps-file    Use this file instead of deps.edn
  -Scommand      A custom command that will be invoked. Substitutions: {{classpath}}, {{main-opts}}.
 ```
+
+It also is able to pick up [proxy information from environment
+variables](#proxy-environment-variables).
 
 ### -Scommand
 
@@ -214,6 +218,10 @@ $ lm -Sdeps '{:deps {medley {:mvn/version "1.2.0"}}}' -K \
 ### -Sdeps-file
 
 The  `-Sdeps-file` option may be used to load a different project file than `deps.edn`.
+
+### Proxy environment variables
+
+TODO
 
 ## License
 
