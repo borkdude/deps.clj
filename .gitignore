@@ -2,3 +2,4 @@
 /pom.xml
 /deps.exe
 /.cpcache
+/.clj-kondo/.cache

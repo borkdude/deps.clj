@@ -20,3 +20,7 @@
        (with-out-str
          (deps/-main "-Stree"))
        "org.clojure/clojure")))
+
+(deftest jvm-proxy-settings-test
+  ;; TODO:
+  #_(is (= "..." (deps/parse-proxy-info "..."))))

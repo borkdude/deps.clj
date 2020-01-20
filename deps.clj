@@ -218,6 +218,47 @@ function Get-StringHash($str) {
     (unzip dest (.getPath deps-clj-config-dir))
     (.delete dest)))
 
+(def ^:private authenticated-proxy-re #".+:.+@(.+):(\d+).*")
+(def ^:private unauthenticated-proxy-re #"(.+):(\d+).*")
+
+(defn parse-proxy-info
+  [s]
+  (when s
+    (let [p (cond
+              (clojure.string/starts-with? s "http://") (subs s 7)
+              (clojure.string/starts-with? s "https://") (subs s 8)
+              :else s)
+          auth-proxy-match (re-matches authenticated-proxy-re p)
+          unauth-proxy-match (re-matches unauthenticated-proxy-re p)
+          match->proxy-info (fn [m]
+                              {:host (nth m 1)
+                               :port (nth m 2)})]
+      (cond
+        auth-proxy-match
+        (binding [*out* *err*]
+          (println "WARNING: Proxy info is of authenticated type - discarding the user/pw as we do not support it!")
+          (match->proxy-info auth-proxy-match))
+
+        unauth-proxy-match
+        (match->proxy-info unauth-proxy-match)
+
+        :else
+        (binding [*out* *err*]
+          (println "WARNING: Can't parse proxy info - found:" s "- proceeding without using proxy!")
+          nil)))))
+
+(defn jvm-proxy-settings
+  []
+  (let [http-proxy  (parse-proxy-info (or (System/getenv "http_proxy")
+                                          (System/getenv "HTTP_PROXY")))
+        https-proxy (parse-proxy-info (or (System/getenv "https_proxy")
+                                          (System/getenv "HTTPS_PROXY")))]
+    (cond-> []
+      http-proxy (concat [(format "-Dhttp.proxyHost=%s" (:host http-proxy))
+                          (format "-Dhttp.proxyPort=%s" (:port http-proxy))])
+      https-proxy (concat [(format "-Dhttps.proxyHost=%s" (:host https-proxy))
+                           (format "-Dhttps.proxyPort=%s" (:port https-proxy))]))))
+
 (defn -main [& command-line-args]
   (let [windows? (windows?)
         args (loop [command-line-args (seq command-line-args)
@@ -285,13 +326,17 @@ function Get-StringHash($str) {
            downloaded-jar))
         deps-edn
         (or (:deps-file args)
-            "deps.edn")]
+            "deps.edn")
+        clj-main-cmd
+        (vec (concat [java-cmd]
+                     (jvm-proxy-settings)
+                     ["-Xms256m" "-classpath" tools-cp "clojure.main"]))]
     (when (:resolve-tags args)
       (let [f (io/file deps-edn)]
         (if (.exists f)
-          (do (shell-command [java-cmd "-Xms256m" "-classpath" tools-cp
-                              "clojure.main" "-m" "clojure.tools.deps.alpha.script.resolve-tags"
-                              (str "--deps-file=" deps-edn)])
+          (do (shell-command (into clj-main-cmd
+                                   ["-m" "clojure.tools.deps.alpha.script.resolve-tags"
+                                    (str "--deps-file=" deps-edn)]))
               (System/exit 0))
           (binding [*out* *err*]
             (println deps-edn "does not exist")
@@ -398,27 +443,26 @@ function Get-StringHash($str) {
             _ (when (and stale (not (:describe args)))
                 (when (:verbose args)
                   (println "Refreshing classpath"))
-                (shell-command (into [java-cmd "-Xms256m"
-                                      "-classpath" tools-cp
-                                      "clojure.main" "-m" "clojure.tools.deps.alpha.script.make-classpath2"
-                                      "--config-user" config-user
-                                      "--config-project" config-project
-                                      "--libs-file" (double-quote libs-file)
-                                      "--cp-file" (double-quote cp-file)
-                                      "--jvm-file" (double-quote jvm-file)
-                                      "--main-file" (double-quote main-file)]
-                                     tools-args)))
+                (shell-command (into clj-main-cmd
+                                     (concat
+                                      ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
+                                       "--config-user" config-user
+                                       "--config-project" config-project
+                                       "--libs-file" (double-quote libs-file)
+                                       "--cp-file" (double-quote cp-file)
+                                       "--jvm-file" (double-quote jvm-file)
+                                       "--main-file" (double-quote main-file)]
+                                      tools-args))))
             cp
             (cond (:describe args) nil
                   (not (str/blank? (:force-cp args))) (:force-cp args)
                   :else (slurp (io/file cp-file)))]
         (cond (:pom args)
-              (shell-command [java-cmd "-Xms256m"
-                              "-classpath" tools-cp
-                              "clojure.main" "-m" "clojure.tools.deps.alpha.script.generate-manifest2"
-                              "--config-user" config-user
-                              "--config-project" config-project
-                              "--gen=pom" (str/join " " tools-args)])
+              (shell-command (into clj-main-cmd
+                                   ["-m" "clojure.tools.deps.alpha.script.generate-manifest2"
+                                    "--config-user" config-user
+                                    "--config-project" config-project
+                                    "--gen=pom" (str/join " " tools-args)]))
               (:print-classpath args)
               (println cp)
               (:describe args)
@@ -437,10 +481,9 @@ function Get-StringHash($str) {
                          [:main-aliases (str (:main-aliases args))]
                          [:all-aliases (str (:all-aliases args))]])
               (:tree args)
-              (println (str/trim (shell-command [java-cmd "-Xms256m"
-                                                 "-classpath" tools-cp
-                                                 "clojure.main" "-m" "clojure.tools.deps.alpha.script.print-tree"
-                                                 "--libs-file" libs-file]
+              (println (str/trim (shell-command (into clj-main-cmd
+                                                      ["-m" "clojure.tools.deps.alpha.script.print-tree"
+                                                       "--libs-file" libs-file])
                                                 {:to-string? true})))
               (:trace args)
               (println "Writing trace.edn")
@@ -458,8 +501,14 @@ function Get-StringHash($str) {
                     main-cache-opts (when (.exists (io/file main-file))
                                       (slurp main-file))
                     main-cache-opts (when main-cache-opts (str/split main-cache-opts #"\s"))
-                    main-args (into (vector java-cmd jvm-cache-opts (:jvm-opts args)
-                                            (str "-Dclojure.libfile=" libs-file) "-classpath" cp "clojure.main") main-cache-opts)
+                    main-args (concat [java-cmd]
+                                      (jvm-proxy-settings)
+                                      [jvm-cache-opts
+                                       (:jvm-opts args)
+                                       (str "-Dclojure.libfile=" libs-file)
+                                       "-classpath" cp
+                                       "clojure.main"]
+                                      main-cache-opts)
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args args))]
                 (shell-command main-args)))))))
