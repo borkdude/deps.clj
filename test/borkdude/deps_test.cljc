@@ -1,6 +1,6 @@
 (ns borkdude.deps-test
   (:require
-   [spartan.test :as t :refer [deftest is]]
+   [clojure.test :as t :refer [deftest is]]
    [borkdude.deps :as deps]
    [clojure.string :as str]
    [clojure.edn :as edn]))

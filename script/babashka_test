@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-./deps.clj -A:test -Scommand "bb -cp {{classpath}} {{main-opts}}"
+bb -cp "src:test:resources" \
+   -e "(require '[clojure.test :as t] '[borkdude.deps-test])
+       (t/run-tests 'borkdude.deps-test)"
