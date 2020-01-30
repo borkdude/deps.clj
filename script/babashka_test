@@ -2,4 +2,5 @@
 
 bb -cp "src:test:resources" \
    -e "(require '[clojure.test :as t] '[borkdude.deps-test])
-       (t/run-tests 'borkdude.deps-test)"
+       (let [{:keys [:fail :error]} (t/run-tests 'borkdude.deps-test)]
+         (System/exit (+ fail error)))"
