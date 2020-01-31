@@ -266,7 +266,10 @@ location of your GraalVM installation, e.g.:
 $ export GRAALVM_HOME=/Users/borkdude/Downloads/graalvm-ce-java8-19.3.0/Contents/Home
 ```
 
-Then run the compile script:
+The script also assumes that you have
+[`lein`](https://github.com/technomancy/leiningen) installed.
+
+Run the compile script with:
 
 ```
 $ script/compile
