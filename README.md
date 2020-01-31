@@ -223,6 +223,64 @@ The  `-Sdeps-file` option may be used to load a different project file than `dep
 
 TODO
 
+### Developing deps.clj
+
+For running locally, you can invoke deps.clj with `clojure` (totally meta right?):
+
+```
+$ clojure -m borkdude.deps -Spath
+```
+
+or with `lein`:
+
+```
+$ lein run -m borkdude.deps -Spath
+```
+
+To run jvm tests:
+
+```
+$ script/jvm_test
+```
+
+To run with babashka after making changes to `src/borkdude/deps.clj`, you should run:
+
+```
+$ script/gen_script.clj
+```
+
+and then:
+
+```
+$ ./deps.clj -Spath
+# or
+$ bb deps.clj -Spath
+```
+
+To run as an executable, you'll first have to compile it. First,
+[download](https://github.com/graalvm/graalvm-ce-builds/releases) a GraalVM
+distro. The compile script assumes that you will have set `GRAALVM_HOME` to the
+location of your GraalVM installation, e.g.:
+
+``` shell
+$ export GRAALVM_HOME=/Users/borkdude/Downloads/graalvm-ce-java8-19.3.0/Contents/Home
+```
+
+Then run the compile script:
+
+```
+$ script/compile
+```
+
+If everything worked out, there will be a `deps.exe` binary in the root of the
+project.
+
+To run executable tests:
+
+```
+$ script/exe_test
+```
+
 ## License
 
 Copyright © 2019 Michiel Borkent
