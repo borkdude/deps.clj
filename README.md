@@ -223,7 +223,7 @@ The  `-Sdeps-file` option may be used to load a different project file than `dep
 
 TODO
 
-### Developing deps.clj
+## Developing deps.clj
 
 For running locally, you can invoke deps.clj with `clojure` (totally meta right?):
 
