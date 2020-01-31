@@ -7,7 +7,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def version "1.10.1.502")
+(def version "1.10.1.507")
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
       (slurp)
@@ -53,8 +53,8 @@
 
 (def help-text (str "Version: " version "
 
-Usage: clojure [dep-opt*] [init-opt*] [main-opt] [arg*]
-       clj     [dep-opt*] [init-opt*] [main-opt] [arg*]
+Usage: clojure [dep-opt*] [--] [init-opt*] [main-opt] [arg*]
+       clj     [dep-opt*] [--] [init-opt*] [main-opt] [arg*]
 
 The clojure script is a runner for Clojure. clj is a wrapper
 for interactive repl use. These scripts ultimately construct and
@@ -79,7 +79,9 @@ The dep-opts are used to build the java-opts and classpath:
  -Sresolve-tags Resolve git coordinate tags to shas and update deps.edn
  -Sverbose      Print important path info to console
  -Sdescribe     Print environment and command parsing info as data
+ -Sthreads      Set specific number of download threads
  -Strace        Write a trace.edn file that traces deps expansion
+ --             Stop parsing dep options and pass remaining arguments to clojure.main
 
 The following non-standard options are added:
 
@@ -127,7 +129,8 @@ For more info, see:
   {"-Sdeps" :deps-data
    "-Scp" :force-cp
    "-Sdeps-file" :deps-file
-   "-Scommand" :command})
+   "-Scommand" :command
+   "-Sthreads" :threads})
 
 (defn describe-line [[kw val]]
   (pr kw val ))
@@ -267,25 +270,27 @@ function Get-StringHash($str) {
                  (let [arg (first command-line-args)
                        bool-opt-keyword (get bool-opts->keyword arg)
                        string-opt-keyword (get string-opts->keyword arg)]
-                   (cond (some #(str/starts-with? arg %) ["-J" "-R" "-C" "-O" "-M" "-A"])
-                         (recur (next command-line-args)
-                                (update acc (get parse-opts->keyword (subs arg 0 2))
-                                        str (subs arg 2)))
-                         bool-opt-keyword (recur
-                                           (next command-line-args)
-                                           (assoc acc bool-opt-keyword true))
-                         string-opt-keyword (recur
-                                             (nnext command-line-args)
-                                             (assoc acc string-opt-keyword
-                                                    (second command-line-args)))
-                         (str/starts-with? arg "-S") (binding [*out* *err*]
-                                                       (println "Invalid option:" arg)
-                                                       (System/exit 1))
-                         (and
-                          (not (some acc [:main-aliases :all-aliases]))
-                          (or (= "-h" arg)
-                              (= "--help" arg))) (assoc acc :help true)
-                         :else (assoc acc :args command-line-args)))
+                   (cond
+                     (= "--" arg) (assoc acc :args (next command-line-args))
+                     (some #(str/starts-with? arg %) ["-J" "-R" "-C" "-O" "-M" "-A"])
+                     (recur (next command-line-args)
+                            (update acc (get parse-opts->keyword (subs arg 0 2))
+                                    str (subs arg 2)))
+                     bool-opt-keyword (recur
+                                       (next command-line-args)
+                                       (assoc acc bool-opt-keyword true))
+                     string-opt-keyword (recur
+                                         (nnext command-line-args)
+                                         (assoc acc string-opt-keyword
+                                                (second command-line-args)))
+                     (str/starts-with? arg "-S") (binding [*out* *err*]
+                                                   (println "Invalid option:" arg)
+                                                   (System/exit 1))
+                     (and
+                      (not (some acc [:main-aliases :all-aliases]))
+                      (or (= "-h" arg)
+                          (= "--help" arg))) (assoc acc :help true)
+                     :else (assoc acc :args command-line-args)))
                  acc))
         _ (when (:help args)
             (println help-text)
@@ -437,6 +442,8 @@ function Get-StringHash($str) {
                 (conj (str "-A" (:all-aliases args)))
                 (:force-cp args)
                 (conj "--skip-cp")
+                (:threads args)
+                (conj "--threads" (:threads args))
                 (:trace args)
                 (conj "--trace")))
             ;;  If stale, run make-classpath to refresh cached classpath
