@@ -11,7 +11,7 @@ command line tool for:
 - Running Clojure programs
 - Evaluating Clojure expressions
 
-The `clojure` CLI tool is written in bash. This is a port of that tool written in
+The `clojure` CLI is written in bash. This is a port of that tool written in
 Clojure itself. 
 
 Features:
