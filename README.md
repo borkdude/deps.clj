@@ -18,7 +18,7 @@ Features:
 
 - Available as executable compiled with [GraalVM](https://github.com/oracle/graal)
 - Run directly from source with [babashka](https://github.com/borkdude/babashka/) or the JVM
-- Similar startup as bash
+- Similar startup to bash
 - Easy installation on all three major platforms including Windows
 - Works in `cmd.exe` on Windows
 
