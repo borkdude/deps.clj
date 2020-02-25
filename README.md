@@ -12,7 +12,15 @@ command line tool for:
 - Evaluating Clojure expressions
 
 The `clojure` CLI tool is written in bash. This is a port of that tool written in
-Clojure itself. It is available as an executable or you can run it directly from source with [babashka](https://github.com/borkdude/babashka/) or the JVM.
+Clojure itself. 
+
+Features:
+
+- Available as executable compiled with [GraalVM](https://github.com/oracle/graal)
+- Run directly from source with [babashka](https://github.com/borkdude/babashka/) or the JVM
+- Similar startup as bash
+- Easy installation on all three major platforms including Windows
+- Works in `cmd.exe` on Windows
 
 ## Quickstart
 
