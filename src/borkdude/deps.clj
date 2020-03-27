@@ -2,7 +2,8 @@
   (:require
    [clojure.string :as str]
    [clojure.java.io :as io])
-  (:import [java.lang ProcessBuilder$Redirect])
+  (:import [java.lang ProcessBuilder$Redirect]
+           [java.net URL HttpURLConnection])
   (:gen-class))
 
 (set! *warn-on-reflection* true)
@@ -199,10 +200,13 @@ function Get-StringHash($str) {
     (System/getProperty "user.home")))
 
 (defn download [source dest]
-  (if (windows?)
-    (shell-command ["PowerShell" "-Command"
-                    (format "Invoke-WebRequest -Uri %s -Outfile %s" source dest)])
-    (shell-command ["curl" "-o" dest source])))
+  (let [source (URL. source)
+        dest (io/file dest)
+        conn ^HttpURLConnection (.openConnection ^URL source)]
+    (.setInstanceFollowRedirects conn true)
+    (.connect conn)
+    (with-open [is (.getInputStream conn)]
+      (io/copy is dest))))
 
 (defn unzip [file destination-dir]
   (if (windows?)
