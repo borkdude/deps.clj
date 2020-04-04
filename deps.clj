@@ -7,7 +7,8 @@
    [clojure.string :as str]
    [clojure.java.io :as io])
   (:import [java.lang ProcessBuilder$Redirect]
-           [java.net URL HttpURLConnection]))
+           [java.net URL HttpURLConnection]
+           [java.nio.file Files FileSystems CopyOption]))
 
 (set! *warn-on-reflection* true)
 
@@ -200,7 +201,6 @@ function Get-StringHash($str) {
     (System/getProperty "user.home")))
 
 (defn download [source dest]
-  (prn "download" source dest)
   (let [source (URL. source)
         dest (io/file dest)
         conn ^HttpURLConnection (.openConnection ^URL source)]
@@ -209,22 +209,26 @@ function Get-StringHash($str) {
     (with-open [is (.getInputStream conn)]
       (io/copy is dest))))
 
-(defn unzip [file destination-dir]
-  (if (windows?)
-    (shell-command
-     ["PowerShell" "-Command"
-      (format "Expand-Archive -LiteralPath %s -DestinationPath %s -Force" file destination-dir)])
-    (shell-command ["unzip" "-o" file "-d" destination-dir])))
+(def clojure-tools-jar (format "clojure-tools-%s.jar" version))
+
+(defn unzip [zip-file destination-dir]
+  (let [zip-file (io/file zip-file)
+        _ (.mkdirs (io/file destination-dir "ClojureTools"))
+        fs (FileSystems/newFileSystem (.toPath zip-file) nil)]
+    (doseq [f [clojure-tools-jar "example-deps.edn"]]
+      (let [file-in-zip (.getPath fs "ClojureTools" (into-array String [f]))]
+        (Files/copy file-in-zip (.toPath (io/file destination-dir "ClojureTools" f))
+                    ^{:tag "[Ljava.nio.file.CopyOption;"} (into-array CopyOption []))))))
 
 (defn clojure-tools-jar-download
   "Downloads clojure tools jar into deps-clj-config-dir."
   [^java.io.File deps-clj-config-dir]
-  (let [dest (io/file deps-clj-config-dir "tools.zip")]
+  (let [zip (io/file deps-clj-config-dir "tools.zip")]
     (.mkdirs deps-clj-config-dir)
     (download (format "https://download.clojure.org/install/clojure-tools-%s.zip" version)
-              dest)
-    (unzip dest (.getPath deps-clj-config-dir))
-    (.delete dest)))
+              zip)
+    (unzip zip (.getPath deps-clj-config-dir))
+    (.delete zip)))
 
 (def ^:private authenticated-proxy-re #".+:.+@(.+):(\d+).*")
 (def ^:private unauthenticated-proxy-re #"(.+):(\d+).*")
