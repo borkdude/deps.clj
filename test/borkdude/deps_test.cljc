@@ -22,5 +22,8 @@
        "org.clojure/clojure")))
 
 (deftest jvm-proxy-settings-test
-  ;; TODO:
-  #_(is (= "..." (deps/parse-proxy-info "..."))))
+  (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "http://aHost:1234")))
+  (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "http://user:pw@aHost:1234")))
+  (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "https://aHost:1234")))
+  (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "https://user:pw@aHost:1234")))
+  (is (nil? (deps/parse-proxy-info "http://aHost:abc"))))
