@@ -298,7 +298,9 @@ function Get-StringHash($str) {
             (println help-text)
             (System/exit 0))
         java-cmd
-        (let [java-cmd (which "java")]
+        (let [java-cmd (which (if (windows?)
+                                "java.exe"
+                                "java"))]
           (if (str/blank? java-cmd)
             (let [java-home (System/getenv "JAVA_HOME")]
               (if-not (str/blank? java-home)
