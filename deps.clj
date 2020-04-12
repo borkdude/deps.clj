@@ -184,9 +184,7 @@ function Get-StringHash($str) {
         (let [f (io/file p executable)]
           (if (and (.isFile f)
                    (.canExecute f))
-            (do
-              (prn (.getCanonicalPath f))
-              (.getCanonicalPath f))
+            (.getCanonicalPath f)
             (recur (rest paths))))))))
 
 (defn home-dir []
