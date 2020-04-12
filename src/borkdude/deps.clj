@@ -167,20 +167,14 @@ function Get-StringHash($str) {
     s))
 
 (defn cksum
-  "TODO: replace by native Java version instead of shelling out"
-  [s]
-  (if (windows?)
-    (-> (shell-command
-         ["PowerShell" "-Command" powershell-cksum
-          (format "Get-StringHash(\"%s\")" (double-quote s))]
-         {:to-string? true})
-        (str/replace "-" "")
-        (str/trim))
-    (-> (shell-command
-         ["cksum"] {:input s
-                    :to-string? true})
-        (str/split #" ")
-        first)))
+  [^String s]
+  (let [hashed (.digest (java.security.MessageDigest/getInstance "MD5")
+                        (.getBytes s))
+        sw (java.io.StringWriter.)]
+    (binding [*out* sw]
+      (doseq [byte hashed]
+        (print (format "%02X" byte))))
+    (str sw)))
 
 (defn where [s]
   (-> (shell-command
