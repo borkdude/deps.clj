@@ -176,17 +176,16 @@ function Get-StringHash($str) {
         (print (format "%02X" byte))))
     (str sw)))
 
-(defn where [s]
-  (-> (shell-command
-       (if (windows?)
-         ["where" s]
-         ["which" s])
-       {:to-string? true
-        :throw? false
-        :show-errors? false})
-      (str/split #"\r?\n")
-      first
-      str/trim))
+(defn which [executable]
+  (let [path (System/getenv "PATH")
+        paths (.split path (System/getProperty "path.separator"))]
+    (loop [paths paths]
+      (when-first [p paths]
+        (let [f (io/file p executable)]
+          (if (and (.isFile f)
+                   (.canExecute f))
+            (.getCanonicalPath f)
+            (recur (rest paths))))))))
 
 (defn home-dir []
   (if (windows?)
@@ -299,7 +298,7 @@ function Get-StringHash($str) {
             (println help-text)
             (System/exit 0))
         java-cmd
-        (let [java-cmd (where "java")]
+        (let [java-cmd (which "java")]
           (if (str/blank? java-cmd)
             (let [java-home (System/getenv "JAVA_HOME")]
               (if-not (str/blank? java-home)
@@ -311,7 +310,7 @@ function Get-StringHash($str) {
                 (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
             java-cmd))
         clojure-file
-        (some-> (let [res (where "clojure")]
+        (some-> (let [res (which "clojure")]
                   (when-not (str/blank? res)
                     res))
                 (io/file))
