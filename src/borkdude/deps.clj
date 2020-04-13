@@ -150,14 +150,6 @@ For more info, see:
       (str/lower-case)
       (str/includes? "windows")))
 
-(def powershell-cksum "
-function Get-StringHash($str) {
-  $md5 = new-Object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider
-  $utf8 = new-object -TypeName System.Text.UTF8Encoding
-  return [System.BitConverter]::ToString($md5.ComputeHash($utf8.GetBytes($str)))
-}
-")
-
 (defn double-quote
   "Double quotes shell arguments on Windows. On other platforms it just
   passes through the string."
