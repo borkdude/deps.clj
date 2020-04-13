@@ -309,7 +309,7 @@ function Get-StringHash($str) {
                     (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
                 (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
             java-cmd))
-        clojure-file (some-> (which "clojure") (io/file))
+        clojure-file (-> (which "clojure") (io/file))
         install-dir (when clojure-file
                       (with-open [reader (io/reader clojure-file)]
                         (let [lines (line-seq reader)]
