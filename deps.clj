@@ -150,14 +150,6 @@ For more info, see:
       (str/lower-case)
       (str/includes? "windows")))
 
-(def powershell-cksum "
-function Get-StringHash($str) {
-  $md5 = new-Object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider
-  $utf8 = new-object -TypeName System.Text.UTF8Encoding
-  return [System.BitConverter]::ToString($md5.ComputeHash($utf8.GetBytes($str)))
-}
-")
-
 (defn double-quote
   "Double quotes shell arguments on Windows. On other platforms it just
   passes through the string."
@@ -176,17 +168,16 @@ function Get-StringHash($str) {
         (print (format "%02X" byte))))
     (str sw)))
 
-(defn where [s]
-  (-> (shell-command
-       (if (windows?)
-         ["where" s]
-         ["which" s])
-       {:to-string? true
-        :throw? false
-        :show-errors? false})
-      (str/split #"\r?\n")
-      first
-      str/trim))
+(defn which [executable]
+  (let [path (System/getenv "PATH")
+        paths (.split path (System/getProperty "path.separator"))]
+    (loop [paths paths]
+      (when-first [p paths]
+        (let [f (io/file p executable)]
+          (if (and (.isFile f)
+                   (.canExecute f))
+            (.getCanonicalPath f)
+            (recur (rest paths))))))))
 
 (defn home-dir []
   (if (windows?)
@@ -299,7 +290,7 @@ function Get-StringHash($str) {
             (println help-text)
             (System/exit 0))
         java-cmd
-        (let [java-cmd (where "java")]
+        (let [java-cmd (which (if windows? "java.exe" "java"))]
           (if (str/blank? java-cmd)
             (let [java-home (System/getenv "JAVA_HOME")]
               (if-not (str/blank? java-home)
@@ -310,11 +301,7 @@ function Get-StringHash($str) {
                     (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
                 (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
             java-cmd))
-        clojure-file
-        (some-> (let [res (where "clojure")]
-                  (when-not (str/blank? res)
-                    res))
-                (io/file))
+        clojure-file (-> (which "clojure") (io/file))
         install-dir (when clojure-file
                       (with-open [reader (io/reader clojure-file)]
                         (let [lines (line-seq reader)]
