@@ -191,23 +191,26 @@ Ran 3 tests containing 3 assertions.
 If you use `-Scommand` often, an alias can be helpful:
 
 ``` shell
-$ alias babashka='rlwrap deps.clj -Scommand "bb -cp {{classpath}} {{main-opts}}"'
-$ babashka -A:test
+$ alias bbk='rlwrap deps.clj -Scommand "bb -cp {{classpath}} {{main-opts}}"'
+$ bbk -A:test
 Ran 3 tests containing 3 assertions.
 0 failures, 0 errors.
 ```
 
+The `bbk` alias is similar to the `clj` alias in that it adds `rlwrap`.
+
 Additional args are passed along to the command:
 
 ``` shell
-$ babashka -e '(+ 1 2 3)'
+$ bbk -e '(+ 1 2 3)'
 6
 ```
 
-Note that we included `rlwrap` for a better REPL experience. Of course you can create another alias without `rlwrap` for CI:
+Of course you can create another alias without `rlwrap` for CI, similar to the
+`clojure` command:
 
 ``` shell
-$ alias bbk='deps.clj -Scommand "bb -cp {{classpath}} {{main-opts}}"'
+$ alias babashka='deps.clj -Scommand "bb -cp {{classpath}} {{main-opts}}"'
 ```
 
 This approach can also be used with [planck](https://github.com/planck-repl/planck) or
