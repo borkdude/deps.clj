@@ -26,7 +26,6 @@ call %GRAALVM_HOME%\bin\native-image.cmd ^
   "-H:Log=registerResource:" ^
   "-H:EnableURLProtocols=http,https" ^
   "--enable-all-security-services" ^
-  "-H:+JNI" ^
   "--no-fallback" ^
   "--verbose" ^
   "-J-Xmx3g"

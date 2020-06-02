@@ -28,7 +28,6 @@ lein do clean, uberjar
   --no-fallback \
   "-H:EnableURLProtocols=http,https" \
   "--enable-all-security-services" \
-  "-H:+JNI" \
   --no-server \
   "-J-Xmx3g"
 
