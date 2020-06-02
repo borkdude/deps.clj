@@ -13,7 +13,7 @@ DEPS_CLJ_VERSION=$(cat resources/DEPS_CLJ_VERSION)
 
 lein deps.clj -Spath -Sdeps '{:deps {borkdude/deps.clj {:mvn/version "0.0.1"}}}'
 
-lein do clean, uberjar
+lein with-profiles +native-image do clean, uberjar
 
 "$GRAALVM_HOME/bin/native-image" \
   -jar target/deps.clj-$DEPS_CLJ_VERSION-standalone.jar \

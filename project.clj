@@ -10,11 +10,13 @@
   :source-paths ["src"]
   :resource-paths ["resources"]
   :dependencies [[org.clojure/clojure "1.10.1"]]
-  :profiles {:uberjar {:global-vars {*assert* false}
+  :profiles {:uberjar {:dependencies [[]]
+                       :global-vars {*assert* false}
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"
                                   "-Dclojure.spec.skip-macros=true"]
                        :main borkdude.deps
-                       :aot :all}}
+                       :aot :all}
+             :native-image {:dependencies [[borkdude/clj-reflector-graal-java11-fix "0.0.1-graalvm-20.1.0"]]}}
   :aliases {"deps.clj" ["run" "-m" "borkdude.deps"]}
   :deploy-repositories [["clojars" {:url "https://clojars.org/repo"
                                     :username :env/clojars_user
