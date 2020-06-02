@@ -12,7 +12,7 @@ command line tool for:
 - Evaluating Clojure expressions
 
 The `clojure` CLI is written in bash. This is a port of that tool written in
-Clojure itself. 
+Clojure itself.
 
 Features:
 
@@ -275,10 +275,10 @@ $ bb deps.clj -Spath
 To run as an executable, you'll first have to compile it. First,
 [download](https://github.com/graalvm/graalvm-ce-builds/releases) a GraalVM
 distro. The compile script assumes that you will have set `GRAALVM_HOME` to the
-location of your GraalVM installation, e.g.:
+location of your GraalVM installation. Currently this project uses `java-11-20.1.0`.
 
 ``` shell
-$ export GRAALVM_HOME=/Users/borkdude/Downloads/graalvm-ce-java8-19.3.0/Contents/Home
+$ export GRAALVM_HOME=/Users/borkdude/Downloads/graalvm-ce-java11-20.1.0/Contents/Home
 ```
 
 The script also assumes that you have
@@ -301,7 +301,7 @@ $ script/exe_test
 
 ## License
 
-Copyright © 2019 Michiel Borkent
+Copyright © 2019-2020 Michiel Borkent
 
 Distributed under the EPL License. See LICENSE.
 
