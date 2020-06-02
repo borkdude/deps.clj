@@ -16,6 +16,8 @@ echo Building deps.exe %DEPS_CLJ_VERSION%
 call lein do clean, uberjar
 if %errorlevel% neq 0 exit /b %errorlevel%
 
+call %GRAALVM_HOME%\bin\gu.cmd install native-image
+
 call %GRAALVM_HOME%\bin\native-image.cmd ^
   "-jar" "target/deps.clj-%DEPS_CLJ_VERSION%-standalone.jar" ^
   "-H:Name=deps" ^
