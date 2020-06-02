@@ -10,8 +10,7 @@
   :source-paths ["src"]
   :resource-paths ["resources"]
   :dependencies [[org.clojure/clojure "1.10.1"]]
-  :profiles {:uberjar {:dependencies [[]]
-                       :global-vars {*assert* false}
+  :profiles {:uberjar {:global-vars {*assert* false}
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"
                                   "-Dclojure.spec.skip-macros=true"]
                        :main borkdude.deps
