@@ -345,8 +345,11 @@ For more info, see:
       (let [config-dir (io/file config-dir)]
         (when-not (.exists config-dir)
           (.mkdirs config-dir)))
-      (let [config-deps-edn (io/file config-dir "deps.edn")]
-        (when (and install-dir (not (.exists config-deps-edn)))
+      (let [config-deps-edn (io/file config-dir "deps.edn")
+            example-deps-edn (io/file install-dir "example-deps.edn")]
+        (when (and install-dir
+                   (not (.exists config-deps-edn))
+                   (.exists example-deps-edn))
           (io/copy (io/file install-dir "example-deps.edn")
                    config-deps-edn)))
       ;; Determine user cache directory
