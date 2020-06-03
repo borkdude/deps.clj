@@ -350,8 +350,7 @@ For more info, see:
         (when (and install-dir
                    (not (.exists config-deps-edn))
                    (.exists example-deps-edn))
-          (io/copy (io/file install-dir "example-deps.edn")
-                   config-deps-edn)))
+          (io/copy example-deps-edn config-deps-edn)))
       ;; Determine user cache directory
       (let [user-cache-dir
             (or (System/getenv "CLJ_CACHE")
