@@ -32,7 +32,7 @@ $download_url = "https://github.com/borkdude/deps.clj/releases/download/v$latest
 $tmp_zip_file = "$tmp_dir\deps.clj.zip"
 
 Write-Output "Downloading..."
-Invoke-WebRequest -Uri $download_url -OutFile "$tmp_zip_file" 
+(New-Object System.Net.WebClient).DownloadFile($download_url,"$tmp_zip_file")
 Write-Output 'Extracting...'
 Expand-Archive -LiteralPath "$tmp_zip_file" -DestinationPath "$tmp_dir" -Force
 
