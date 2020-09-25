@@ -1,7 +1,7 @@
 (ns borkdude.deps
   (:require
-   [clojure.string :as str]
-   [clojure.java.io :as io])
+   [clojure.java.io :as io]
+   [clojure.string :as str])
   (:import [java.lang ProcessBuilder$Redirect]
            [java.net URL HttpURLConnection]
            [java.nio.file Files FileSystems CopyOption])
@@ -125,7 +125,8 @@ For more info, see:
    "-Srepro" :repro
    "-Stree" :tree
    "-Spom" :pom
-   "-Sresolve-tags" :resolve-tags})
+   "-Sresolve-tags" :resolve-tags
+   "-P" :prep})
 
 (def string-opts->keyword
   {"-Sdeps" :deps-data
@@ -286,6 +287,8 @@ For more info, see:
                           (= "--help" arg))) (assoc acc :help true)
                      :else (assoc acc :args command-line-args)))
                  acc))
+        _ (prn args)
+        _ (System/exit 0)
         _ (when (:help args)
             (println help-text)
             (System/exit 0))
