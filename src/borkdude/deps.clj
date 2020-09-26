@@ -54,38 +54,57 @@
        string-out))))
 
 (def help-text (str "Version: " version "
+Version: 1.10.1.697
 
-Usage: clojure [dep-opt*] [--] [init-opt*] [main-opt] [arg*]
-       clj     [dep-opt*] [--] [init-opt*] [main-opt] [arg*]
+You use the Clojure tools ('clj' or 'clojure') to run Clojure programs
+on the JVM, e.g. to start a REPL or invoke a specific function with data.
+The Clojure tools will configure the JVM process by defining a classpath
+(of desired libraries), an execution environment (JVM options) and
+specifying a main class and args.
 
-The clojure script is a runner for Clojure. clj is a wrapper
-for interactive repl use. These scripts ultimately construct and
-invoke a command-line of the form:
+Using a deps.edn file (or files), you tell Clojure where your source code
+resides and what libraries you need. Clojure will then calculate the full
+set of required libraries and a classpath, caching expensive parts of this
+process for better performance.
 
-java [java-opt*] -cp classpath clojure.main [init-opt*] [main-opt] [arg*]
+The internal steps of the Clojure tools, as well as the Clojure functions
+you intend to run, are parameterized by data structures, often maps. Shell
+command lines are not optimized for passing nested data, so instead you
+will put the data structures in your deps.edn file and refer to them on the
+command line via 'aliases' - keywords that name data structures.
 
-The dep-opts are used to build the java-opts and classpath:
+'clj' and 'clojure' differ in that 'clj' has extra support for use as a REPL
+in a terminal, and should be preferred unless you don't want that support,
+then use 'clojure'.
+
+Usage:
+  Start a REPL   clj     [clj-opt*] [-A:aliases] [init-opt*]
+  Exec function  clojure [clj-opt*] -X[:aliases] [a/fn] [kpath v]*
+  Run main       clojure [clj-opt*] -M[:aliases] [init-opt*] [main-opt] [arg*]
+  Prepare        clojure [clj-opt*] -P [other exec opts]
+
+exec-opts:
+ -A:aliases     Use aliases to modify classpath
+ -X[:aliases]   Use aliases to modify classpath or supply exec fn/args
+ -M[:aliases]   Use aliases to modify classpath or supply main opts
+ -P             Prepare deps - download libs, cache classpath, but don't exec
+
+clj-opts:
  -Jopt          Pass opt through in java_opts, ex: -J-Xmx512m
- -Oalias...     Concatenated jvm option aliases, ex: -O:mem
- -Ralias...     Concatenated resolve-deps aliases, ex: -R:bench:1.9
- -Calias...     Concatenated make-classpath aliases, ex: -C:dev
- -Malias...     Concatenated main option aliases, ex: -M:test
- -Aalias...     Concatenated aliases of any kind, ex: -A:dev:mem
  -Sdeps EDN     Deps data to use as the last deps file to be merged
  -Spath         Compute classpath and echo to stdout only
+ -Spom          Generate (or update) pom.xml with deps and paths
+ -Stree         Print dependency tree
  -Scp CP        Do NOT compute or cache classpath, use this one instead
  -Srepro        Ignore the ~/.clojure/deps.edn config file
  -Sforce        Force recomputation of the classpath (don't use the cache)
- -Spom          Generate (or update existing) pom.xml with deps and paths
- -Stree         Print dependency tree
- -Sresolve-tags Resolve git coordinate tags to shas and update deps.edn
  -Sverbose      Print important path info to console
  -Sdescribe     Print environment and command parsing info as data
  -Sthreads      Set specific number of download threads
  -Strace        Write a trace.edn file that traces deps expansion
  --             Stop parsing dep options and pass remaining arguments to clojure.main
 
-The following non-standard options are added:
+The following non-standard options are available only in deps.clj:
 
  -Sdeps-file    Use this file instead of deps.edn
  -Scommand      A custom command that will be invoked. Substitutions: {{classpath}}, {{main-opts}}.
@@ -93,8 +112,7 @@ The following non-standard options are added:
 init-opt:
  -i, --init path     Load a file or resource
  -e, --eval string   Eval exprs in string; print non-nil values
- --report target     Report uncaught exception to \"file\" (default), \"stderr\", or \"none\",
-                     overrides System property clojure.main.report
+ --report target     Report uncaught exception to \"file\" (default), \"stderr\", or \"none\"
 
 main-opt:
  -m, --main ns-name  Call the -main function from namespace w/args
@@ -103,36 +121,13 @@ main-opt:
  -                   Run a script from standard input
  -h, -?, --help      Print this help message and exit
 
+Programs provided by :deps alias:
+ -X:deps mvn-install       Install a maven jar to the local repository cache
+ -X:deps git-resolve-tags  Resolve git coord tags to shas and update deps.edn
+
 For more info, see:
  https://clojure.org/guides/deps_and_cli
- https://clojure.org/reference/repl_and_main
-"))
-
-(def parse-opts->keyword
-  {"-J" :jvm-opts
-   "-R" :resolve-aliases
-   "-C" :classpath-aliases
-   "-M" :main-aliases
-   "-A" :repl-aliases
-   })
-
-(def bool-opts->keyword
-  {"-Spath" :print-classpath
-   "-Sverbose" :verbose
-   "-Strace" :trace
-   "-Sdescribe" :describe
-   "-Sforce" :force
-   "-Srepro" :repro
-   "-Stree" :tree
-   "-Spom" :pom
-   "-P" :prep})
-
-(def string-opts->keyword
-  {"-Sdeps" :deps-data
-   "-Scp" :force-cp
-   "-Sdeps-file" :deps-file
-   "-Scommand" :command
-   "-Sthreads" :threads})
+ https://clojure.org/reference/repl_and_main"))
 
 (defn describe-line [[kw val]]
   (pr kw val ))
@@ -260,6 +255,32 @@ For more info, see:
   (binding [*out* *err*]
     (apply println strs)))
 
+(def parse-opts->keyword
+  {"-J" :jvm-opts
+   "-R" :resolve-aliases
+   "-C" :classpath-aliases
+   "-M" :main-aliases
+   "-A" :repl-aliases
+   })
+
+(def bool-opts->keyword
+  {"-Spath" :print-classpath
+   "-Sverbose" :verbose
+   "-Strace" :trace
+   "-Sdescribe" :describe
+   "-Sforce" :force
+   "-Srepro" :repro
+   "-Stree" :tree
+   "-Spom" :pom
+   "-P" :prep})
+
+(def string-opts->keyword
+  {"-Sdeps" :deps-data
+   "-Scp" :force-cp
+   "-Sdeps-file" :deps-file
+   "-Scommand" :command
+   "-Sthreads" :threads})
+
 (defn -main [& command-line-args]
   (let [windows? (windows?)
         args (loop [command-line-args (seq command-line-args)
@@ -280,6 +301,7 @@ For more info, see:
                             :mode :exec
                             :exec-aliases (subs arg 2)
                             :args (next command-line-args))
+                     ;; deprecations
                      (some #(str/starts-with? arg %) ["-R" "-C"])
                      (do (warn arg "is deprecated, use -A with repl, -M for main, or -X for exec")
                          (recur (next command-line-args)
@@ -288,6 +310,10 @@ For more info, see:
                      (some #(str/starts-with? arg %) ["-O" "-T"])
                      (do (warn arg "is no longer supported, use -A with repl, -M for main, or -X for exec")
                          (System/exit 1))
+                     (= "-Sresolve-tags" arg)
+                     (do (warn "Option changed, use: clj -X:deps git-resolve-tags")
+                         (System/exit 1))
+                     ;; end deprecations
                      (some #(str/starts-with? arg %) ["-J" "-C" "-O" "-A"])
                      (recur (next command-line-args)
                             (update acc (get parse-opts->keyword (subs arg 0 2))
@@ -308,7 +334,6 @@ For more info, see:
                      :else (assoc acc :args command-line-args)))
                  acc))
         _ (prn args)
-        _ (System/exit 0)
         _ (when (:help args)
             (println help-text)
             (System/exit 0))
@@ -348,137 +373,131 @@ For more info, see:
         clj-main-cmd
         (vec (concat [java-cmd]
                      (jvm-proxy-settings)
-                     ["-Xms256m" "-classpath" tools-cp "clojure.main"]))]
-    (when (:resolve-tags args)
-      (let [f (io/file deps-edn)]
-        (if (.exists f)
-          (do (shell-command (into clj-main-cmd
-                                   ["-m" "clojure.tools.deps.alpha.script.resolve-tags"
-                                    (str "--deps-file=" deps-edn)]))
-              (System/exit 0))
-          (binding [*out* *err*]
-            (println deps-edn "does not exist")
-            (System/exit 1)))))
-    (let [config-dir
-          (or (System/getenv "CLJ_CONFIG")
-              (when-let [xdg-config-home (System/getenv "XDG_CONFIG_HOME")]
+                     ["-Xms256m" "-classpath" tools-cp "clojure.main"]))
+        config-dir
+        (or (System/getenv "CLJ_CONFIG")
+            (when-let [xdg-config-home (System/getenv "XDG_CONFIG_HOME")]
+              (.getPath (io/file xdg-config-home "clojure")))
+            (.getPath (io/file (home-dir) ".clojure")))]
+    ;; If user config directory does not exist, create it
+    (let [config-dir (io/file config-dir)]
+      (when-not (.exists config-dir)
+        (.mkdirs config-dir)))
+    (let [config-deps-edn (io/file config-dir "deps.edn")
+          example-deps-edn (io/file install-dir "example-deps.edn")]
+      (when (and install-dir
+                 (not (.exists config-deps-edn))
+                 (.exists example-deps-edn))
+        (io/copy example-deps-edn config-deps-edn)))
+    ;; Determine user cache directory
+    (let [user-cache-dir
+          (or (System/getenv "CLJ_CACHE")
+              (when-let [xdg-config-home (System/getenv "XDG_CACHE_HOME")]
                 (.getPath (io/file xdg-config-home "clojure")))
-              (.getPath (io/file (home-dir) ".clojure")))]
-      ;; If user config directory does not exist, create it
-      (let [config-dir (io/file config-dir)]
-        (when-not (.exists config-dir)
-          (.mkdirs config-dir)))
-      (let [config-deps-edn (io/file config-dir "deps.edn")
-            example-deps-edn (io/file install-dir "example-deps.edn")]
-        (when (and install-dir
-                   (not (.exists config-deps-edn))
-                   (.exists example-deps-edn))
-          (io/copy example-deps-edn config-deps-edn)))
-      ;; Determine user cache directory
-      (let [user-cache-dir
-            (or (System/getenv "CLJ_CACHE")
-                (when-let [xdg-config-home (System/getenv "XDG_CACHE_HOME")]
-                  (.getPath (io/file xdg-config-home "clojure")))
-                (.getPath (io/file config-dir ".cpcache")))
-            ;; Chain deps.edn in config paths. repro=skip config dir
-            config-user
-            (when-not (:repro args)
-              (.getPath (io/file config-dir "deps.edn")))
-            config-project deps-edn
-            config-paths
-            (if (:repro args)
-              (if install-dir [(.getPath (io/file install-dir "deps.edn")) deps-edn]
-                  [])
-              (if install-dir
-                [(.getPath (io/file install-dir "deps.edn"))
-                 (.getPath (io/file config-dir "deps.edn"))
-                 deps-edn]
-                [(.getPath (io/file config-dir "deps.edn"))
-                 deps-edn]))
-            ;; Determine whether to use user or project cache
-            cache-dir
-            (if (.exists (io/file "deps.edn"))
-              ".cpcache"
-              user-cache-dir)
-            ;; Construct location of cached classpath file
-            val*
-            (str/join "|"
-                      (concat [(:resolve-aliases args)
-                               (:classpath-aliases args)
-                               (:all-aliases args)
-                               (:jvm-aliases args)
-                               (:main-aliases args)
-                               (:deps-data args)]
-                              (map (fn [config-path]
-                                     (if (.exists (io/file config-path))
-                                       config-path
-                                       "NIL"))
-                                   config-paths)))
-            ck (cksum val*)
-            libs-file (.getPath (io/file cache-dir (str ck ".libs")))
-            cp-file (.getPath (io/file cache-dir (str ck ".cp")))
-            jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
-            main-file (.getPath (io/file cache-dir (str ck ".main")))
-            _ (when (:verbose args)
-                (println "deps.clj version =" deps-clj-version)
-                (println "version          =" version)
-                (when install-dir (println "install_dir      =" install-dir))
-                (println "config_dir       =" config-dir)
-                (println "config_paths     =" (str/join " " config-paths))
-                (println "cache_dir        =" cache-dir)
-                (println "cp_file          =" cp-file)
-                (println))
-            stale
-            (or (:force args)
-                (:trace args)
-                (not (.exists (io/file cp-file)))
-                (let [cp-file (io/file cp-file)]
-                  (some (fn [config-path]
-                          (let [f (io/file config-path)]
-                            (when (.exists f)
-                              (> (.lastModified f)
-                                 (.lastModified cp-file))))) config-paths)))
-            tools-args
-            (when (or stale (:pom args))
-              (cond-> []
-                (not (str/blank? (:deps-data args)))
-                (conj "--config-data" (if windows?
-                                        (pr-str (:deps-data args))
-                                        (:deps-data args)))
-                (:resolve-aliases args)
-                (conj (str "-R" (:resolve-aliases args)))
-                (:classpath-aliases args)
-                (conj (str "-C" (:classpath-aliases args)))
-                (:jvm-aliases args)
-                (conj (str "-J" (:jvm-aliases args)))
-                (:main-aliases args)
-                (conj (str "-M" (:main-aliases args)))
-                (:all-aliases args)
-                (conj (str "-A" (:all-aliases args)))
-                (:force-cp args)
-                (conj "--skip-cp")
-                (:threads args)
-                (conj "--threads" (:threads args))
-                (:trace args)
-                (conj "--trace")))
-            ;;  If stale, run make-classpath to refresh cached classpath
-            _ (when (and stale (not (:describe args)))
-                (when (:verbose args)
-                  (println "Refreshing classpath"))
-                (shell-command (into clj-main-cmd
-                                     (concat
-                                      ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
-                                       "--config-user" config-user
-                                       "--config-project" config-project
-                                       "--libs-file" (double-quote libs-file)
-                                       "--cp-file" (double-quote cp-file)
-                                       "--jvm-file" (double-quote jvm-file)
-                                       "--main-file" (double-quote main-file)]
-                                      tools-args))))
-            cp
-            (cond (:describe args) nil
-                  (not (str/blank? (:force-cp args))) (:force-cp args)
-                  :else (slurp (io/file cp-file)))]
+              (.getPath (io/file config-dir ".cpcache")))
+          ;; Chain deps.edn in config paths. repro=skip config dir
+          config-user
+          (when-not (:repro args)
+            (.getPath (io/file config-dir "deps.edn")))
+          config-project deps-edn
+          config-paths
+          (if (:repro args)
+            (if install-dir [(.getPath (io/file install-dir "deps.edn")) deps-edn]
+                [])
+            (if install-dir
+              [(.getPath (io/file install-dir "deps.edn"))
+               (.getPath (io/file config-dir "deps.edn"))
+               deps-edn]
+              [(.getPath (io/file config-dir "deps.edn"))
+               deps-edn]))
+          ;; Determine whether to use user or project cache
+          cache-dir
+          (if (.exists (io/file "deps.edn"))
+            ".cpcache"
+            user-cache-dir)
+          ;; Construct location of cached classpath file
+          val*
+          (str/join "|"
+                    (concat [(:resolve-aliases args)
+                             (:classpath-aliases args)
+                             (:repl-aliases args)
+                             (:exec-aliases args)
+                             (:main-aliases args)
+                             (:deps-data args)]
+                            (map (fn [config-path]
+                                   (if (.exists (io/file config-path))
+                                     config-path
+                                     "NIL"))
+                                 config-paths)))
+          ck (cksum val*)
+          libs-file (.getPath (io/file cache-dir (str ck ".libs")))
+          cp-file (.getPath (io/file cache-dir (str ck ".cp")))
+          jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
+          main-file (.getPath (io/file cache-dir (str ck ".main")))
+          basis-file (.getPath (io/file cache-dir (str ck ".basis")))
+          _ (when (:verbose args)
+              (println "deps.clj version =" deps-clj-version)
+              (println "version          =" version)
+              (when install-dir (println "install_dir      =" install-dir))
+              (println "config_dir       =" config-dir)
+              (println "config_paths     =" (str/join " " config-paths))
+              (println "cache_dir        =" cache-dir)
+              (println "cp_file          =" cp-file)
+              (println))
+          stale
+          (or (:force args)
+              (:trace args)
+              (:prep args)
+              (not (.exists (io/file cp-file)))
+              (let [cp-file (io/file cp-file)]
+                (some (fn [config-path]
+                        (let [f (io/file config-path)]
+                          (when (.exists f)
+                            (> (.lastModified f)
+                               (.lastModified cp-file))))) config-paths)))
+          tools-args
+          (when (or stale (:pom args))
+            (cond-> []
+              (not (str/blank? (:deps-data args)))
+              (conj "--config-data" (if windows?
+                                      (pr-str (:deps-data args))
+                                      (:deps-data args)))
+              (:resolve-aliases args)
+              (conj (str "-R" (:resolve-aliases args)))
+              (:classpath-aliases args)
+              (conj (str "-C" (:classpath-aliases args)))
+              (:main-aliases args)
+              (conj (str "-M" (:main-aliases args)))
+              (:repl-aliases args)
+              (conj (str "-A" (:repl-aliases args)))
+              (:exec-aliases args)
+              (conj (str "-X" (:exec-aliases args)))
+              (:force-cp args)
+              (conj "--skip-cp")
+              (:threads args)
+              (conj "--threads" (:threads args))
+              (:trace args)
+              (conj "--trace")))]
+      ;;  If stale, run make-classpath to refresh cached classpath
+      (when (and stale (not (:describe args)))
+        (when (:verbose args)
+          (warn "Refreshing classpath"))
+        (shell-command (into clj-main-cmd
+                             (concat
+                              ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
+                               "--config-user" config-user
+                               "--config-project" config-project
+                               "--basis-file" basis-file
+                               "--libs-file" (double-quote libs-file)
+                               "--cp-file" (double-quote cp-file)
+                               "--jvm-file" (double-quote jvm-file)
+                               "--main-file" (double-quote main-file)]
+                              tools-args))))
+      (when (:prep args)
+        (System/exit 0))
+      (let [cp (cond (:describe args) nil
+                     (not (str/blank? (:force-cp args))) (:force-cp args)
+                     :else (slurp (io/file cp-file)))]
         (cond (:pom args)
               (shell-command (into clj-main-cmd
                                    ["-m" "clojure.tools.deps.alpha.script.generate-manifest2"
@@ -497,9 +516,6 @@ For more info, see:
                          [:cache-dir cache-dir]
                          [:force (boolean (:force args))]
                          [:repro (boolean (:repro args))]
-                         [:resolve-aliases (str (:resolve-aliases args))]
-                         [:classpath-aliases (str (:claspath-aliases args))]
-                         [:jvm-aliases (str (:jvm-aliases args))]
                          [:main-aliases (str (:main-aliases args))]
                          [:all-aliases (str (:all-aliases args))]])
               (:tree args)
@@ -508,7 +524,7 @@ For more info, see:
                                                        "--libs-file" libs-file])
                                                 {:to-string? true})))
               (:trace args)
-              (println "Writing trace.edn")
+              (warn "Wrote trace.edn")
               (:command args)
               (let [command (str/replace (:command args) "{{classpath}}" (str cp))
                     main-cache-opts (when (.exists (io/file main-file))
