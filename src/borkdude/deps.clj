@@ -8,6 +8,7 @@
   (:gen-class))
 
 (set! *warn-on-reflection* true)
+(def path-separator (System/getProperty "path.separator"))
 
 (def version "1.10.1.697")
 (def deps-clj-version
@@ -165,7 +166,7 @@ For more info, see:
 
 (defn which [executable]
   (let [path (System/getenv "PATH")
-        paths (.split path (System/getProperty "path.separator"))]
+        paths (.split path path-separator)]
     (loop [paths paths]
       (when-first [p paths]
         (let [f (io/file p executable)]
@@ -557,7 +558,7 @@ For more info, see:
                                           (slurp main-file))
                                         (str/split #"\s")))
                     cp (if exec?
-                         (str cp ":" exec-cp)
+                         (str cp path-separator exec-cp)
                          cp)
                     main-args (concat [java-cmd]
                                       (jvm-proxy-settings)
