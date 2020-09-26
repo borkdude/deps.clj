@@ -360,7 +360,8 @@ For more info, see:
         tools-dir (or (System/getenv "CLOJURE_TOOLS_DIR") ;; TODO document
                       (.getPath (io/file (home-dir)
                                          ".deps.clj"
-                                         version)))
+                                         version
+                                         "ClojureTools")))
         tools-jar (io/file tools-dir
                            (format "clojure-tools-%s.jar" version))
         exec-jar (io/file tools-dir "exec.jar")
