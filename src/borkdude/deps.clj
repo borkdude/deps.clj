@@ -112,9 +112,9 @@ For more info, see:
   {"-J" :jvm-opts
    "-R" :resolve-aliases
    "-C" :classpath-aliases
-   "-O" :jvm-aliases
    "-M" :main-aliases
-   "-A" :all-aliases})
+   "-A" :repl-aliases
+   })
 
 (def bool-opts->keyword
   {"-Spath" :print-classpath
@@ -125,7 +125,6 @@ For more info, see:
    "-Srepro" :repro
    "-Stree" :tree
    "-Spom" :pom
-   "-Sresolve-tags" :resolve-tags
    "-P" :prep})
 
 (def string-opts->keyword
@@ -257,17 +256,39 @@ For more info, see:
       https-proxy (concat [(format "-Dhttps.proxyHost=%s" (:host https-proxy))
                            (format "-Dhttps.proxyPort=%s" (:port https-proxy))]))))
 
+(defn warn [& strs]
+  (binding [*out* *err*]
+    (apply println strs)))
+
 (defn -main [& command-line-args]
   (let [windows? (windows?)
         args (loop [command-line-args (seq command-line-args)
-                    acc {}]
+                    acc {:mode :repl}]
                (if command-line-args
                  (let [arg (first command-line-args)
                        bool-opt-keyword (get bool-opts->keyword arg)
                        string-opt-keyword (get string-opts->keyword arg)]
                    (cond
                      (= "--" arg) (assoc acc :args (next command-line-args))
-                     (some #(str/starts-with? arg %) ["-J" "-R" "-C" "-O" "-M" "-A"])
+                     (str/starts-with? arg "-M")
+                     (assoc acc
+                            :mode :main
+                            :main-aliases (subs arg 2)
+                            :args (next command-line-args))
+                     (str/starts-with? arg "-X")
+                     (assoc acc
+                            :mode :exec
+                            :exec-aliases (subs arg 2)
+                            :args (next command-line-args))
+                     (some #(str/starts-with? arg %) ["-R" "-C"])
+                     (do (warn arg "is deprecated, use -A with repl, -M for main, or -X for exec")
+                         (recur (next command-line-args)
+                                (update acc (get parse-opts->keyword (subs arg 0 2))
+                                        str (subs arg 2))))
+                     (some #(str/starts-with? arg %) ["-O" "-T"])
+                     (do (warn arg "is no longer supported, use -A with repl, -M for main, or -X for exec")
+                         (System/exit 1))
+                     (some #(str/starts-with? arg %) ["-J" "-C" "-O" "-A"])
                      (recur (next command-line-args)
                             (update acc (get parse-opts->keyword (subs arg 0 2))
                                     str (subs arg 2)))
@@ -278,9 +299,8 @@ For more info, see:
                                          (nnext command-line-args)
                                          (assoc acc string-opt-keyword
                                                 (second command-line-args)))
-                     (str/starts-with? arg "-S") (binding [*out* *err*]
-                                                   (println "Invalid option:" arg)
-                                                   (System/exit 1))
+                     (str/starts-with? arg "-S") (do (warn "Invalid option:" arg)
+                                                     (System/exit 1))
                      (and
                       (not (some acc [:main-aliases :all-aliases]))
                       (or (= "-h" arg)
