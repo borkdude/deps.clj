@@ -9,7 +9,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def version "1.10.1.507")
+(def version "1.10.1.697")
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
       (slurp)
@@ -180,7 +180,12 @@ For more info, see:
     (System/getenv "userprofile")
     (System/getProperty "user.home")))
 
+(defn warn [& strs]
+  (binding [*out* *err*]
+    (apply println strs)))
+
 (defn download [source dest]
+  (warn "Attempting download from" source)
   (let [source (URL. source)
         dest (io/file dest)
         conn ^HttpURLConnection (.openConnection ^URL source)]
@@ -195,10 +200,12 @@ For more info, see:
   (let [zip-file (io/file zip-file)
         _ (.mkdirs (io/file destination-dir "ClojureTools"))
         fs (FileSystems/newFileSystem (.toPath zip-file) nil)]
-    (doseq [f [clojure-tools-jar "example-deps.edn"]]
+    (doseq [f [clojure-tools-jar "exec.jar" "example-deps.edn"]]
       (let [file-in-zip (.getPath fs "ClojureTools" (into-array String [f]))]
         (Files/copy file-in-zip (.toPath (io/file destination-dir "ClojureTools" f))
-                    ^{:tag "[Ljava.nio.file.CopyOption;"} (into-array CopyOption []))))))
+                    ^{:tag "[Ljava.nio.file.CopyOption;"}
+                    (into-array CopyOption
+                                [java.nio.file.StandardCopyOption/REPLACE_EXISTING]))))))
 
 (defn clojure-tools-jar-download
   "Downloads clojure tools jar into deps-clj-config-dir."
@@ -207,8 +214,7 @@ For more info, see:
     (.mkdirs deps-clj-config-dir)
     (download (format "https://download.clojure.org/install/clojure-tools-%s.zip" version)
               zip)
-    (unzip zip (.getPath deps-clj-config-dir))
-    (.delete zip)))
+    (unzip zip (.getPath deps-clj-config-dir))))
 
 (def ^:private authenticated-proxy-re #".+:.+@(.+):(\d+).*")
 (def ^:private unauthenticated-proxy-re #"(.+):(\d+).*")
@@ -250,10 +256,6 @@ For more info, see:
                           (format "-Dhttp.proxyPort=%s" (:port http-proxy))])
       https-proxy (concat [(format "-Dhttps.proxyHost=%s" (:host https-proxy))
                            (format "-Dhttps.proxyPort=%s" (:port https-proxy))]))))
-
-(defn warn [& strs]
-  (binding [*out* *err*]
-    (apply println strs)))
 
 (def parse-opts->keyword
   {"-J" :jvm-opts
@@ -354,19 +356,22 @@ For more info, see:
                       (with-open [reader (io/reader clojure-file)]
                         (let [lines (line-seq reader)]
                           (second (some #(re-matches #"^install_dir=(.*)" %) lines)))))
-        downloaded-jar (io/file (home-dir)
-                                ".deps.clj"
-                                "ClojureTools"
+        tools-dir (or (System/getenv "CLOJURE_TOOLS_DIR") ;; TODO document
+                      (.getPath (io/file (home-dir)
+                                         ".deps.clj"
+                                         "ClojureTools")))
+        tools-jar (io/file tools-dir
                                 (format "clojure-tools-%s.jar" version))
+        exec-jar (io/file tools-dir "exec.jar")
         tools-cp
         (or
-         (System/getenv "CLOJURE_TOOLS_CP")
-         (when (.exists downloaded-jar) (.getPath downloaded-jar))
+         (when (.exists tools-jar) (.getPath tools-jar))
          (binding [*out* *err*]
-           (println (format "Could not find clojure-tools-%s.jar. Attempting download."
-                            version))
+           (println (format "Could not find %s" tools-jar))
            (clojure-tools-jar-download (io/file (home-dir) ".deps.clj"))
-           downloaded-jar))
+           tools-jar))
+        exec-cp (when (:exec-aliases args)
+                  (.getPath exec-jar))
         deps-edn
         (or (:deps-file args)
             "deps.edn")
@@ -534,19 +539,29 @@ For more info, see:
                     command (into command (:args args))]
                 (shell-command command))
               :else
-              (let [jvm-cache-opts (when (.exists (io/file jvm-file))
+              (let [mode (:mode args)
+                    exec-args (when (= :exec mode)
+                                ["--aliases" (:exec-aliases args)])
+                    jvm-cache-opts (when (.exists (io/file jvm-file))
                                      (slurp jvm-file))
-                    main-cache-opts (when (.exists (io/file main-file))
-                                      (slurp main-file))
-                    main-cache-opts (when main-cache-opts (str/split main-cache-opts #"\s"))
+                    main-args (if exec-args
+                                (into ["-m" "clojure.run.exec"]
+                                      exec-args)
+                                (some-> (when (.exists (io/file main-file))
+                                          (slurp main-file))
+                                        (str/split #"\s")))
+                    cp (if (= :exec mode)
+                         (str cp ":" exec-cp)
+                         cp)
                     main-args (concat [java-cmd]
                                       (jvm-proxy-settings)
                                       [jvm-cache-opts
                                        (:jvm-opts args)
+                                       (str "-Dclojure.basis=" basis-file)
                                        (str "-Dclojure.libfile=" libs-file)
                                        "-classpath" cp
                                        "clojure.main"]
-                                      main-cache-opts)
+                                      main-args)
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args args))]
                 (shell-command main-args)))))))
