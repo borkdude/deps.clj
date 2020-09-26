@@ -285,6 +285,10 @@ For more info, see:
    "-Scommand" :command
    "-Sthreads" :threads})
 
+(defn non-blank [s]
+  (when-not (str/blank? s)
+    s))
+
 (defn -main [& command-line-args]
   (let [windows? (windows?)
         args (loop [command-line-args (seq command-line-args)
@@ -298,12 +302,12 @@ For more info, see:
                      (str/starts-with? arg "-M")
                      (assoc acc
                             :mode :main
-                            :main-aliases (subs arg 2)
+                            :main-aliases (non-blank (subs arg 2))
                             :args (next command-line-args))
                      (str/starts-with? arg "-X")
                      (assoc acc
                             :mode :exec
-                            :exec-aliases (subs arg 2)
+                            :exec-aliases (non-blank (subs arg 2))
                             :args (next command-line-args))
                      ;; deprecations
                      (some #(str/starts-with? arg %) ["-R" "-C"])
@@ -321,7 +325,7 @@ For more info, see:
                      (some #(str/starts-with? arg %) ["-J" "-C" "-O" "-A"])
                      (recur (next command-line-args)
                             (update acc (get parse-opts->keyword (subs arg 0 2))
-                                    str (subs arg 2)))
+                                    str (non-blank (subs arg 2))))
                      bool-opt-keyword (recur
                                        (next command-line-args)
                                        (assoc acc bool-opt-keyword true))
@@ -372,7 +376,8 @@ For more info, see:
            (println (format "Could not find %s" tools-jar))
            (clojure-tools-jar-download tools-dir)
            tools-jar))
-        exec-cp (when (:exec-aliases args)
+        exec? (= :exec (:mode args))
+        exec-cp (when exec?
                   (.getPath exec-jar))
         deps-edn
         (or (:deps-file args)
@@ -477,7 +482,7 @@ For more info, see:
               (conj (str "-M" (:main-aliases args)))
               (:repl-aliases args)
               (conj (str "-A" (:repl-aliases args)))
-              (:exec-aliases args)
+              exec?
               (conj (str "-X" (:exec-aliases args)))
               (:force-cp args)
               (conj "--skip-cp")
@@ -541,9 +546,8 @@ For more info, see:
                     command (into command (:args args))]
                 (shell-command command))
               :else
-              (let [exec? (= :exec (:mode args))
-                    exec-args (when exec?
-                                ["--aliases" (:exec-aliases args)])
+              (let [exec-args (when-let [aliases (:exec-aliases args)]
+                                ["--aliases" aliases])
                     jvm-cache-opts (when (.exists (io/file jvm-file))
                                      (slurp jvm-file))
                     main-args (if exec?

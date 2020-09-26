@@ -25,7 +25,9 @@
 (deftest exec-test
   (deps/-main "-X:exec-test" ":foo" "1")
   (is (= "{:foo 1}" (slurp "exec-fn-test")))
-  (.delete (io/file "exec-fn-test")))
+  (.delete (io/file "exec-fn-test"))
+  (is (do (deps/-main "-X" "clojure.core/prn" ":foo" "1")
+          ::success)))
 
 (deftest jvm-proxy-settings-test
   (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "http://aHost:1234")))
