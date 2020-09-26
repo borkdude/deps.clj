@@ -2,4 +2,7 @@
  :aliases
  {:test
   {:extra-paths ["test"]
-   :main-opts ["-e" "(require,'[clojure.test,:as,t],'[borkdude.deps-test]),(t/run-tests,'borkdude.deps-test)"]}}}
+   :main-opts ["-e" "(require,'[clojure.test,:as,t],'[borkdude.deps-test]),(t/run-tests,'borkdude.deps-test)"]}
+  :exec-test
+  {:extra-paths ["test"]
+   :exec-fn borkdude.exec-test/exec-fn}}}

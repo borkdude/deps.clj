@@ -3,7 +3,8 @@
    [clojure.test :as t :refer [deftest is]]
    [borkdude.deps :as deps]
    [clojure.string :as str]
-   [clojure.edn :as edn]))
+   [clojure.edn :as edn]
+   [clojure.java.io :as io]))
 
 (deftest path-test
   (is (str/includes? (with-out-str
@@ -20,6 +21,11 @@
        (with-out-str
          (deps/-main "-Stree"))
        "org.clojure/clojure")))
+
+(deftest exec-test
+  (deps/-main "-X:exec-test" ":foo" "1")
+  (is (= "{:foo 1}" (slurp "exec-fn-test")))
+  (.delete (io/file "exec-fn-test")))
 
 (deftest jvm-proxy-settings-test
   (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "http://aHost:1234")))
