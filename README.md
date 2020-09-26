@@ -42,6 +42,11 @@ Clojure 1.10.1
 user=>
 ```
 
+If your Windows system does not run PowerShell, you can simply download a
+Windows binary from [Github
+releases](https://github.com/borkdude/deps.clj/releases) and place it on your
+path.
+
 ## Rationale
 
 Reasons why I made this:
