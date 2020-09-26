@@ -14,7 +14,7 @@
 (def path-separator (System/getProperty "path.separator"))
 
 (def version "1.10.1.697")
-(def deps-clj-version "0.0.10")
+(def deps-clj-version "0.0.11-SNAPSHOT")
 
 (defn shell-command
   "Executes shell command.
