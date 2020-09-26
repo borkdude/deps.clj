@@ -14,7 +14,7 @@
 (def path-separator (System/getProperty "path.separator"))
 
 (def version "1.10.1.697")
-(def deps-clj-version "0.0.10-SNAPSHOT")
+(def deps-clj-version "0.0.10")
 
 (defn shell-command
   "Executes shell command.
@@ -55,7 +55,6 @@
        string-out))))
 
 (def help-text (str "Version: " version "
-Version: 1.10.1.697
 
 You use the Clojure tools ('clj' or 'clojure') to run Clojure programs
 on the JVM, e.g. to start a REPL or invoke a specific function with data.
@@ -222,6 +221,10 @@ For more info, see:
 (def ^:private authenticated-proxy-re #".+:.+@(.+):(\d+).*")
 (def ^:private unauthenticated-proxy-re #"(.+):(\d+).*")
 
+(defn proxy-info [m]
+  {:host (nth m 1)
+   :port (nth m 2)})
+
 (defn parse-proxy-info
   [s]
   (when s
@@ -230,23 +233,18 @@ For more info, see:
               (clojure.string/starts-with? s "https://") (subs s 8)
               :else s)
           auth-proxy-match (re-matches authenticated-proxy-re p)
-          unauth-proxy-match (re-matches unauthenticated-proxy-re p)
-          match->proxy-info (fn [m]
-                              {:host (nth m 1)
-                               :port (nth m 2)})]
+          unauth-proxy-match (re-matches unauthenticated-proxy-re p)]
       (cond
         auth-proxy-match
-        (binding [*out* *err*]
-          (println "WARNING: Proxy info is of authenticated type - discarding the user/pw as we do not support it!")
-          (match->proxy-info auth-proxy-match))
+        (do (warn "WARNING: Proxy info is of authenticated type - discarding the user/pw as we do not support it!")
+            (proxy-info auth-proxy-match))
 
         unauth-proxy-match
-        (match->proxy-info unauth-proxy-match)
+        (proxy-info unauth-proxy-match)
 
         :else
-        (binding [*out* *err*]
-          (println "WARNING: Can't parse proxy info - found:" s "- proceeding without using proxy!")
-          nil)))))
+        (do (warn "WARNING: Can't parse proxy info - found:" s "- proceeding without using proxy!")
+            nil)))))
 
 (defn jvm-proxy-settings
   []
@@ -254,11 +252,17 @@ For more info, see:
                                           (System/getenv "HTTP_PROXY")))
         https-proxy (parse-proxy-info (or (System/getenv "https_proxy")
                                           (System/getenv "HTTPS_PROXY")))]
+    (when http-proxy
+      (System/setProperty "http.proxyHost" (:host http-proxy))
+      (System/setProperty "http.proxyPort" (:port http-proxy)))
+    (when https-proxy
+      (System/setProperty "https.proxyHost" (:host https-proxy))
+      (System/setProperty "https.proxyPort" (:port https-proxy)))
     (cond-> []
-      http-proxy (concat [(format "-Dhttp.proxyHost=%s" (:host http-proxy))
-                          (format "-Dhttp.proxyPort=%s" (:port http-proxy))])
-      https-proxy (concat [(format "-Dhttps.proxyHost=%s" (:host https-proxy))
-                           (format "-Dhttps.proxyPort=%s" (:port https-proxy))]))))
+      http-proxy (concat  [(str "-Dhttp.proxyHost=" (:host http-proxy))
+                           (str "-Dhttp.proxyPort=" (:port http-proxy))])
+      https-proxy (concat [(str "-Dhttps.proxyHost=" (:host https-proxy))
+                           (str "-Dhttps.proxyPort=" (:port https-proxy))]))))
 
 (def parse-opts->keyword
   {"-J" :jvm-opts
@@ -370,6 +374,7 @@ For more info, see:
         tools-jar (io/file tools-dir
                            (format "clojure-tools-%s.jar" version))
         exec-jar (io/file tools-dir "exec.jar")
+        proxy-settings (jvm-proxy-settings) ;; side effecting, sets java proxy properties for download
         tools-cp
         (or
          (when (.exists tools-jar) (.getPath tools-jar))
@@ -385,7 +390,7 @@ For more info, see:
             "deps.edn")
         clj-main-cmd
         (vec (concat [java-cmd]
-                     (jvm-proxy-settings)
+                     proxy-settings
                      ["-Xms256m" "-classpath" tools-cp "clojure.main"]))
         config-dir
         (or (System/getenv "CLJ_CONFIG")
@@ -561,7 +566,7 @@ For more info, see:
                          (str cp path-separator exec-cp)
                          cp)
                     main-args (concat [java-cmd]
-                                      (jvm-proxy-settings)
+                                      proxy-settings
                                       [jvm-cache-opts
                                        (:jvm-opts args)
                                        (str "-Dclojure.basis=" basis-file)
