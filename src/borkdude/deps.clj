@@ -483,7 +483,7 @@ For more info, see:
               (conj (str "-M" (:main-aliases args)))
               (:repl-aliases args)
               (conj (str "-A" (:repl-aliases args)))
-              exec?
+              (:exec-aliases args)
               (conj (str "-X" (:exec-aliases args)))
               (:force-cp args)
               (conj "--skip-cp")
