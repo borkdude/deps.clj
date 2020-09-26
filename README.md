@@ -28,7 +28,7 @@ Linux and macOS:
 
 ``` shell
 $ bash <(curl -s https://raw.githubusercontent.com/borkdude/deps.clj/master/install)
-$ deps.exe
+$ deps
 Clojure 1.10.1
 user=>
 ```
@@ -79,14 +79,14 @@ Experimental, but in a usable state. Breaking changes might happen to the non-st
 
 There are three ways of running:
 
-- as a compiled binary called `deps.exe` which is tailored to your OS
+- as a compiled binary called `deps` which is tailored to your OS
 - as a script file called `deps.clj` using [`bb`](https://github.com/borkdude/babashka/) or `clojure`
 - as a JVM library or uberjar (see [Github
 releases](https://github.com/borkdude/deps.clj/releases)).
 
 ### Binary
 
-The binary version of deps.clj, called `deps.exe`, only requires a working
+The binary version of deps.clj, called `deps` (without the `.clj` extension), only requires a working
 installation of `java`.
 
 #### Manual download
@@ -100,7 +100,7 @@ Install using the installation script on linux or macOS:
 
 ``` shell
 $ bash <(curl -s https://raw.githubusercontent.com/borkdude/deps.clj/master/install) /tmp
-$ /tmp/deps.exe
+$ /tmp/deps
 Clojure 1.10.1
 user=>
 ```
@@ -292,7 +292,7 @@ Run the compile script with:
 $ script/compile
 ```
 
-If everything worked out, there will be a `deps.exe` binary in the root of the
+If everything worked out, there will be a `deps` binary in the root of the
 project.
 
 To run executable tests:

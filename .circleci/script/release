@@ -2,7 +2,7 @@
 
 rm -rf /tmp/release
 mkdir -p /tmp/release
-cp deps.exe /tmp/release
+cp deps /tmp/release
 
 VERSION=$(cat resources/DEPS_CLJ_VERSION)
 
@@ -10,6 +10,6 @@ cd /tmp/release
 
 ## release binary as zip archive
 
-zip "deps.clj-$VERSION-$DEPS_CLJ_PLATFORM-amd64.zip" deps.exe
+zip "deps.clj-$VERSION-$DEPS_CLJ_PLATFORM-amd64.zip" deps
 
-rm deps.exe
+rm deps

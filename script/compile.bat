@@ -11,7 +11,7 @@ set JAVA_HOME=%GRAALVM_HOME%\bin
 set PATH=%PATH%;%GRAALVM_HOME%\bin
 
 set /P DEPS_CLJ_VERSION=< resources\DEPS_CLJ_VERSION
-echo Building deps.exe %DEPS_CLJ_VERSION%
+echo Building deps %DEPS_CLJ_VERSION%
 
 call lein with-profiles +native-image do clean, uberjar
 if %errorlevel% neq 0 exit /b %errorlevel%
@@ -35,7 +35,8 @@ call %GRAALVM_HOME%\bin\native-image.cmd ^
 if %errorlevel% neq 0 exit /b %errorlevel%
 
 echo Creating zip archive
-jar -cMf deps.clj-%DEPS_CLJ_VERSION%-windows-amd64.zip deps.exe
+jar -cMf deps.clj-%DEPS_CLJ_VERSION%-windows-amd64.zip deps
 
 echo Test run
-call deps.exe -Spath -Sdeps "{:deps {borkdude/deps.clj {:mvn/version ""0.0.1""}}}"
+rm -rf ~/.deps.clj
+call deps -Spath -Sdeps "{:deps {borkdude/deps.clj {:mvn/version ""0.0.1""}}}"
