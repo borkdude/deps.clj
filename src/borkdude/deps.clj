@@ -335,7 +335,6 @@ For more info, see:
                           (= "--help" arg))) (assoc acc :help true)
                      :else (assoc acc :args command-line-args)))
                  acc))
-        _ (prn args)
         _ (when (:help args)
             (println help-text)
             (System/exit 0))
@@ -539,18 +538,18 @@ For more info, see:
                     command (into command (:args args))]
                 (shell-command command))
               :else
-              (let [mode (:mode args)
-                    exec-args (when (= :exec mode)
+              (let [exec? (= :exec (:mode args))
+                    exec-args (when exec?
                                 ["--aliases" (:exec-aliases args)])
                     jvm-cache-opts (when (.exists (io/file jvm-file))
                                      (slurp jvm-file))
-                    main-args (if exec-args
+                    main-args (if exec?
                                 (into ["-m" "clojure.run.exec"]
                                       exec-args)
                                 (some-> (when (.exists (io/file main-file))
                                           (slurp main-file))
                                         (str/split #"\s")))
-                    cp (if (= :exec mode)
+                    cp (if exec?
                          (str cp ":" exec-cp)
                          cp)
                     main-args (concat [java-cmd]
