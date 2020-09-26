@@ -145,13 +145,15 @@ Clojure 1.10.1
 user=>
 ```
 
-### Tools jar
+### Tools jars
 
-This project will look in `$HOME/.deps.clj/ClojureTools` for
-`clojure-tools.jar`. If it cannot it find it there, it will try to download it
-from [this](https://download.clojure.org/install/clojure-tools-1.10.1.492.zip)
-location. You can override the location of the jar with the `CLOJURE_TOOLS_CP`
-environment variable.
+This project will look in `$HOME/.deps.clj/<clojure-version>` for
+`clojure-tools-<version>.jar`, `exec.jar` and `example-deps.edn`. If it cannot
+it find those files there, it will try to download them from
+[this](https://download.clojure.org/install/clojure-tools-1.10.1.697.zip)
+location. You can override the location of these jars with the
+`CLOJURE_TOOLS_DIR` environment variable. If the download fails for some reason,
+you can try to download the zip yourself and unzip it at the expected location.
 
 ## Extra features
 
