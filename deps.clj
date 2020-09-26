@@ -198,23 +198,25 @@ For more info, see:
 
 (defn unzip [zip-file destination-dir]
   (let [zip-file (io/file zip-file)
-        _ (.mkdirs (io/file destination-dir "ClojureTools"))
+        _ (.mkdirs (io/file destination-dir))
         fs (FileSystems/newFileSystem (.toPath zip-file) nil)]
     (doseq [f [clojure-tools-jar "exec.jar" "example-deps.edn"]]
       (let [file-in-zip (.getPath fs "ClojureTools" (into-array String [f]))]
-        (Files/copy file-in-zip (.toPath (io/file destination-dir "ClojureTools" f))
+        (Files/copy file-in-zip (.toPath (io/file destination-dir f))
                     ^{:tag "[Ljava.nio.file.CopyOption;"}
                     (into-array CopyOption
                                 [java.nio.file.StandardCopyOption/REPLACE_EXISTING]))))))
 
 (defn clojure-tools-jar-download
   "Downloads clojure tools jar into deps-clj-config-dir."
-  [^java.io.File deps-clj-config-dir]
-  (let [zip (io/file deps-clj-config-dir "tools.zip")]
-    (.mkdirs deps-clj-config-dir)
+  [deps-clj-config-dir]
+  (let [dir (io/file deps-clj-config-dir)
+        zip (io/file deps-clj-config-dir "tools.zip")]
+    (.mkdirs dir)
     (download (format "https://download.clojure.org/install/clojure-tools-%s.zip" version)
               zip)
-    (unzip zip (.getPath deps-clj-config-dir))))
+    (unzip zip (.getPath dir))
+    (.delete zip)))
 
 (def ^:private authenticated-proxy-re #".+:.+@(.+):(\d+).*")
 (def ^:private unauthenticated-proxy-re #"(.+):(\d+).*")
@@ -358,16 +360,16 @@ For more info, see:
         tools-dir (or (System/getenv "CLOJURE_TOOLS_DIR") ;; TODO document
                       (.getPath (io/file (home-dir)
                                          ".deps.clj"
-                                         "ClojureTools")))
+                                         version)))
         tools-jar (io/file tools-dir
-                                (format "clojure-tools-%s.jar" version))
+                           (format "clojure-tools-%s.jar" version))
         exec-jar (io/file tools-dir "exec.jar")
         tools-cp
         (or
          (when (.exists tools-jar) (.getPath tools-jar))
          (binding [*out* *err*]
            (println (format "Could not find %s" tools-jar))
-           (clojure-tools-jar-download (io/file (home-dir) ".deps.clj"))
+           (clojure-tools-jar-download tools-dir)
            tools-jar))
         exec-cp (when (:exec-aliases args)
                   (.getPath exec-jar))
