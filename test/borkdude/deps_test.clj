@@ -1,10 +1,10 @@
 (ns borkdude.deps-test
   (:require
-   [clojure.test :as t :refer [deftest is]]
    [borkdude.deps :as deps]
-   [clojure.string :as str]
    [clojure.edn :as edn]
-   [clojure.java.io :as io]))
+   [clojure.java.io :as io]
+   [clojure.string :as str]
+   [clojure.test :as t :refer [deftest is]]))
 
 (deftest path-test
   (is (str/includes? (with-out-str
