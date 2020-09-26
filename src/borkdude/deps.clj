@@ -55,7 +55,6 @@
        string-out))))
 
 (def help-text (str "Version: " version "
-Version: 1.10.1.697
 
 You use the Clojure tools ('clj' or 'clojure') to run Clojure programs
 on the JVM, e.g. to start a REPL or invoke a specific function with data.
