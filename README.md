@@ -243,7 +243,7 @@ For running locally, you can invoke deps.clj with `clojure` (totally meta
 right?). E.g. for creating a classpath with deps.clj, you can run:
 
 ```
-$ clojure -m borkdude.deps -Spath
+$ clojure -M -m borkdude.deps -Spath
 ```
 
 or with `lein`:
