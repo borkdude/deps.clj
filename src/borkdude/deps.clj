@@ -16,6 +16,8 @@
       (slurp)
       (str/trim)))
 
+(def ^:private ^:dynamic *exit-fn* #(System/exit %))
+
 (defn shell-command
   "Executes shell command.
 
@@ -39,8 +41,10 @@
              (str sw)))
          exit-code (.waitFor proc)]
      (when (not (zero? exit-code))
-       (System/exit exit-code))
+       (*exit-fn* exit-code))
      string-out)))
+
+(def ^:private ^:dynamic *process-fn* shell-command)
 
 (def help-text (str "Version: " version "
 
@@ -310,10 +314,10 @@ For more info, see:
                                         str (subs arg 2))))
                      (some #(str/starts-with? arg %) ["-O" "-T"])
                      (do (warn arg "is no longer supported, use -A with repl, -M for main, or -X for exec")
-                         (System/exit 1))
+                         (*exit-fn* 1))
                      (= "-Sresolve-tags" arg)
                      (do (warn "Option changed, use: clj -X:deps git-resolve-tags")
-                         (System/exit 1))
+                         (*exit-fn* 1))
                      ;; end deprecations
                      (some #(str/starts-with? arg %) ["-J" "-C" "-O" "-A"])
                      (recur (next command-line-args)
@@ -327,7 +331,7 @@ For more info, see:
                                          (assoc acc string-opt-keyword
                                                 (second command-line-args)))
                      (str/starts-with? arg "-S") (do (warn "Invalid option:" arg)
-                                                     (System/exit 1))
+                                                     (*exit-fn* 1))
                      (and
                       (not (some acc [:main-aliases :all-aliases]))
                       (or (= "-h" arg)
@@ -336,7 +340,7 @@ For more info, see:
                  acc))
         _ (when (:help args)
             (println help-text)
-            (System/exit 0))
+            (*exit-fn* 0))
         java-cmd
         (let [java-cmd (which (if windows? "java.exe" "java"))]
           (if (str/blank? java-cmd)
@@ -500,7 +504,7 @@ For more info, see:
                                "--main-file" (double-quote main-file)]
                               tools-args))))
       (when (:prep args)
-        (System/exit 0))
+        (*exit-fn* 0))
       (let [cp (cond (:describe args) nil
                      (not (str/blank? (:force-cp args))) (:force-cp args)
                      :else (slurp (io/file cp-file)))]
@@ -526,9 +530,9 @@ For more info, see:
                          [:all-aliases (str (:all-aliases args))]])
               (:tree args)
               (println (str/trim (shell-command (into clj-main-cmd
-                                                      ["-m" "clojure.tools.deps.alpha.script.print-tree"
-                                                       "--libs-file" libs-file])
-                                                {:to-string? true})))
+                                                     ["-m" "clojure.tools.deps.alpha.script.print-tree"
+                                                      "--libs-file" libs-file])
+                                               {:to-string? true})))
               (:trace args)
               (warn "Wrote trace.edn")
               (:command args)
@@ -538,7 +542,7 @@ For more info, see:
                     command (str/replace command "{{main-opts}}" (str main-cache-opts))
                     command (str/split command #"\s+")
                     command (into command (:args args))]
-                (shell-command command))
+                (*process-fn* command))
               :else
               (let [exec-args (when-let [aliases (:exec-aliases args)]
                                 ["--aliases" aliases])
@@ -564,4 +568,4 @@ For more info, see:
                                       main-args)
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args args))]
-                (shell-command main-args)))))))
+                (*process-fn* main-args)))))))
