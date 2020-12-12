@@ -15,7 +15,7 @@
                                   "-Dclojure.spec.skip-macros=true"]
                        :main borkdude.deps
                        :aot :all}
-             :native-image {:dependencies [[borkdude/clj-reflector-graal-java11-fix "0.0.1-graalvm-20.1.0"]]}}
+             :native-image {:dependencies [[borkdude/clj-reflector-graal-java11-fix "0.0.1-graalvm-20.3.0"]]}}
   :aliases {"deps.clj" ["run" "-m" "borkdude.deps"]}
   :deploy-repositories [["clojars" {:url "https://clojars.org/repo"
                                     :username :env/clojars_user
