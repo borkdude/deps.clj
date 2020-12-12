@@ -343,9 +343,6 @@ For more info, see:
                           (= "--help" arg))) (assoc acc :help true)
                      :else (assoc acc :args command-line-args)))
                  acc))
-        _ (when (:help args)
-            (println help-text)
-            (*exit-fn* 0))
         java-cmd
         (let [java-cmd (which (if windows? "java.exe" "java"))]
           (if (str/blank? java-cmd)
@@ -494,7 +491,8 @@ For more info, see:
               (:trace args)
               (conj "--trace")))]
       ;;  If stale, run make-classpath to refresh cached classpath
-      (when (and stale (not (:describe args)))
+      (when (and stale (not (or (:describe args)
+                                (:help args))))
         (when (:verbose args)
           (warn "Refreshing classpath"))
         (shell-command (into clj-main-cmd
@@ -508,12 +506,15 @@ For more info, see:
                                "--jvm-file" (double-quote jvm-file)
                                "--main-file" (double-quote main-file)]
                               tools-args))))
-      (when (:prep args)
-        (*exit-fn* 0))
-      (let [cp (cond (:describe args) nil
+      (let [cp (cond (or (:describe args)
+                         (:prep args)
+                         (:help nil)) nil
                      (not (str/blank? (:force-cp args))) (:force-cp args)
                      :else (slurp (io/file cp-file)))]
-        (cond (:pom args)
+        (cond (:help args) (do (println help-text)
+                               (*exit-fn* 0))
+              (:prep args) (*exit-fn* 0)
+              (:pom args)
               (shell-command (into clj-main-cmd
                                    ["-m" "clojure.tools.deps.alpha.script.generate-manifest2"
                                     "--config-user" config-user
@@ -535,9 +536,9 @@ For more info, see:
                          [:all-aliases (str (:all-aliases args))]])
               (:tree args)
               (println (str/trim (shell-command (into clj-main-cmd
-                                                     ["-m" "clojure.tools.deps.alpha.script.print-tree"
-                                                      "--libs-file" libs-file])
-                                               {:to-string? true})))
+                                                      ["-m" "clojure.tools.deps.alpha.script.print-tree"
+                                                       "--libs-file" libs-file])
+                                                {:to-string? true})))
               (:trace args)
               (warn "Wrote trace.edn")
               (:command args)
