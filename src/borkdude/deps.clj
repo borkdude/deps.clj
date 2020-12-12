@@ -16,43 +16,44 @@
       (slurp)
       (str/trim)))
 
+(defn warn [& strs]
+  (binding [*out* *err*]
+    (apply println strs)))
+
+(def ^:private ^:dynamic *exit-fn*
+  (fn
+    ([exit-code] (System/exit exit-code))
+    ([exit-code msg]
+     (warn msg)
+     (System/exit exit-code))))
+
 (defn shell-command
   "Executes shell command.
 
   Accepts the following options:
 
-  `:input`: instead of reading from stdin, read from this string.
-
   `:to-string?`: instead of writing to stdoud, write to a string and
-  return it.
-
-  `:throw?`: Unless `false`, exits script when the shell-command has a
-  non-zero exit code, unless `throw?` is set to false."
+  return it."
   ([args] (shell-command args nil))
-  ([args {:keys [:input :to-string? :throw? :show-errors?]
-          :or {throw? true
-               show-errors? true}}]
+  ([args {:keys [:to-string?]}]
    (let [args (mapv str args)
          pb (cond-> (ProcessBuilder. ^java.util.List args)
-              show-errors? (.redirectError ProcessBuilder$Redirect/INHERIT)
+              true (.redirectError ProcessBuilder$Redirect/INHERIT)
               (not to-string?) (.redirectOutput ProcessBuilder$Redirect/INHERIT)
-              (not input) (.redirectInput ProcessBuilder$Redirect/INHERIT))
-         proc (.start pb)]
-     (when input
-       (with-open [w (io/writer (.getOutputStream proc))]
-         (binding [*out* w]
-           (print input)
-           (flush))))
-     (let [string-out
-           (when to-string?
-             (let [sw (java.io.StringWriter.)]
-               (with-open [w (io/reader (.getInputStream proc))]
-                 (io/copy w sw))
-               (str sw)))
-           exit-code (.waitFor proc)]
-       (when (and throw? (not (zero? exit-code)))
-         (System/exit exit-code))
-       string-out))))
+              true (.redirectInput ProcessBuilder$Redirect/INHERIT))
+         proc (.start pb)
+         string-out
+         (when to-string?
+           (let [sw (java.io.StringWriter.)]
+             (with-open [w (io/reader (.getInputStream proc))]
+               (io/copy w sw))
+             (str sw)))
+         exit-code (.waitFor proc)]
+     (when (not (zero? exit-code))
+       (*exit-fn* exit-code))
+     string-out)))
+
+(def ^:private ^:dynamic *process-fn* shell-command)
 
 (def help-text (str "Version: " version "
 
@@ -179,10 +180,6 @@ For more info, see:
     ;; workaround for https://github.com/oracle/graal/issues/1630
     (System/getenv "userprofile")
     (System/getProperty "user.home")))
-
-(defn warn [& strs]
-  (binding [*out* *err*]
-    (apply println strs)))
 
 (defn download [source dest]
   (warn "Attempting download from" source)
@@ -321,11 +318,11 @@ For more info, see:
                                 (update acc (get parse-opts->keyword (subs arg 0 2))
                                         str (subs arg 2))))
                      (some #(str/starts-with? arg %) ["-O" "-T"])
-                     (do (warn arg "is no longer supported, use -A with repl, -M for main, or -X for exec")
-                         (System/exit 1))
+                     (let [msg (str arg " is no longer supported, use -A with repl, -M for main, or -X for exec")]
+                       (*exit-fn* 1 msg))
                      (= "-Sresolve-tags" arg)
-                     (do (warn "Option changed, use: clj -X:deps git-resolve-tags")
-                         (System/exit 1))
+                     (let [msg "Option changed, use: clj -X:deps git-resolve-tags"]
+                       (*exit-fn* 1 msg))
                      ;; end deprecations
                      (some #(str/starts-with? arg %) ["-J" "-C" "-O" "-A"])
                      (recur (next command-line-args)
@@ -338,17 +335,14 @@ For more info, see:
                                          (nnext command-line-args)
                                          (assoc acc string-opt-keyword
                                                 (second command-line-args)))
-                     (str/starts-with? arg "-S") (do (warn "Invalid option:" arg)
-                                                     (System/exit 1))
+                     (str/starts-with? arg "-S") (let [msg (str "Invalid option: " arg)]
+                                                   (*exit-fn* 1 msg))
                      (and
                       (not (some acc [:main-aliases :all-aliases]))
                       (or (= "-h" arg)
                           (= "--help" arg))) (assoc acc :help true)
                      :else (assoc acc :args command-line-args)))
                  acc))
-        _ (when (:help args)
-            (println help-text)
-            (System/exit 0))
         java-cmd
         (let [java-cmd (which (if windows? "java.exe" "java"))]
           (if (str/blank? java-cmd)
@@ -497,7 +491,8 @@ For more info, see:
               (:trace args)
               (conj "--trace")))]
       ;;  If stale, run make-classpath to refresh cached classpath
-      (when (and stale (not (:describe args)))
+      (when (and stale (not (or (:describe args)
+                                (:help args))))
         (when (:verbose args)
           (warn "Refreshing classpath"))
         (shell-command (into clj-main-cmd
@@ -511,12 +506,15 @@ For more info, see:
                                "--jvm-file" (double-quote jvm-file)
                                "--main-file" (double-quote main-file)]
                               tools-args))))
-      (when (:prep args)
-        (System/exit 0))
-      (let [cp (cond (:describe args) nil
+      (let [cp (cond (or (:describe args)
+                         (:prep args)
+                         (:help nil)) nil
                      (not (str/blank? (:force-cp args))) (:force-cp args)
                      :else (slurp (io/file cp-file)))]
-        (cond (:pom args)
+        (cond (:help args) (do (println help-text)
+                               (*exit-fn* 0))
+              (:prep args) (*exit-fn* 0)
+              (:pom args)
               (shell-command (into clj-main-cmd
                                    ["-m" "clojure.tools.deps.alpha.script.generate-manifest2"
                                     "--config-user" config-user
@@ -550,7 +548,7 @@ For more info, see:
                     command (str/replace command "{{main-opts}}" (str main-cache-opts))
                     command (str/split command #"\s+")
                     command (into command (:args args))]
-                (shell-command command))
+                (*process-fn* command))
               :else
               (let [exec-args (when-let [aliases (:exec-aliases args)]
                                 ["--aliases" aliases])
@@ -576,4 +574,4 @@ For more info, see:
                                       main-args)
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args args))]
-                (shell-command main-args)))))))
+                (*process-fn* main-args)))))))
