@@ -10,7 +10,7 @@
 (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
-(def version "1.10.1.697")
+(def version "1.10.1.763")
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
       (slurp)
@@ -79,15 +79,15 @@ in a terminal, and should be preferred unless you don't want that support,
 then use 'clojure'.
 
 Usage:
-  Start a REPL   clj     [clj-opt*] [-A:aliases] [init-opt*]
-  Exec function  clojure [clj-opt*] -X[:aliases] [a/fn] [kpath v]*
-  Run main       clojure [clj-opt*] -M[:aliases] [init-opt*] [main-opt] [arg*]
+  Start a REPL   clj     [clj-opt*] [-Aaliases] [init-opt*]
+  Exec function  clojure [clj-opt*] -X[aliases] [a/fn] [kpath v]*
+  Run main       clojure [clj-opt*] -M[aliases] [init-opt*] [main-opt] [arg*]
   Prepare        clojure [clj-opt*] -P [other exec opts]
 
 exec-opts:
- -A:aliases     Use aliases to modify classpath
- -X[:aliases]   Use aliases to modify classpath or supply exec fn/args
- -M[:aliases]   Use aliases to modify classpath or supply main opts
+ -Aaliases      Use concatenated aliases to modify classpath
+ -X[aliases]    Use concatenated aliases to modify classpath or supply exec fn/args
+ -M[aliases]    Use concatenated aliases to modify classpath or supply main opts
  -P             Prepare deps - download libs, cache classpath, but don't exec
 
 clj-opts:
@@ -324,6 +324,9 @@ For more info, see:
                      (let [msg "Option changed, use: clj -X:deps git-resolve-tags"]
                        (*exit-fn* 1 msg))
                      ;; end deprecations
+                     (= "-A" arg)
+                     (let [msg "-A requires an alias"]
+                       (*exit-fn* 1 msg))
                      (some #(str/starts-with? arg %) ["-J" "-C" "-O" "-A"])
                      (recur (next command-line-args)
                             (update acc (get parse-opts->keyword (subs arg 0 2))
@@ -456,9 +459,11 @@ For more info, see:
               (println "cache_dir        =" cache-dir)
               (println "cp_file          =" cp-file)
               (println))
+          tree? (:tree args)
           stale
           (or (:force args)
               (:trace args)
+              tree?
               (:prep args)
               (not (.exists (io/file cp-file)))
               (let [cp-file (io/file cp-file)]
@@ -489,23 +494,28 @@ For more info, see:
               (:threads args)
               (conj "--threads" (:threads args))
               (:trace args)
-              (conj "--trace")))]
+              (conj "--trace")
+              tree?
+              (conj "--tree")))]
       ;;  If stale, run make-classpath to refresh cached classpath
       (when (and stale (not (or (:describe args)
                                 (:help args))))
         (when (:verbose args)
           (warn "Refreshing classpath"))
-        (shell-command (into clj-main-cmd
-                             (concat
-                              ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
-                               "--config-user" config-user
-                               "--config-project" config-project
-                               "--basis-file" basis-file
-                               "--libs-file" (double-quote libs-file)
-                               "--cp-file" (double-quote cp-file)
-                               "--jvm-file" (double-quote jvm-file)
-                               "--main-file" (double-quote main-file)]
-                              tools-args))))
+        (let [res (shell-command (into clj-main-cmd
+                                      (concat
+                                       ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
+                                        "--config-user" config-user
+                                        "--config-project" config-project
+                                        "--basis-file" basis-file
+                                        "--libs-file" (double-quote libs-file)
+                                        "--cp-file" (double-quote cp-file)
+                                        "--jvm-file" (double-quote jvm-file)
+                                        "--main-file" (double-quote main-file)]
+                                       tools-args))
+                                 {:to-string? tree?})]
+          (when tree?
+            (print res) (flush))))
       (let [cp (cond (or (:describe args)
                          (:prep args)
                          (:help nil)) nil
@@ -534,11 +544,7 @@ For more info, see:
                          [:repro (boolean (:repro args))]
                          [:main-aliases (str (:main-aliases args))]
                          [:all-aliases (str (:all-aliases args))]])
-              (:tree args)
-              (println (str/trim (shell-command (into clj-main-cmd
-                                                      ["-m" "clojure.tools.deps.alpha.script.print-tree"
-                                                       "--libs-file" libs-file])
-                                                {:to-string? true})))
+              tree? (*exit-fn* 0)
               (:trace args)
               (warn "Wrote trace.edn")
               (:command args)

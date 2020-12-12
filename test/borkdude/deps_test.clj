@@ -17,10 +17,11 @@
     (is (every? some? [config-files config-user config-project deps-clj-version version]))))
 
 (deftest tree-test
-  (is (str/includes?
-       (with-out-str
-         (deps/-main "-Stree"))
-       "org.clojure/clojure")))
+  (binding [deps/*exit-fn* (constantly nil)]
+    (is (str/includes?
+         (with-out-str
+           (deps/-main "-Stree"))
+         "org.clojure/clojure"))))
 
 (deftest exec-test
   (deps/-main "-X:exec-test" ":foo" "1")
