@@ -16,7 +16,16 @@
       (slurp)
       (str/trim)))
 
-(def ^:private ^:dynamic *exit-fn* #(System/exit %))
+(defn warn [& strs]
+  (binding [*out* *err*]
+    (apply println strs)))
+
+(def ^:private ^:dynamic *exit-fn*
+  (fn
+    ([exit-code] (System/exit exit-code))
+    ([exit-code msg]
+     (warn msg)
+     (System/exit exit-code))))
 
 (defn shell-command
   "Executes shell command.
@@ -172,10 +181,6 @@ For more info, see:
     (System/getenv "userprofile")
     (System/getProperty "user.home")))
 
-(defn warn [& strs]
-  (binding [*out* *err*]
-    (apply println strs)))
-
 (defn download [source dest]
   (warn "Attempting download from" source)
   (let [source (URL. source)
@@ -313,11 +318,11 @@ For more info, see:
                                 (update acc (get parse-opts->keyword (subs arg 0 2))
                                         str (subs arg 2))))
                      (some #(str/starts-with? arg %) ["-O" "-T"])
-                     (do (warn arg "is no longer supported, use -A with repl, -M for main, or -X for exec")
-                         (*exit-fn* 1))
+                     (let [msg (str arg " is no longer supported, use -A with repl, -M for main, or -X for exec")]
+                       (*exit-fn* 1 msg))
                      (= "-Sresolve-tags" arg)
-                     (do (warn "Option changed, use: clj -X:deps git-resolve-tags")
-                         (*exit-fn* 1))
+                     (let [msg "Option changed, use: clj -X:deps git-resolve-tags"]
+                       (*exit-fn* 1 msg))
                      ;; end deprecations
                      (some #(str/starts-with? arg %) ["-J" "-C" "-O" "-A"])
                      (recur (next command-line-args)
@@ -330,8 +335,8 @@ For more info, see:
                                          (nnext command-line-args)
                                          (assoc acc string-opt-keyword
                                                 (second command-line-args)))
-                     (str/starts-with? arg "-S") (do (warn "Invalid option:" arg)
-                                                     (*exit-fn* 1))
+                     (str/starts-with? arg "-S") (let [msg (str "Invalid option: " arg)]
+                                                   (*exit-fn* 1 msg))
                      (and
                       (not (some acc [:main-aliases :all-aliases]))
                       (or (= "-h" arg)
