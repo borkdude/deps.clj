@@ -17,7 +17,7 @@ Clojure itself.
 Features:
 
 - Available as executable compiled with [GraalVM](https://github.com/oracle/graal)
-- Run directly from source with [babashka](https://github.com/borkdude/babashka/) or the JVM
+- Run directly from source with [babashka](https://github.com/babashka/babashka/) or the JVM
 - Similar startup to bash
 - Easy installation on all three major platforms including Windows
 - Works in `cmd.exe` on Windows
@@ -52,7 +52,7 @@ path.
 Reasons why I made this:
 
 - The port was done as proof of concept for
-  [babashka](https://github.com/borkdude/babashka/). The entire bash script was
+  [babashka](https://github.com/babashka/babashka/). The entire bash script was
   ported to Clojure successfully and runs just as fast with `bb`.
 
 - This offers an arguably easier way to get going with `deps.edn` based projects
@@ -65,7 +65,7 @@ current Powershell based approach.
 - This repo might be a place to experiment with features that are not available
 in the original `clojure` command. Most notably it offers an `-Scommand` option
 which allows other programs to be started than just the JVM version of Clojure,
-e.g. [`babashka`](https://github.com/borkdude/babashka/) or
+e.g. [`babashka`](https://github.com/babashka/babashka/) or
 [`planck`](https://github.com/planck-repl/planck/).
 
 - Arguably bash and Powershell are less attractive languages for Clojure
@@ -85,7 +85,7 @@ Experimental, but in a usable state. Breaking changes might happen to the non-st
 There are three ways of running:
 
 - as a compiled binary called `deps` which is tailored to your OS
-- as a script file called `deps.clj` using [`bb`](https://github.com/borkdude/babashka/) or `clojure`
+- as a script file called `deps.clj` using [`bb`](https://github.com/babashka/babashka/) or `clojure`
 - as a JVM library or uberjar (see [Github
 releases](https://github.com/borkdude/deps.clj/releases)).
 
@@ -138,7 +138,7 @@ Scoop bucket.
 ### Script
 
 The script, `deps.clj`, requires a working installation of `java` and
-additionally [`bb`](https://github.com/borkdude/babashka/) or `clojure`.
+additionally [`bb`](https://github.com/babashka/babashka/) or `clojure`.
 
 It can simply be downloaded from this repo:
 
@@ -187,7 +187,7 @@ Given this `deps.edn`:
    :main-opts ["-m" "spartan.test" "-n" "borkdude.deps-test"]}}}
 ```
 
-you can invoke [`bb`](https://github.com/borkdude/babashka/) like this:
+you can invoke [`bb`](https://github.com/babashka/babashka/) like this:
 
 ``` shell
 $ deps.clj -A:test -Scommand "bb -cp {{classpath}} {{main-opts}}"
