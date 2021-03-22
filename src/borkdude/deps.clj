@@ -10,7 +10,7 @@
 (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
-(def version "1.10.1.763")
+(def version "1.10.3.814")
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
       (slurp)
@@ -104,6 +104,8 @@ clj-opts:
  -Sthreads      Set specific number of download threads
  -Strace        Write a trace.edn file that traces deps expansion
  --             Stop parsing dep options and pass remaining arguments to clojure.main
+ --version      Print the version to stdout and exit
+ -version       Print the version to stdout and exit
 
 The following non-standard options are available only in deps.clj:
 
@@ -301,6 +303,8 @@ For more info, see:
                        string-opt-keyword (get string-opts->keyword arg)]
                    (cond
                      (= "--" arg) (assoc acc :args (next command-line-args))
+                     (or (= "-version" arg)
+                         (= "--version" arg)) (assoc acc :version true)
                      (str/starts-with? arg "-M")
                      (assoc acc
                             :mode :main
@@ -347,17 +351,18 @@ For more info, see:
                      :else (assoc acc :args command-line-args)))
                  acc))
         java-cmd
-        (let [java-cmd (which (if windows? "java.exe" "java"))]
-          (if (str/blank? java-cmd)
-            (let [java-home (System/getenv "JAVA_HOME")]
-              (if-not (str/blank? java-home)
-                (let [f (io/file java-home "bin" "java")]
-                  (if (and (.exists f)
-                           (.canExecute f))
-                    (.getCanonicalPath f)
+        (or (System/getenv "JAVA_CMD")
+            (let [java-cmd (which (if windows? "java.exe" "java"))]
+              (if (str/blank? java-cmd)
+                (let [java-home (System/getenv "JAVA_HOME")]
+                  (if-not (str/blank? java-home)
+                    (let [f (io/file java-home "bin" "java")]
+                      (if (and (.exists f)
+                               (.canExecute f))
+                        (.getCanonicalPath f)
+                        (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
                     (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-                (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-            java-cmd))
+                java-cmd)))
         clojure-file (-> (which "clojure") (io/file))
         install-dir (when clojure-file
                       (with-open [reader (io/reader clojure-file)]
@@ -499,7 +504,8 @@ For more info, see:
               (conj "--tree")))]
       ;;  If stale, run make-classpath to refresh cached classpath
       (when (and stale (not (or (:describe args)
-                                (:help args))))
+                                (:help args)
+                                (:version args))))
         (when (:verbose args)
           (warn "Refreshing classpath"))
         (let [res (shell-command (into clj-main-cmd
@@ -523,6 +529,8 @@ For more info, see:
                      :else (slurp (io/file cp-file)))]
         (cond (:help args) (do (println help-text)
                                (*exit-fn* 0))
+              (:version args) (do (println "Clojure CLI version (deps.clj)" version)
+                                  (*exit-fn* 0))
               (:prep args) (*exit-fn* 0)
               (:pom args)
               (shell-command (into clj-main-cmd
@@ -550,7 +558,8 @@ For more info, see:
               (:command args)
               (let [command (str/replace (:command args) "{{classpath}}" (str cp))
                     main-cache-opts (when (.exists (io/file main-file))
-                                      (slurp main-file))
+                                      (-> main-file slurp str/split-lines))
+                    main-cache-opts (str/join " " main-cache-opts)
                     command (str/replace command "{{main-opts}}" (str main-cache-opts))
                     command (str/split command #"\s+")
                     command (into command (:args args))]
@@ -559,13 +568,17 @@ For more info, see:
               (let [exec-args (when-let [aliases (:exec-aliases args)]
                                 ["--aliases" aliases])
                     jvm-cache-opts (when (.exists (io/file jvm-file))
-                                     (slurp jvm-file))
-                    main-args (if exec?
+                                     (-> jvm-file slurp str/split-lines))
+                    jvm-cache-opts (when jvm-cache-opts
+                                     (str/join " " jvm-cache-opts))
+                    main-cache-opts (when (.exists (io/file main-file))
+                                      (-> main-file slurp str/split-lines))
+                    main-cache-opts (when main-cache-opts
+                                      (str/join " " main-cache-opts))
+                    main-opts (if exec?
                                 (into ["-m" "clojure.run.exec"]
                                       exec-args)
-                                (some-> (when (.exists (io/file main-file))
-                                          (slurp main-file))
-                                        (str/split #"\s")))
+                                main-cache-opts)
                     cp (if exec?
                          (str cp path-separator exec-cp)
                          cp)
@@ -577,7 +590,7 @@ For more info, see:
                                        (str "-Dclojure.libfile=" libs-file)
                                        "-classpath" cp
                                        "clojure.main"]
-                                      main-args)
+                                      main-opts)
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args args))]
                 (*process-fn* main-args)))))))
