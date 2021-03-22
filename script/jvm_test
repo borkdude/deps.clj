@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
 
-clojure -A:test
+set -eo pipefail
+
+clojure -M:test
+
+clojure -M -m borkdude.deps -M:test

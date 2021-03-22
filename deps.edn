@@ -2,7 +2,8 @@
  :aliases
  {:test
   {:extra-paths ["test"]
-   :main-opts ["-e" "(require,'[clojure.test,:as,t],'[borkdude.deps-test]),(t/run-tests,'borkdude.deps-test)"]}
+   :main-opts ["-e" "(require,'[clojure.test,:as,t],'[borkdude.deps-test]),(t/run-tests,'borkdude.deps-test)"]
+   :extra-deps {babashka/fs {:mvn/version "0.0.3"}}}
   :exec-test
   {:extra-paths ["test"]
    :exec-fn borkdude.exec-test/exec-fn}}}

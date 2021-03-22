@@ -1,10 +1,11 @@
 (ns borkdude.deps-test
   (:require
+   [babashka.fs :as fs]
    [borkdude.deps :as deps]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as str]
-   [clojure.test :as t :refer [deftest is]]))
+   [clojure.test :as t :refer [deftest is testing]]))
 
 (deftest path-test
   (is (str/includes? (with-out-str
@@ -29,6 +30,27 @@
   (.delete (io/file "exec-fn-test"))
   (is (do (deps/-main "-X" "clojure.core/prn" ":foo" "1")
           ::success)))
+
+(deftest whitespace-test
+  (testing "jvm opts"
+    (let [temp-dir (fs/create-temp-dir)
+          temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
+          temp-file-path (str temp-file)
+          _ (deps/-main "-Sdeps" "{:aliases {:space {:jvm-opts [\"-Dfoo=\\\"foo bar\\\"\"]}}}" "-M:space" "-e"
+                        (format "(spit \"%s\" (System/getProperty \"foo\"))"
+                                temp-file-path))
+          out (slurp temp-file-path)]
+      (is (= "\"foo bar\"" out))))
+  (testing "main opts"
+    (let [temp-dir (fs/create-temp-dir)
+          temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
+          temp-file-path (str temp-file)
+          _ (deps/-main "-Sdeps"
+                        (format "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\"%s\\\" (+ 1 2 3))\"]}}}"
+                                temp-file-path)
+                        "-M:space")
+          out (slurp temp-file-path)]
+      (is (= "6" out)))))
 
 (deftest jvm-proxy-settings-test
   (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "http://aHost:1234")))

@@ -569,12 +569,8 @@ For more info, see:
                                 ["--aliases" aliases])
                     jvm-cache-opts (when (.exists (io/file jvm-file))
                                      (-> jvm-file slurp str/split-lines))
-                    jvm-cache-opts (when jvm-cache-opts
-                                     (str/join " " jvm-cache-opts))
                     main-cache-opts (when (.exists (io/file main-file))
                                       (-> main-file slurp str/split-lines))
-                    main-cache-opts (when main-cache-opts
-                                      (str/join " " main-cache-opts))
                     main-opts (if exec?
                                 (into ["-m" "clojure.run.exec"]
                                       exec-args)
@@ -584,9 +580,9 @@ For more info, see:
                          cp)
                     main-args (concat [java-cmd]
                                       proxy-settings
-                                      [jvm-cache-opts
-                                       (:jvm-opts args)
-                                       (str "-Dclojure.basis=" basis-file)
+                                      jvm-cache-opts
+                                      (:jvm-opts args)
+                                      [(str "-Dclojure.basis=" basis-file)
                                        (str "-Dclojure.libfile=" libs-file)
                                        "-classpath" cp
                                        "clojure.main"]
