@@ -16,8 +16,8 @@ Clojure itself.
 
 Features:
 
-- Available as executable compiled with [GraalVM](https://github.com/oracle/graal)
-- Run directly from source with [babashka](https://github.com/babashka/babashka/) or the JVM
+- Run as executable compiled with [GraalVM](https://github.com/oracle/graal)
+  Or run directly from source with [babashka](https://github.com/babashka/babashka/) or the JVM
 - Similar startup to bash
 - Easy installation on all three major platforms including Windows
 - Works in `cmd.exe` on Windows
@@ -47,7 +47,7 @@ Windows binary from [Github
 releases](https://github.com/borkdude/deps.clj/releases) and place it on your
 path.
 
-## Rationale
+## Why
 
 Reasons why I made this:
 
@@ -76,16 +76,31 @@ or library.
 - This repo can be seen as a proof of concept of what is possible with GraalVM
 and Clojure.
 
+## Used in
+
+### [Babashka](https://github.com/babashka/babashka)
+
+Available under the `clojure` subcommand. It is also available as
+a programmatic API under `babashka.deps`.
+
+### [Calva](https://github.com/BetterThanTomorrow/calva)
+
+Used to provide a getting started REPL.
+
 ## Status
 
-Experimental, but in a usable state. Breaking changes might happen to the non-standard functionality. Feedback and PRs are welcome.
+Deps.clj tries to follow the official Clojure CLI as faithfully as possible and
+as such, this project can be considered a stable drop-in
+replacement. Experimental [extra
+options](https://github.com/borkdude/deps.clj#extra-features) may still be
+changed or removed in the future.
 
 ## Installation
 
 There are three ways of running:
 
 - as a compiled binary called `deps` which is tailored to your OS
-- as a script file called `deps.clj` using [`bb`](https://github.com/babashka/babashka/) or `clojure`
+- from source, as a script file called `deps.clj` using the [`bb`](https://github.com/babashka/babashka/) or `clojure` runtime.
 - as a JVM library or uberjar (see [Github
 releases](https://github.com/borkdude/deps.clj/releases)).
 
@@ -146,6 +161,16 @@ It can simply be downloaded from this repo:
 $ curl -sL https://raw.githubusercontent.com/borkdude/deps.clj/master/deps.clj -o /tmp/deps.clj
 $ chmod +x /tmp/deps.clj
 $ bb /tmp/deps.clj
+Clojure 1.10.1
+user=>
+```
+
+On Windows you can use the `deps.bat` script:
+
+``` shell
+C:\Temp> curl -sL https://raw.githubusercontent.com/borkdude/deps.clj/master/deps.bat -o c:\Temp\deps.bat
+C:\Temp> deps
+C:\Temp>
 Clojure 1.10.1
 user=>
 ```
