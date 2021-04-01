@@ -34,7 +34,7 @@
   (str "@SETLOCAL
 @SET BABASHKA_SKIPLINES= ^
  (binding [*file* (first *command-line-args*) ^
-           *command-line-args*,(next,*command-line-args*)] ^
+           *command-line-args* (next *command-line-args*)] ^
   (load-string (str/join \\newline (drop 8 (str/split-lines (slurp *file*))))))
 @ENDLOCAL
 @SETLOCAL ENABLEDELAYEDEXPANSION & bb -e \"%BABASHKA_SKIPLINES%\" \"%~f0\" %* & EXIT /B !ERRORLEVEL!
