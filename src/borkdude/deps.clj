@@ -299,6 +299,12 @@ For more info, see:
                     acc {:mode :repl}]
                (if command-line-args
                  (let [arg (first command-line-args)
+                       [arg command-line-args]
+                       ;; workaround for Powershell
+                       (if (and windows? (#{"-X:" "-M:" "-A:"} arg))
+                         [(str arg (first command-line-args))
+                          (rest command-line-args)]
+                         [arg command-line-args])
                        bool-opt-keyword (get bool-opts->keyword arg)
                        string-opt-keyword (get string-opts->keyword arg)]
                    (cond
