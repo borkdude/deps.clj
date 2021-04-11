@@ -303,7 +303,7 @@ For more info, see:
                        ;; workaround for Powershell, see GH-42
                        (if (and windows? (#{"-X:" "-M:" "-A:"} arg))
                          [(str arg (second command-line-args))
-                          (nnext command-line-args)]
+                          (next command-line-args)]
                          [arg command-line-args])
                        bool-opt-keyword (get bool-opts->keyword arg)
                        string-opt-keyword (get string-opts->keyword arg)]
