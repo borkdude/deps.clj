@@ -13,8 +13,8 @@
 (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
-(def version "1.10.3.814")
-(def deps-clj-version "0.0.13-SNAPSHOT")
+(def version "1.10.3.822")
+(def deps-clj-version "0.0.13")
 
 (defn warn [& strs]
   (binding [*out* *err*]
@@ -299,6 +299,12 @@ For more info, see:
                     acc {:mode :repl}]
                (if command-line-args
                  (let [arg (first command-line-args)
+                       [arg command-line-args]
+                       ;; workaround for Powershell, see GH-42
+                       (if (and windows? (#{"-X:" "-M:" "-A:"} arg))
+                         [(str arg (second command-line-args))
+                          (next command-line-args)]
+                         [arg command-line-args])
                        bool-opt-keyword (get bool-opts->keyword arg)
                        string-opt-keyword (get string-opts->keyword arg)]
                    (cond
