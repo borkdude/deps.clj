@@ -148,11 +148,13 @@ For more info, see:
       (str/lower-case)
       (str/includes? "windows")))
 
+(def win? (delay (windows?)))
+
 (defn double-quote
   "Double quotes shell arguments on Windows. On other platforms it just
   passes through the string."
   [s]
-  (if (windows?)
+  (if @win?
     (format "\"\"%s\"\"" s)
     s))
 
@@ -178,7 +180,7 @@ For more info, see:
             (recur (rest paths))))))))
 
 (defn home-dir []
-  (if (windows?)
+  (if @win?
     ;; workaround for https://github.com/oracle/graal/issues/1630
     (System/getenv "userprofile")
     (System/getProperty "user.home")))
@@ -294,7 +296,7 @@ For more info, see:
     s))
 
 (defn -main [& command-line-args]
-  (let [windows? (windows?)
+  (let [windows? @win?
         args (loop [command-line-args (seq command-line-args)
                     acc {:mode :repl}]
                (if command-line-args
