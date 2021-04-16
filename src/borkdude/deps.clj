@@ -155,7 +155,7 @@ For more info, see:
   passes through the string."
   [s]
   (if @win?
-    (format "\"\"%s\"\"" s)
+    s #_(format "\"\"%s\"\"" s)
     s))
 
 (defn cksum
