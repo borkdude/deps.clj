@@ -33,6 +33,11 @@
      (warn msg)
      (System/exit exit-code))))
 
+(def windows?
+  (-> (System/getProperty "os.name")
+      (str/lower-case)
+      (str/includes? "windows")))
+
 (defn shell-command
   "Executes shell command.
 
@@ -43,6 +48,9 @@
   ([args] (shell-command args nil))
   ([args {:keys [:to-string?]}]
    (let [args (mapv str args)
+         args (if windows?
+                (mapv #(str/replace % "\"" "\\\"") args)
+                args)
          pb (cond-> (ProcessBuilder. ^java.util.List args)
               true (.redirectError ProcessBuilder$Redirect/INHERIT)
               (not to-string?) (.redirectOutput ProcessBuilder$Redirect/INHERIT)
@@ -149,19 +157,6 @@ For more info, see:
       (print "\n ") (describe-line line))
     (println "}")))
 
-(defn windows? []
-  (-> (System/getProperty "os.name")
-      (str/lower-case)
-      (str/includes? "windows")))
-
-(defn double-quote
-  "Double quotes shell arguments on Windows. On other platforms it just
-  passes through the string."
-  [s]
-  (if (windows?)
-    (format "\"\"%s\"\"" s)
-    s))
-
 (defn cksum
   [^String s]
   (let [hashed (.digest (java.security.MessageDigest/getInstance "MD5")
@@ -184,7 +179,7 @@ For more info, see:
             (recur (rest paths))))))))
 
 (defn home-dir []
-  (if (windows?)
+  (if windows?
     ;; workaround for https://github.com/oracle/graal/issues/1630
     (System/getenv "userprofile")
     (System/getProperty "user.home")))
@@ -300,8 +295,7 @@ For more info, see:
     s))
 
 (defn -main [& command-line-args]
-  (let [windows? (windows?)
-        args (loop [command-line-args (seq command-line-args)
+  (let [args (loop [command-line-args (seq command-line-args)
                     acc {:mode :repl}]
                (if command-line-args
                  (let [arg (first command-line-args)
@@ -493,9 +487,7 @@ For more info, see:
           (when (or stale (:pom args))
             (cond-> []
               (not (str/blank? (:deps-data args)))
-              (conj "--config-data" (if windows?
-                                      (pr-str (:deps-data args))
-                                      (:deps-data args)))
+              (conj "--config-data" (:deps-data args))
               (:resolve-aliases args)
               (conj (str "-R" (:resolve-aliases args)))
               (:classpath-aliases args)
@@ -521,16 +513,16 @@ For more info, see:
         (when (:verbose args)
           (warn "Refreshing classpath"))
         (let [res (shell-command (into clj-main-cmd
-                                      (concat
-                                       ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
-                                        "--config-user" (double-quote config-user)
-                                        "--config-project" (double-quote config-project)
-                                        "--basis-file" (double-quote basis-file)
-                                        "--libs-file" (double-quote libs-file)
-                                        "--cp-file" (double-quote cp-file)
-                                        "--jvm-file" (double-quote jvm-file)
-                                        "--main-file" (double-quote main-file)]
-                                       tools-args))
+                                       (concat
+                                        ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
+                                         "--config-user" config-user
+                                         "--config-project" config-project
+                                         "--basis-file" basis-file
+                                         "--libs-file" libs-file
+                                         "--cp-file" cp-file
+                                         "--jvm-file" jvm-file
+                                         "--main-file" main-file]
+                                        tools-args))
                                  {:to-string? tree?})]
           (when tree?
             (print res) (flush))))
