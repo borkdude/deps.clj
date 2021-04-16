@@ -401,7 +401,7 @@ For more info, see:
         clj-main-cmd
         (vec (concat [java-cmd]
                      proxy-settings
-                     ["-Xms256m" "-classpath" tools-cp "clojure.main"]))
+                     ["-Xms256m" "-classpath" (double-quote tools-cp) "clojure.main"]))
         config-dir
         (or (System/getenv "CLJ_CONFIG")
             (when-let [xdg-config-home (System/getenv "XDG_CONFIG_HOME")]
