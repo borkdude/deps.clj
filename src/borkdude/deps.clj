@@ -27,6 +27,13 @@
      (warn msg)
      (System/exit exit-code))))
 
+(defn windows? []
+  (-> (System/getProperty "os.name")
+      (str/lower-case)
+      (str/includes? "windows")))
+
+(def win? (delay (windows?)))
+
 (defn shell-command
   "Executes shell command.
 
@@ -37,6 +44,9 @@
   ([args] (shell-command args nil))
   ([args {:keys [:to-string?]}]
    (let [args (mapv str args)
+         args (if windows?
+                (mapv #(str/replace % "\"" "\\\"") args)
+                args)
          pb (cond-> (ProcessBuilder. ^java.util.List args)
               true (.redirectError ProcessBuilder$Redirect/INHERIT)
               (not to-string?) (.redirectOutput ProcessBuilder$Redirect/INHERIT)
@@ -142,13 +152,6 @@ For more info, see:
             :when line]
       (print "\n ") (describe-line line))
     (println "}")))
-
-(defn windows? []
-  (-> (System/getProperty "os.name")
-      (str/lower-case)
-      (str/includes? "windows")))
-
-(def win? (delay (windows?)))
 
 (defn cksum
   [^String s]
@@ -481,9 +484,7 @@ For more info, see:
           (when (or stale (:pom args))
             (cond-> []
               (not (str/blank? (:deps-data args)))
-              (conj "--config-data" (if windows?
-                                      (pr-str (:deps-data args))
-                                      (:deps-data args)))
+              (conj "--config-data" (:deps-data args))
               (:resolve-aliases args)
               (conj (str "-R" (:resolve-aliases args)))
               (:classpath-aliases args)
