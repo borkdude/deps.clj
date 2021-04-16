@@ -27,12 +27,10 @@
      (warn msg)
      (System/exit exit-code))))
 
-(defn windows? []
+(def windows?
   (-> (System/getProperty "os.name")
       (str/lower-case)
       (str/includes? "windows")))
-
-(def win? (delay (windows?)))
 
 (defn shell-command
   "Executes shell command.
@@ -175,7 +173,7 @@ For more info, see:
             (recur (rest paths))))))))
 
 (defn home-dir []
-  (if @win?
+  (if windows?
     ;; workaround for https://github.com/oracle/graal/issues/1630
     (System/getenv "userprofile")
     (System/getProperty "user.home")))
@@ -291,8 +289,7 @@ For more info, see:
     s))
 
 (defn -main [& command-line-args]
-  (let [windows? @win?
-        args (loop [command-line-args (seq command-line-args)
+  (let [args (loop [command-line-args (seq command-line-args)
                     acc {:mode :repl}]
                (if command-line-args
                  (let [arg (first command-line-args)
@@ -510,16 +507,16 @@ For more info, see:
         (when (:verbose args)
           (warn "Refreshing classpath"))
         (let [res (shell-command (into clj-main-cmd
-                                      (concat
-                                       ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
-                                        "--config-user" config-user
-                                        "--config-project" config-project
-                                        "--basis-file" basis-file
-                                        "--libs-file" libs-file
-                                        "--cp-file" cp-file
-                                        "--jvm-file" jvm-file
-                                        "--main-file" main-file]
-                                       tools-args))
+                                       (concat
+                                        ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
+                                         "--config-user" config-user
+                                         "--config-project" config-project
+                                         "--basis-file" basis-file
+                                         "--libs-file" libs-file
+                                         "--cp-file" cp-file
+                                         "--jvm-file" jvm-file
+                                         "--main-file" main-file]
+                                        tools-args))
                                  {:to-string? tree?})]
           (when tree?
             (print res) (flush))))
