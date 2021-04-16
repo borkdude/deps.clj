@@ -150,14 +150,6 @@ For more info, see:
 
 (def win? (delay (windows?)))
 
-(defn double-quote
-  "Double quotes shell arguments on Windows. On other platforms it just
-  passes through the string."
-  [s]
-  (if @win?
-    s #_(format "\"\"%s\"\"" s)
-    s))
-
 (defn cksum
   [^String s]
   (let [hashed (.digest (java.security.MessageDigest/getInstance "MD5")
@@ -401,7 +393,7 @@ For more info, see:
         clj-main-cmd
         (vec (concat [java-cmd]
                      proxy-settings
-                     ["-Xms256m" "-classpath" (double-quote tools-cp) "clojure.main"]))
+                     ["-Xms256m" "-classpath" tools-cp "clojure.main"]))
         config-dir
         (or (System/getenv "CLJ_CONFIG")
             (when-let [xdg-config-home (System/getenv "XDG_CONFIG_HOME")]
@@ -519,13 +511,13 @@ For more info, see:
         (let [res (shell-command (into clj-main-cmd
                                       (concat
                                        ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
-                                        "--config-user" (double-quote config-user)
-                                        "--config-project" (double-quote config-project)
-                                        "--basis-file" (double-quote basis-file)
-                                        "--libs-file" (double-quote libs-file)
-                                        "--cp-file" (double-quote cp-file)
-                                        "--jvm-file" (double-quote jvm-file)
-                                        "--main-file" (double-quote main-file)]
+                                        "--config-user" config-user
+                                        "--config-project" config-project
+                                        "--basis-file" basis-file
+                                        "--libs-file" libs-file
+                                        "--cp-file" cp-file
+                                        "--jvm-file" jvm-file
+                                        "--main-file" main-file]
                                        tools-args))
                                  {:to-string? tree?})]
           (when tree?
