@@ -523,9 +523,9 @@ For more info, see:
         (let [res (shell-command (into clj-main-cmd
                                       (concat
                                        ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
-                                        "--config-user" config-user
-                                        "--config-project" config-project
-                                        "--basis-file" basis-file
+                                        "--config-user" (double-quote config-user)
+                                        "--config-project" (double-quote config-project)
+                                        "--basis-file" (double-quote basis-file)
                                         "--libs-file" (double-quote libs-file)
                                         "--cp-file" (double-quote cp-file)
                                         "--jvm-file" (double-quote jvm-file)
