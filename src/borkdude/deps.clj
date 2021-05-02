@@ -42,7 +42,7 @@
   ([args] (shell-command args nil))
   ([args {:keys [:to-string?]}]
    (let [args (mapv str args)
-         args (if windows?
+         args (if (and windows? (not (System/getenv "DEPS_CLJ_NO_WINDOWS_FIXES")))
                 (mapv #(str/replace % "\"" "\\\"") args)
                 args)
          pb (cond-> (ProcessBuilder. ^java.util.List args)
