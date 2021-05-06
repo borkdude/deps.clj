@@ -162,7 +162,7 @@ For more info, see:
     (str sw)))
 
 (defn which [executable]
-  (let [path (System/getenv "PATH")
+  (let [path (or (System/getenv "PATH") ^String "")
         paths (.split path path-separator)]
     (loop [paths paths]
       (when-first [p paths]
