@@ -42,7 +42,7 @@
   ([args] (shell-command args nil))
   ([args {:keys [:to-string?]}]
    (let [args (mapv str args)
-         args (if windows?
+         args (if (and windows? (not (System/getenv "DEPS_CLJ_NO_WINDOWS_FIXES")))
                 (mapv #(str/replace % "\"" "\\\"") args)
                 args)
          pb (cond-> (ProcessBuilder. ^java.util.List args)
@@ -162,15 +162,15 @@ For more info, see:
     (str sw)))
 
 (defn which [executable]
-  (let [path (or (System/getenv "PATH") ^String "")
-        paths (.split path path-separator)]
-    (loop [paths paths]
-      (when-first [p paths]
-        (let [f (io/file p executable)]
-          (if (and (.isFile f)
-                   (.canExecute f))
-            (.getCanonicalPath f)
-            (recur (rest paths))))))))
+  (when-let [path (System/getenv "PATH")]
+    (let [paths (.split path path-separator)]
+      (loop [paths paths]
+        (when-first [p paths]
+          (let [f (io/file p executable)]
+            (if (and (.isFile f)
+                     (.canExecute f))
+              (.getCanonicalPath f)
+              (recur (rest paths)))))))))
 
 (defn home-dir []
   (if windows?

@@ -162,15 +162,15 @@ For more info, see:
     (str sw)))
 
 (defn which [executable]
-  (let [path (System/getenv "PATH")
-        paths (.split path path-separator)]
-    (loop [paths paths]
-      (when-first [p paths]
-        (let [f (io/file p executable)]
-          (if (and (.isFile f)
-                   (.canExecute f))
-            (.getCanonicalPath f)
-            (recur (rest paths))))))))
+  (when-let [path (System/getenv "PATH")]
+    (let [paths (.split path path-separator)]
+      (loop [paths paths]
+        (when-first [p paths]
+          (let [f (io/file p executable)]
+            (if (and (.isFile f)
+                     (.canExecute f))
+              (.getCanonicalPath f)
+              (recur (rest paths)))))))))
 
 (defn home-dir []
   (if windows?
