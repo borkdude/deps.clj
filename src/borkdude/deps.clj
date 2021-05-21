@@ -10,7 +10,7 @@
 (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
-(def version "1.10.3.822")
+(def version "1.10.3.849")
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
       (slurp)

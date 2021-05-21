@@ -13,7 +13,7 @@
 (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
-(def version "1.10.3.822")
+(def version "1.10.3.849")
 (def deps-clj-version "0.0.15-SNAPSHOT")
 
 (defn warn [& strs]
@@ -587,6 +587,9 @@ For more info, see:
                                       main-opts)
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args args))]
+                (when (and (identical? :repl (:mode args))
+                           (pos? (count (:args args))))
+                  (warn "WARNING: Use of -A with clojure.main is deprecated, use -M instead"))
                 (*process-fn* main-args)))))))
 
 (apply -main *command-line-args*)
