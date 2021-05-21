@@ -384,7 +384,8 @@ For more info, see:
            (println (format "Could not find %s" tools-jar))
            (clojure-tools-jar-download tools-dir)
            tools-jar))
-        exec? (= :exec (:mode args))
+        mode (:mode args)
+        exec? (= :exec mode)
         exec-cp (when exec?
                   (.getPath exec-jar))
         deps-edn
@@ -587,7 +588,7 @@ For more info, see:
                                       main-opts)
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args args))]
-                (when (and (identical? :repl (:mode args))
+                (when (and (= :repl mode)
                            (pos? (count (:args args))))
                   (warn "WARNING: Use of -A with clojure.main is deprecated, use -M instead"))
                 (*process-fn* main-args)))))))
