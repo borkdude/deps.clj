@@ -587,4 +587,7 @@ For more info, see:
                                       main-opts)
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args args))]
+                (when (and (identical? :repl (:mode args))
+                           (pos? (count (:args args))))
+                  (warn "WARNING: Use of -A with clojure.main is deprecated, use -M instead"))
                 (*process-fn* main-args)))))))
