@@ -594,5 +594,5 @@ For more info, see:
                     main-args (into main-args (:args opts))]
                 (when (and (= :repl mode)
                            (pos? (count (:args opts))))
-                  (warn "WARNING: Use of -A with clojure.main is deprecated, use -M instead"))
+                  (warn "WARNING: Implicit use of clojure.main with options is deprecated, use -M"))
                 (*process-fn* main-args)))))))
