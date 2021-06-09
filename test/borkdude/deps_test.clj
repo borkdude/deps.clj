@@ -7,6 +7,13 @@
    [clojure.string :as str]
    [clojure.test :as t :refer [deftest is testing]]))
 
+(deftest parse-args-test
+  (is (= {:mode :repl, :jvm-opts ["-Dfoo=bar" "-Dbaz=quuz"]}
+         (deps/parse-args ["-J-Dfoo=bar" "-J-Dbaz=quuz"])))
+  (is (= {:mode :main, :main-aliases nil, :args '("-e" "(+ 1 2 3)")}
+         (deps/parse-args ["-M" "-e" "(+ 1 2 3)"])))
+  (is (= {:mode :main, :main-aliases ":foo", :args nil} (deps/parse-args ["-M:foo"]))))
+
 (deftest path-test
   (is (str/includes? (with-out-str
                        (deps/-main "-Spath")) "resources")))
@@ -58,3 +65,13 @@
   (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "https://aHost:1234")))
   (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "https://user:pw@aHost:1234")))
   (is (nil? (deps/parse-proxy-info "http://aHost:abc"))))
+
+(deftest jvm-opts-test
+  (let [temp-dir (fs/create-temp-dir)
+        temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
+        temp-file-path (str temp-file)]
+    (deps/-main "-J-Dfoo=bar" "-J-Dbaz=quux"
+                "-M" "-e" (format "
+(spit \"%s\" (pr-str [(System/getProperty \"foo\") (System/getProperty \"baz\")]))"
+                                  temp-file-path))
+    (is (= ["bar" "quux"] (edn/read-string  (slurp temp-file-path))))))
