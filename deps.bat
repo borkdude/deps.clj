@@ -268,7 +268,6 @@ For more info, see:
   {"-J" :jvm-opts
    "-R" :resolve-aliases
    "-C" :classpath-aliases
-   "-M" :main-aliases
    "-A" :repl-aliases
    })
 
@@ -294,68 +293,73 @@ For more info, see:
   (when-not (str/blank? s)
     s))
 
+(def vconj (fnil conj []))
+
+(defn parse-args [args]
+  (loop [args (seq args)
+         acc {:mode :repl}]
+    (if args
+      (let [arg (first args)
+            [arg args]
+            ;; workaround for Powershell, see GH-42
+            (if (and windows? (#{"-X:" "-M:" "-A:"} arg))
+              [(str arg (second args))
+               (next args)]
+              [arg args])
+            bool-opt-keyword (get bool-opts->keyword arg)
+            string-opt-keyword (get string-opts->keyword arg)]
+        (cond
+          (= "--" arg) (assoc acc :args (next args))
+          (or (= "-version" arg)
+              (= "--version" arg)) (assoc acc :version true)
+          (str/starts-with? arg "-M")
+          (assoc acc
+                 :mode :main
+                 :main-aliases (non-blank (subs arg 2))
+                 :args (next args))
+          (str/starts-with? arg "-X")
+          (assoc acc
+                 :mode :exec
+                 :exec-aliases (non-blank (subs arg 2))
+                 :args (next args))
+          ;; deprecations
+          (some #(str/starts-with? arg %) ["-R" "-C"])
+          (do (warn arg "is deprecated, use -A with repl, -M for main, or -X for exec")
+              (recur (next args)
+                     (update acc (get parse-opts->keyword (subs arg 0 2))
+                             vconj (subs arg 2))))
+          (some #(str/starts-with? arg %) ["-O" "-T"])
+          (let [msg (str arg " is no longer supported, use -A with repl, -M for main, or -X for exec")]
+            (*exit-fn* 1 msg))
+          (= "-Sresolve-tags" arg)
+          (let [msg "Option changed, use: clj -X:deps git-resolve-tags"]
+            (*exit-fn* 1 msg))
+          ;; end deprecations
+          (= "-A" arg)
+          (let [msg "-A requires an alias"]
+            (*exit-fn* 1 msg))
+          (some #(str/starts-with? arg %) ["-J" "-C" "-O" "-A"])
+          (recur (next args)
+                 (update acc (get parse-opts->keyword (subs arg 0 2))
+                         vconj (non-blank (subs arg 2))))
+          bool-opt-keyword (recur
+                            (next args)
+                            (assoc acc bool-opt-keyword true))
+          string-opt-keyword (recur
+                              (nnext args)
+                              (assoc acc string-opt-keyword
+                                     (second args)))
+          (str/starts-with? arg "-S") (let [msg (str "Invalid option: " arg)]
+                                        (*exit-fn* 1 msg))
+          (and
+           (not (some acc [:main-aliases :all-aliases]))
+           (or (= "-h" arg)
+               (= "--help" arg))) (assoc acc :help true)
+          :else (assoc acc :args args)))
+      acc)))
+
 (defn -main [& command-line-args]
-  (let [args (loop [command-line-args (seq command-line-args)
-                    acc {:mode :repl}]
-               (if command-line-args
-                 (let [arg (first command-line-args)
-                       [arg command-line-args]
-                       ;; workaround for Powershell, see GH-42
-                       (if (and windows? (#{"-X:" "-M:" "-A:"} arg))
-                         [(str arg (second command-line-args))
-                          (next command-line-args)]
-                         [arg command-line-args])
-                       bool-opt-keyword (get bool-opts->keyword arg)
-                       string-opt-keyword (get string-opts->keyword arg)]
-                   (cond
-                     (= "--" arg) (assoc acc :args (next command-line-args))
-                     (or (= "-version" arg)
-                         (= "--version" arg)) (assoc acc :version true)
-                     (str/starts-with? arg "-M")
-                     (assoc acc
-                            :mode :main
-                            :main-aliases (non-blank (subs arg 2))
-                            :args (next command-line-args))
-                     (str/starts-with? arg "-X")
-                     (assoc acc
-                            :mode :exec
-                            :exec-aliases (non-blank (subs arg 2))
-                            :args (next command-line-args))
-                     ;; deprecations
-                     (some #(str/starts-with? arg %) ["-R" "-C"])
-                     (do (warn arg "is deprecated, use -A with repl, -M for main, or -X for exec")
-                         (recur (next command-line-args)
-                                (update acc (get parse-opts->keyword (subs arg 0 2))
-                                        str (subs arg 2))))
-                     (some #(str/starts-with? arg %) ["-O" "-T"])
-                     (let [msg (str arg " is no longer supported, use -A with repl, -M for main, or -X for exec")]
-                       (*exit-fn* 1 msg))
-                     (= "-Sresolve-tags" arg)
-                     (let [msg "Option changed, use: clj -X:deps git-resolve-tags"]
-                       (*exit-fn* 1 msg))
-                     ;; end deprecations
-                     (= "-A" arg)
-                     (let [msg "-A requires an alias"]
-                       (*exit-fn* 1 msg))
-                     (some #(str/starts-with? arg %) ["-J" "-C" "-O" "-A"])
-                     (recur (next command-line-args)
-                            (update acc (get parse-opts->keyword (subs arg 0 2))
-                                    str (non-blank (subs arg 2))))
-                     bool-opt-keyword (recur
-                                       (next command-line-args)
-                                       (assoc acc bool-opt-keyword true))
-                     string-opt-keyword (recur
-                                         (nnext command-line-args)
-                                         (assoc acc string-opt-keyword
-                                                (second command-line-args)))
-                     (str/starts-with? arg "-S") (let [msg (str "Invalid option: " arg)]
-                                                   (*exit-fn* 1 msg))
-                     (and
-                      (not (some acc [:main-aliases :all-aliases]))
-                      (or (= "-h" arg)
-                          (= "--help" arg))) (assoc acc :help true)
-                     :else (assoc acc :args command-line-args)))
-                 acc))
+  (let [opts (parse-args command-line-args)
         java-cmd
         (or (System/getenv "JAVA_CMD")
             (let [java-cmd (which (if windows? "java.exe" "java"))]
@@ -390,11 +394,12 @@ For more info, see:
            (println (format "Could not find %s" tools-jar))
            (clojure-tools-jar-download tools-dir)
            tools-jar))
-        exec? (= :exec (:mode args))
+        mode (:mode opts)
+        exec? (= :exec mode)
         exec-cp (when exec?
                   (.getPath exec-jar))
         deps-edn
-        (or (:deps-file args)
+        (or (:deps-file opts)
             "deps.edn")
         clj-main-cmd
         (vec (concat [java-cmd]
@@ -423,11 +428,11 @@ For more info, see:
               (.getPath (io/file config-dir ".cpcache")))
           ;; Chain deps.edn in config paths. repro=skip config dir
           config-user
-          (when-not (:repro args)
+          (when-not (:repro opts)
             (.getPath (io/file config-dir "deps.edn")))
           config-project deps-edn
           config-paths
-          (if (:repro args)
+          (if (:repro opts)
             (if install-dir [(.getPath (io/file install-dir "deps.edn")) deps-edn]
                 [])
             (if install-dir
@@ -444,12 +449,12 @@ For more info, see:
           ;; Construct location of cached classpath file
           val*
           (str/join "|"
-                    (concat [(:resolve-aliases args)
-                             (:classpath-aliases args)
-                             (:repl-aliases args)
-                             (:exec-aliases args)
-                             (:main-aliases args)
-                             (:deps-data args)]
+                    (concat (:resolve-aliases opts)
+                            (:classpath-aliases opts)
+                            (:repl-aliases opts)
+                            [(:exec-aliases opts)
+                             (:main-aliases opts)
+                             (:deps-data opts)]
                             (map (fn [config-path]
                                    (if (.exists (io/file config-path))
                                      config-path
@@ -461,7 +466,7 @@ For more info, see:
           jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
           main-file (.getPath (io/file cache-dir (str ck ".main")))
           basis-file (.getPath (io/file cache-dir (str ck ".basis")))
-          _ (when (:verbose args)
+          _ (when (:verbose opts)
               (println "deps.clj version =" deps-clj-version)
               (println "version          =" version)
               (when install-dir (println "install_dir      =" install-dir))
@@ -470,12 +475,12 @@ For more info, see:
               (println "cache_dir        =" cache-dir)
               (println "cp_file          =" cp-file)
               (println))
-          tree? (:tree args)
+          tree? (:tree opts)
           stale
-          (or (:force args)
-              (:trace args)
+          (or (:force opts)
+              (:trace opts)
               tree?
-              (:prep args)
+              (:prep opts)
               (not (.exists (io/file cp-file)))
               (let [cp-file (io/file cp-file)]
                 (some (fn [config-path]
@@ -484,33 +489,33 @@ For more info, see:
                             (> (.lastModified f)
                                (.lastModified cp-file))))) config-paths)))
           tools-args
-          (when (or stale (:pom args))
+          (when (or stale (:pom opts))
             (cond-> []
-              (not (str/blank? (:deps-data args)))
-              (conj "--config-data" (:deps-data args))
-              (:resolve-aliases args)
-              (conj (str "-R" (:resolve-aliases args)))
-              (:classpath-aliases args)
-              (conj (str "-C" (:classpath-aliases args)))
-              (:main-aliases args)
-              (conj (str "-M" (:main-aliases args)))
-              (:repl-aliases args)
-              (conj (str "-A" (:repl-aliases args)))
-              (:exec-aliases args)
-              (conj (str "-X" (:exec-aliases args)))
-              (:force-cp args)
+              (not (str/blank? (:deps-data opts)))
+              (conj "--config-data" (:deps-data opts))
+              (:resolve-aliases opts)
+              (conj (str "-R" (str/join "" (:resolve-aliases opts))))
+              (:classpath-aliases opts)
+              (conj (str "-C" (str/join "" (:classpath-aliases opts))))
+              (:main-aliases opts)
+              (conj (str "-M" (:main-aliases opts)))
+              (:repl-aliases opts)
+              (conj (str "-A" (str/join "" (:repl-aliases opts))))
+              (:exec-aliases opts)
+              (conj (str "-X" (:exec-aliases opts)))
+              (:force-cp opts)
               (conj "--skip-cp")
-              (:threads args)
-              (conj "--threads" (:threads args))
-              (:trace args)
+              (:threads opts)
+              (conj "--threads" (:threads opts))
+              (:trace opts)
               (conj "--trace")
               tree?
               (conj "--tree")))]
       ;;  If stale, run make-classpath to refresh cached classpath
-      (when (and stale (not (or (:describe args)
-                                (:help args)
-                                (:version args))))
-        (when (:verbose args)
+      (when (and stale (not (or (:describe opts)
+                                (:help opts)
+                                (:version opts))))
+        (when (:verbose opts)
           (warn "Refreshing classpath"))
         (let [res (shell-command (into clj-main-cmd
                                        (concat
@@ -526,25 +531,25 @@ For more info, see:
                                  {:to-string? tree?})]
           (when tree?
             (print res) (flush))))
-      (let [cp (cond (or (:describe args)
-                         (:prep args)
+      (let [cp (cond (or (:describe opts)
+                         (:prep opts)
                          (:help nil)) nil
-                     (not (str/blank? (:force-cp args))) (:force-cp args)
+                     (not (str/blank? (:force-cp opts))) (:force-cp opts)
                      :else (slurp (io/file cp-file)))]
-        (cond (:help args) (do (println help-text)
+        (cond (:help opts) (do (println help-text)
                                (*exit-fn* 0))
-              (:version args) (do (println "Clojure CLI version (deps.clj)" version)
+              (:version opts) (do (println "Clojure CLI version (deps.clj)" version)
                                   (*exit-fn* 0))
-              (:prep args) (*exit-fn* 0)
-              (:pom args)
+              (:prep opts) (*exit-fn* 0)
+              (:pom opts)
               (shell-command (into clj-main-cmd
                                    ["-m" "clojure.tools.deps.alpha.script.generate-manifest2"
                                     "--config-user" config-user
                                     "--config-project" config-project
                                     "--gen=pom" (str/join " " tools-args)]))
-              (:print-classpath args)
+              (:print-classpath opts)
               (println cp)
-              (:describe args)
+              (:describe opts)
               (describe [[:deps-clj-version deps-clj-version]
                          [:version version]
                          [:config-files (filterv #(.exists (io/file %)) config-paths)]
@@ -552,24 +557,24 @@ For more info, see:
                          [:config-project config-project]
                          (when install-dir [:install-dir install-dir])
                          [:cache-dir cache-dir]
-                         [:force (boolean (:force args))]
-                         [:repro (boolean (:repro args))]
-                         [:main-aliases (str (:main-aliases args))]
-                         [:all-aliases (str (:all-aliases args))]])
+                         [:force (boolean (:force opts))]
+                         [:repro (boolean (:repro opts))]
+                         [:main-aliases (str (:main-aliases opts))]
+                         [:all-aliases (str (:all-aliases opts))]])
               tree? (*exit-fn* 0)
-              (:trace args)
+              (:trace opts)
               (warn "Wrote trace.edn")
-              (:command args)
-              (let [command (str/replace (:command args) "{{classpath}}" (str cp))
+              (:command opts)
+              (let [command (str/replace (:command opts) "{{classpath}}" (str cp))
                     main-cache-opts (when (.exists (io/file main-file))
                                       (-> main-file slurp str/split-lines))
                     main-cache-opts (str/join " " main-cache-opts)
                     command (str/replace command "{{main-opts}}" (str main-cache-opts))
                     command (str/split command #"\s+")
-                    command (into command (:args args))]
+                    command (into command (:args opts))]
                 (*process-fn* command))
               :else
-              (let [exec-args (when-let [aliases (:exec-aliases args)]
+              (let [exec-args (when-let [aliases (:exec-aliases opts)]
                                 ["--aliases" aliases])
                     jvm-cache-opts (when (.exists (io/file jvm-file))
                                      (-> jvm-file slurp str/split-lines))
@@ -585,17 +590,17 @@ For more info, see:
                     main-args (concat [java-cmd]
                                       proxy-settings
                                       jvm-cache-opts
-                                      (:jvm-opts args)
+                                      (:jvm-opts opts)
                                       [(str "-Dclojure.basis=" basis-file)
                                        (str "-Dclojure.libfile=" libs-file)
                                        "-classpath" cp
                                        "clojure.main"]
                                       main-opts)
                     main-args (filterv some? main-args)
-                    main-args (into main-args (:args args))]
-                (when (and (identical? :repl (:mode args))
-                           (pos? (count (:args args))))
-                  (warn "WARNING: Use of -A with clojure.main is deprecated, use -M instead"))
+                    main-args (into main-args (:args opts))]
+                (when (and (= :repl mode)
+                           (pos? (count (:args opts))))
+                  (warn "WARNING: Implicit use of clojure.main with options is deprecated, use -M"))
                 (*process-fn* main-args)))))))
 
 (apply -main *command-line-args*)
