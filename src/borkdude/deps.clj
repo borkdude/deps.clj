@@ -442,7 +442,7 @@ For more info, see:
           ;; Determine whether to use user or project cache
           cache-dir
           (if (.exists (io/file deps-edn))
-            (io/file *dir* ".cpcache")
+            (.getPath (io/file *dir* ".cpcache"))
             user-cache-dir)
           ;; Construct location of cached classpath file
           val*
