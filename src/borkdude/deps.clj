@@ -511,18 +511,18 @@ For more info, see:
                                 (:version opts))))
         (when (:verbose opts)
           (warn "Refreshing classpath"))
-        (let [res (shell-command (into clj-main-cmd
-                                       (concat
-                                        ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
-                                         "--config-user" config-user
-                                         "--config-project" config-project
-                                         "--basis-file" basis-file
-                                         "--libs-file" libs-file
-                                         "--cp-file" cp-file
-                                         "--jvm-file" jvm-file
-                                         "--main-file" main-file]
-                                        tools-args))
-                                 {:to-string? tree?})]
+        (let [res (*process-fn* (into clj-main-cmd
+                                      (concat
+                                       ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
+                                        "--config-user" config-user
+                                        "--config-project" config-project
+                                        "--basis-file" basis-file
+                                        "--libs-file" libs-file
+                                        "--cp-file" cp-file
+                                        "--jvm-file" jvm-file
+                                        "--main-file" main-file]
+                                       tools-args))
+                                {:to-string? tree?})]
           (when tree?
             (print res) (flush))))
       (let [cp (cond (or (:describe opts)
