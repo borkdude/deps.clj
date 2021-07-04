@@ -51,7 +51,8 @@
               true (.redirectError ProcessBuilder$Redirect/INHERIT)
               (not to-string?) (.redirectOutput ProcessBuilder$Redirect/INHERIT)
               true (.redirectInput ProcessBuilder$Redirect/INHERIT))
-         _ (when-let [dir *dir*] (.directory pb (io/file dir)))
+         _ (when-let [dir *dir*]
+             (.directory pb (io/file dir)))
          proc (.start pb)
          string-out
          (when to-string?
@@ -440,8 +441,8 @@ For more info, see:
                deps-edn]))
           ;; Determine whether to use user or project cache
           cache-dir
-          (if (.exists (io/file "deps.edn"))
-            ".cpcache"
+          (if (.exists (io/file deps-edn))
+            (io/file *dir* ".cpcache")
             user-cache-dir)
           ;; Construct location of cached classpath file
           val*
