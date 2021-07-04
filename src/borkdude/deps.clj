@@ -32,6 +32,8 @@
       (str/lower-case)
       (str/includes? "windows")))
 
+(def ^:private ^:dynamic *dir* nil)
+
 (defn shell-command
   "Executes shell command.
 
@@ -49,6 +51,7 @@
               true (.redirectError ProcessBuilder$Redirect/INHERIT)
               (not to-string?) (.redirectOutput ProcessBuilder$Redirect/INHERIT)
               true (.redirectInput ProcessBuilder$Redirect/INHERIT))
+         _ (when-let [dir *dir*] (.directory pb (io/file dir)))
          proc (.start pb)
          string-out
          (when to-string?
@@ -511,7 +514,7 @@ For more info, see:
                                 (:version opts))))
         (when (:verbose opts)
           (warn "Refreshing classpath"))
-        (let [res (*process-fn* (into clj-main-cmd
+        (let [res (shell-command (into clj-main-cmd
                                       (concat
                                        ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
                                         "--config-user" config-user
@@ -522,7 +525,7 @@ For more info, see:
                                         "--jvm-file" jvm-file
                                         "--main-file" main-file]
                                        tools-args))
-                                {:to-string? tree?})]
+                                 {:to-string? tree?})]
           (when tree?
             (print res) (flush))))
       (let [cp (cond (or (:describe opts)
