@@ -20,7 +20,7 @@
 (def path-separator (System/getProperty "path.separator"))
 
 (def version "1.10.3.855")
-(def deps-clj-version "0.0.16-SNAPSHOT")
+(def deps-clj-version "0.0.16")
 
 (defn warn [& strs]
   (binding [*out* *err*]
@@ -574,6 +574,7 @@ For more info, see:
                          [:config-user config-user]
                          [:config-project (relativize config-project)]
                          (when install-dir [:install-dir install-dir])
+                         [:config-dir config-dir]
                          [:cache-dir cache-dir]
                          [:force (boolean (:force opts))]
                          [:repro (boolean (:repro opts))]
