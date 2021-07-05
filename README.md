@@ -4,8 +4,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/wwfs4utm08dd9vx2/branch/master?svg=true)](https://ci.appveyor.com/project/borkdude/deps.clj/branch/master)
 [![Clojars Project](https://img.shields.io/clojars/v/borkdude/deps.clj.svg)](https://clojars.org/borkdude/deps.clj)
 
-About A faithful port of the clojure CLI bash script to Clojure. Can be run as
-executable or from source with babashka or JVM.
+About A faithful port of the clojure CLI bash script to Clojure.
 
 Clojure provides the [`clojure`](https://clojure.org/guides/deps_and_cli)
 command line tool for:
