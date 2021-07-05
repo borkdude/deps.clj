@@ -14,7 +14,7 @@
 (def path-separator (System/getProperty "path.separator"))
 
 (def version "1.10.3.855")
-(def deps-clj-version "0.0.15")
+(def deps-clj-version "0.0.16-SNAPSHOT")
 
 (defn warn [& strs]
   (binding [*out* *err*]
