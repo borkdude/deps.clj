@@ -18,7 +18,7 @@ Features:
 
 - Run as executable compiled with [GraalVM](https://github.com/oracle/graal)
   Or run directly from source with [babashka](https://github.com/babashka/babashka/) or the JVM
-- Similar startup to bash
+- Similar startup to bash (with native or babashka)
 - Easy installation on all three major platforms including Windows
 - Works in `cmd.exe` on Windows
 
@@ -49,34 +49,24 @@ path.
 
 ## Why
 
-Reasons why I made this:
+Originally this project was created as a proof of concept to see if the
+`clojure` bash script could be ported to Clojure and be used as a
+[babashka](https://github.com/babashka/babashka/) script.
 
-- The port was done as proof of concept for
-  [babashka](https://github.com/babashka/babashka/). The entire bash script was
-  ported to Clojure successfully and runs just as fast with `bb`.
+Nowadays it is used as the code behind the `babashka.deps` namespace and the
+`clojure` subcommand in babashka, to resolve and download dependencies for
+babashka itself, or when running a Clojure process with babashka.
 
-- This offers an arguably easier way to get going with `deps.edn` based projects
-  in CI. Just download an installer script, execute it with bash or Powershell and you're set. Installer scripts are provided for linux, macOS and Windows.
+This project offers an arguably easier way to get going with `deps.edn` based
+projects in CI. Just download an installer script, execute it with bash or
+Powershell and you're set. Installer scripts are provided for linux, macOS and
+Windows.
 
-- Windows users might find the `deps.exe` executable of value if they have
-trouble getting their system up and running. It works with `cmd.exe` unlike the
-current Powershell based approach.
+Windows users might find the `deps.exe` executable of value if they have trouble
+getting their system up and running. It works with `cmd.exe` unlike the current
+Powershell based approach.
 
-- This repo might be a place to experiment with features that are not available
-in the original `clojure` command. Most notably it offers an `-Scommand` option
-which allows other programs to be started than just the JVM version of Clojure,
-e.g. [`babashka`](https://github.com/babashka/babashka/) or
-[`planck`](https://github.com/planck-repl/planck/).
-
-- Arguably bash and Powershell are less attractive languages for Clojure
-developers than Clojure itself. This repo provides the `clojure` bash script as
-a port in Clojure. It can be used as a binary, script (`deps.clj`), uberjar
-or library.
-
-- This repo can be seen as a proof of concept of what is possible with GraalVM
-and Clojure.
-
-## Used in
+## Projects using deps.clj
 
 ### [Babashka](https://github.com/babashka/babashka)
 
@@ -99,9 +89,9 @@ changed or removed in the future.
 
 There are three ways of running:
 
-- as a compiled binary called `deps` which is tailored to your OS
-- from source, as a script file called `deps.clj` using the [`bb`](https://github.com/babashka/babashka/) or `clojure` runtime.
-- as a JVM library or uberjar (see [Github
+- As a compiled binary called `deps` which is tailored to your OS.
+- From source, as a script file called `deps.clj` using the [`bb`](https://github.com/babashka/babashka/) or `clojure` runtime.
+- As a JVM library or uberjar (see [Github
 releases](https://github.com/borkdude/deps.clj/releases)).
 
 ### Binary
