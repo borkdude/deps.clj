@@ -8,12 +8,12 @@
    [clojure.string :as str])
   (:import [java.lang ProcessBuilder$Redirect]
            [java.net URL HttpURLConnection]
-           [java.nio.file Files FileSystems CopyOption]))
+           [java.nio.file Files FileSystems Path CopyOption]))
 
 (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
-(def version "1.10.3.849")
+(def version "1.10.3.855")
 (def deps-clj-version "0.0.15")
 
 (defn warn [& strs]
@@ -32,6 +32,8 @@
       (str/lower-case)
       (str/includes? "windows")))
 
+(def ^:private ^:dynamic *dir* nil)
+
 (defn shell-command
   "Executes shell command.
 
@@ -49,6 +51,8 @@
               true (.redirectError ProcessBuilder$Redirect/INHERIT)
               (not to-string?) (.redirectOutput ProcessBuilder$Redirect/INHERIT)
               true (.redirectInput ProcessBuilder$Redirect/INHERIT))
+         _ (when-let [dir *dir*]
+             (.directory pb (io/file dir)))
          proc (.start pb)
          string-out
          (when to-string?
@@ -87,10 +91,10 @@ in a terminal, and should be preferred unless you don't want that support,
 then use 'clojure'.
 
 Usage:
-  Start a REPL   clj     [clj-opt*] [-Aaliases] [init-opt*]
-  Exec function  clojure [clj-opt*] -X[aliases] [a/fn] [kpath v]*
-  Run main       clojure [clj-opt*] -M[aliases] [init-opt*] [main-opt] [arg*]
-  Prepare        clojure [clj-opt*] -P [other exec opts]
+  Start a REPL  clj     [clj-opt*] [-Aaliases] [init-opt*]
+  Exec fn(s)    clojure [clj-opt*] -X[aliases] [a/fn*] [kpath v]*
+  Run main      clojure [clj-opt*] -M[aliases] [init-opt*] [main-opt] [arg*]
+  Prepare       clojure [clj-opt*] -P [other exec opts]
 
 exec-opts:
  -Aaliases      Use concatenated aliases to modify classpath
@@ -352,6 +356,20 @@ For more info, see:
           :else (assoc acc :args args)))
       acc)))
 
+
+(defn- ^Path as-path
+  [path]
+  (if (instance? Path path) path
+      (.toPath (io/file path))))
+
+(defn ^Path relativize
+  "Returns relative path by comparing this with other."
+  [f]
+  ;; (prn :dir *dir* :f f)
+  (if-let [dir *dir*]
+    (.relativize (as-path dir) (as-path f))
+    f))
+
 (defn -main [& command-line-args]
   (let [opts (parse-args command-line-args)
         java-cmd
@@ -394,7 +412,7 @@ For more info, see:
                   (.getPath exec-jar))
         deps-edn
         (or (:deps-file opts)
-            "deps.edn")
+            (.getPath (io/file *dir* "deps.edn")))
         clj-main-cmd
         (vec (concat [java-cmd]
                      proxy-settings
@@ -437,8 +455,8 @@ For more info, see:
                deps-edn]))
           ;; Determine whether to use user or project cache
           cache-dir
-          (if (.exists (io/file "deps.edn"))
-            ".cpcache"
+          (if (.exists (io/file deps-edn))
+            (.getPath (io/file *dir* ".cpcache"))
             user-cache-dir)
           ;; Construct location of cached classpath file
           val*
@@ -512,16 +530,16 @@ For more info, see:
         (when (:verbose opts)
           (warn "Refreshing classpath"))
         (let [res (shell-command (into clj-main-cmd
-                                       (concat
-                                        ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
-                                         "--config-user" config-user
-                                         "--config-project" config-project
-                                         "--basis-file" basis-file
-                                         "--libs-file" libs-file
-                                         "--cp-file" cp-file
-                                         "--jvm-file" jvm-file
-                                         "--main-file" main-file]
-                                        tools-args))
+                                      (concat
+                                       ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
+                                        "--config-user" config-user
+                                        "--config-project" (relativize config-project)
+                                        "--basis-file" (relativize basis-file)
+                                        "--libs-file" (relativize libs-file)
+                                        "--cp-file" (relativize cp-file)
+                                        "--jvm-file" (relativize jvm-file)
+                                        "--main-file" (relativize main-file)]
+                                       tools-args))
                                  {:to-string? tree?})]
           (when tree?
             (print res) (flush))))
@@ -539,7 +557,7 @@ For more info, see:
               (shell-command (into clj-main-cmd
                                    ["-m" "clojure.tools.deps.alpha.script.generate-manifest2"
                                     "--config-user" config-user
-                                    "--config-project" config-project
+                                    "--config-project" (relativize config-project)
                                     "--gen=pom" (str/join " " tools-args)]))
               (:print-classpath opts)
               (println cp)
@@ -548,7 +566,7 @@ For more info, see:
                          [:version version]
                          [:config-files (filterv #(.exists (io/file %)) config-paths)]
                          [:config-user config-user]
-                         [:config-project config-project]
+                         [:config-project (relativize config-project)]
                          (when install-dir [:install-dir install-dir])
                          [:cache-dir cache-dir]
                          [:force (boolean (:force opts))]
@@ -585,8 +603,8 @@ For more info, see:
                                       proxy-settings
                                       jvm-cache-opts
                                       (:jvm-opts opts)
-                                      [(str "-Dclojure.basis=" basis-file)
-                                       (str "-Dclojure.libfile=" libs-file)
+                                      [(str "-Dclojure.basis=" (relativize basis-file))
+                                       (str "-Dclojure.libfile=" (relativize libs-file))
                                        "-classpath" cp
                                        "clojure.main"]
                                       main-opts)
