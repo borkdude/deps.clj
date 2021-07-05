@@ -10,7 +10,7 @@
 (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
-(def version "1.10.3.849")
+(def version "1.10.3.855")
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
       (slurp)
@@ -91,10 +91,10 @@ in a terminal, and should be preferred unless you don't want that support,
 then use 'clojure'.
 
 Usage:
-  Start a REPL   clj     [clj-opt*] [-Aaliases] [init-opt*]
-  Exec function  clojure [clj-opt*] -X[aliases] [a/fn] [kpath v]*
-  Run main       clojure [clj-opt*] -M[aliases] [init-opt*] [main-opt] [arg*]
-  Prepare        clojure [clj-opt*] -P [other exec opts]
+  Start a REPL  clj     [clj-opt*] [-Aaliases] [init-opt*]
+  Exec fn(s)    clojure [clj-opt*] -X[aliases] [a/fn*] [kpath v]*
+  Run main      clojure [clj-opt*] -M[aliases] [init-opt*] [main-opt] [arg*]
+  Prepare       clojure [clj-opt*] -P [other exec opts]
 
 exec-opts:
  -Aaliases      Use concatenated aliases to modify classpath
