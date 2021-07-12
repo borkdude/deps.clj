@@ -34,6 +34,34 @@
 
 (def ^:private ^:dynamic *dir* nil)
 
+(def ^:private ^:dynamic *env* nil)
+(def ^:private ^:dynamic *extra-env* nil)
+
+(defn- as-string-map
+  "Helper to coerce a Clojure map with keyword keys into something coerceable to Map<String,String>
+  Stringifies keyword keys, but otherwise doesn't try to do anything clever with values"
+  [m]
+  (if (map? m)
+    (into {} (map (fn [[k v]] [(str (if (keyword? k) (name k) k)) (str v)])) m)
+    m))
+
+(defn- add-env
+  "Adds environment for a ProcessBuilder instance.
+  Returns instance to participate in the thread-first macro."
+  ^java.lang.ProcessBuilder [^java.lang.ProcessBuilder pb env]
+  (doto (.environment pb)
+    (.putAll (as-string-map env)))
+  pb)
+
+(defn- set-env
+  "Sets environment for a ProcessBuilder instance.
+  Returns instance to participate in the thread-first macro."
+  ^java.lang.ProcessBuilder [^java.lang.ProcessBuilder pb env]
+  (doto (.environment pb)
+    (.clear)
+    (.putAll (as-string-map env)))
+  pb)
+
 (defn shell-command
   "Executes shell command.
 
@@ -53,6 +81,10 @@
               true (.redirectInput ProcessBuilder$Redirect/INHERIT))
          _ (when-let [dir *dir*]
              (.directory pb (io/file dir)))
+         _ (when-let [env *env*]
+             (set-env pb env))
+         _ (when-let [extra-env *extra-env*]
+             (add-env pb extra-env))
          proc (.start pb)
          string-out
          (when to-string?
