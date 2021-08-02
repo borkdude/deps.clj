@@ -10,7 +10,7 @@
 (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
-(def version "1.10.3.855")
+(def version "1.10.3.933")
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
       (slurp)
@@ -126,6 +126,7 @@ Usage:
   Start a REPL  clj     [clj-opt*] [-Aaliases] [init-opt*]
   Exec fn(s)    clojure [clj-opt*] -X[aliases] [a/fn*] [kpath v]*
   Run main      clojure [clj-opt*] -M[aliases] [init-opt*] [main-opt] [arg*]
+  Run tool      clojure [clj-opt*] -T[name|aliases] a/fn [kpath v] kv-map?
   Prepare       clojure [clj-opt*] -P [other exec opts]
 
 exec-opts:
@@ -171,6 +172,8 @@ main-opt:
 Programs provided by :deps alias:
  -X:deps mvn-install       Install a maven jar to the local repository cache
  -X:deps git-resolve-tags  Resolve git coord tags to shas and update deps.edn
+ -X:deps find-versions     Find available versions of a library
+ -X:deps prep              Prepare all unprepped libs in the dep tree
 
 For more info, see:
  https://clojure.org/guides/deps_and_cli
@@ -332,7 +335,7 @@ For more info, see:
       (let [arg (first args)
             [arg args]
             ;; workaround for Powershell, see GH-42
-            (if (and windows? (#{"-X:" "-M:" "-A:"} arg))
+            (if (and windows? (#{"-X:" "-M:" "-A:" "-T:"} arg))
               [(str arg (second args))
                (next args)]
               [arg args])
@@ -352,13 +355,23 @@ For more info, see:
                  :mode :exec
                  :exec-aliases (non-blank (subs arg 2))
                  :args (next args))
+          (str/starts-with? arg "-T:")
+          (assoc acc
+                 :mode :tool
+                 :tool-aliases (non-blank (subs arg 2))
+                 :args (next args))
+          (str/starts-with? arg "-T")
+          (assoc acc
+                 :mode :tool
+                 :tool-name (non-blank (subs arg 2))
+                 :args (next args))
           ;; deprecations
           (some #(str/starts-with? arg %) ["-R" "-C"])
           (do (warn arg "is deprecated, use -A with repl, -M for main, or -X for exec")
               (recur (next args)
                      (update acc (get parse-opts->keyword (subs arg 0 2))
                              vconj (subs arg 2))))
-          (some #(str/starts-with? arg %) ["-O" "-T"])
+          (some #(str/starts-with? arg %) ["-O"])
           (let [msg (str arg " is no longer supported, use -A with repl, -M for main, or -X for exec")]
             (*exit-fn* 1 msg))
           (= "-Sresolve-tags" arg)
@@ -440,7 +453,8 @@ For more info, see:
            tools-jar))
         mode (:mode opts)
         exec? (= :exec mode)
-        exec-cp (when exec?
+        tool? (= :tool mode)
+        exec-cp (when (or exec? tool?)
                   (.getPath exec-jar))
         deps-edn
         (or (:deps-file opts)
@@ -464,6 +478,12 @@ For more info, see:
                  (not (.exists config-deps-edn))
                  (.exists example-deps-edn))
         (io/copy example-deps-edn config-deps-edn)))
+    (let [config-tools-edn (io/file config-dir "tools.edn")
+          example-tools-edn (io/file install-dir "example-tools.edn")]
+      (when (and install-dir
+                 (not (.exists config-tools-edn))
+                 (.exists example-tools-edn))
+        (io/copy example-tools-edn config-tools-edn)))
     ;; Determine user cache directory
     (let [user-cache-dir
           (or (System/getenv "CLJ_CACHE")
@@ -491,6 +511,8 @@ For more info, see:
             (.getPath (io/file *dir* ".cpcache"))
             user-cache-dir)
           ;; Construct location of cached classpath file
+          tool-name (:tool-name opts)
+          tool-aliases (:tool-aliases opts)
           val*
           (str/join "|"
                     (concat (:resolve-aliases opts)
@@ -498,7 +520,9 @@ For more info, see:
                             (:repl-aliases opts)
                             [(:exec-aliases opts)
                              (:main-aliases opts)
-                             (:deps-data opts)]
+                             (:deps-data opts)
+                             tool-name
+                             (:tool-aliases opts)]
                             (map (fn [config-path]
                                    (if (.exists (io/file config-path))
                                      config-path
@@ -526,6 +550,11 @@ For more info, see:
               tree?
               (:prep opts)
               (not (.exists (io/file cp-file)))
+              (when tool-name
+                (let [tool-file (io/file config-dir "tools" (str tool-name ".edn"))]
+                  (when (.exists tool-file)
+                    (> (.lastModified tool-file)
+                       (.lastModified (io/file cp-file))))))
               (let [cp-file (io/file cp-file)]
                 (some (fn [config-path]
                         (let [f (io/file config-path)]
@@ -547,6 +576,12 @@ For more info, see:
               (conj (str "-A" (str/join "" (:repl-aliases opts))))
               (:exec-aliases opts)
               (conj (str "-X" (:exec-aliases opts)))
+              tool?
+              (conj "--tool-mode")
+              tool-name
+              (conj "--tool-name" tool-name)
+              tool-aliases
+              (conj (str "-T" tool-aliases))
               (:force-cp opts)
               (conj "--skip-cp")
               (:threads opts)
@@ -619,17 +654,14 @@ For more info, see:
                     command (into command (:args opts))]
                 (*process-fn* command))
               :else
-              (let [exec-args (when-let [aliases (:exec-aliases opts)]
-                                ["--aliases" aliases])
-                    jvm-cache-opts (when (.exists (io/file jvm-file))
+              (let [jvm-cache-opts (when (.exists (io/file jvm-file))
                                      (-> jvm-file slurp str/split-lines))
                     main-cache-opts (when (.exists (io/file main-file))
                                       (-> main-file slurp str/split-lines))
-                    main-opts (if exec?
-                                (into ["-m" "clojure.run.exec"]
-                                      exec-args)
+                    main-opts (if (or exec? tool?)
+                                ["-m" "clojure.run.exec"]
                                 main-cache-opts)
-                    cp (if exec?
+                    cp (if (or exec? tool?)
                          (str cp path-separator exec-cp)
                          cp)
                     main-args (concat [java-cmd]
