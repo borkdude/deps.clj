@@ -660,15 +660,12 @@ For more info, see:
                     command (into command (:args opts))]
                 (*process-fn* command))
               :else
-              (let [exec-args (when-let [aliases (:exec-aliases opts)]
-                                ["--aliases" aliases])
-                    jvm-cache-opts (when (.exists (io/file jvm-file))
+              (let [jvm-cache-opts (when (.exists (io/file jvm-file))
                                      (-> jvm-file slurp str/split-lines))
                     main-cache-opts (when (.exists (io/file main-file))
                                       (-> main-file slurp str/split-lines))
                     main-opts (if (or exec? tool?)
-                                (into ["-m" "clojure.run.exec"]
-                                      exec-args)
+                                ["-m" "clojure.run.exec"]
                                 main-cache-opts)
                     cp (if (or exec? tool?)
                          (str cp path-separator exec-cp)
