@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.0.17
+
+- Catch up with Clojure CLI version 1.10.3.967
+
 ## v0.0.16
 
 - Add config-dir to -Sdescribe #38
