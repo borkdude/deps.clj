@@ -15,7 +15,7 @@
 
 ;; see https://github.com/clojure/brew-install/blob/1.10.3/CHANGELOG.md
 (def version "1.10.3.967")
-(def deps-clj-version "0.0.17")
+(def deps-clj-version "0.0.18-SNAPSHOT")
 
 (defn warn [& strs]
   (binding [*out* *err*]
