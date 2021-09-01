@@ -10,7 +10,8 @@
 (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
-(def version "1.10.3.933")
+;; see https://github.com/clojure/brew-install/blob/1.10.3/CHANGELOG.md
+(def version "1.10.3.967")
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
       (slurp)

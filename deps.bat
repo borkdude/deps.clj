@@ -19,8 +19,8 @@
 (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
-(def version "1.10.3.933")
-(def deps-clj-version "0.0.17-SNAPSHOT")
+(def version "1.10.3.967")
+(def deps-clj-version "0.0.17")
 
 (defn warn [& strs]
   (binding [*out* *err*]
