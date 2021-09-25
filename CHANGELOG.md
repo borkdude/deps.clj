@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.0.19
+
+- Catch up with Clojure CLI version 1.10.3.986
+
 ## v0.0.18
 
 - Catch up with Clojure CLI version 1.10.3.981
