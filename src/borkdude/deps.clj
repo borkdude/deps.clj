@@ -181,7 +181,7 @@ For more info, see:
  https://clojure.org/reference/repl_and_main"))
 
 (defn describe-line [[kw val]]
-  (pr kw val ))
+  (pr kw val))
 
 (defn describe [lines]
   (let [[first-line & lines] lines]
@@ -613,7 +613,7 @@ For more info, see:
             (print res) (flush))))
       (let [cp (cond (or (:describe opts)
                          (:prep opts)
-                         (:help nil)) nil
+                         (:help opts)) nil
                      (not (str/blank? (:force-cp opts))) (:force-cp opts)
                      :else (slurp (io/file cp-file)))]
         (cond (:help opts) (do (println help-text)
