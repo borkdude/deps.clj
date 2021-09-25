@@ -20,8 +20,8 @@
 (def path-separator (System/getProperty "path.separator"))
 
 ;; see https://github.com/clojure/brew-install/blob/1.10.3/CHANGELOG.md
-(def version "1.10.3.981")
-(def deps-clj-version "0.0.19-SNAPSHOT")
+(def version "1.10.3.986")
+(def deps-clj-version "0.0.19")
 
 (defn warn [& strs]
   (binding [*out* *err*]
@@ -187,7 +187,7 @@ For more info, see:
  https://clojure.org/reference/repl_and_main"))
 
 (defn describe-line [[kw val]]
-  (pr kw val ))
+  (pr kw val))
 
 (defn describe [lines]
   (let [[first-line & lines] lines]
@@ -619,7 +619,7 @@ For more info, see:
             (print res) (flush))))
       (let [cp (cond (or (:describe opts)
                          (:prep opts)
-                         (:help nil)) nil
+                         (:help opts)) nil
                      (not (str/blank? (:force-cp opts))) (:force-cp opts)
                      :else (slurp (io/file cp-file)))]
         (cond (:help opts) (do (println help-text)

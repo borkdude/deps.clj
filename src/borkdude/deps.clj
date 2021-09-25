@@ -11,7 +11,7 @@
 (def path-separator (System/getProperty "path.separator"))
 
 ;; see https://github.com/clojure/brew-install/blob/1.10.3/CHANGELOG.md
-(def version "1.10.3.981")
+(def version "1.10.3.986")
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
       (slurp)
