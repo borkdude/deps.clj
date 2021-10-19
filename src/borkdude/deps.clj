@@ -233,7 +233,8 @@ For more info, see:
 (defn unzip [zip-file destination-dir]
   (let [zip-file (io/file zip-file)
         _ (.mkdirs (io/file destination-dir))
-        fs (FileSystems/newFileSystem (.toPath zip-file) nil)]
+        ^ClassLoader x nil
+        fs (FileSystems/newFileSystem (.toPath zip-file) x)]
     (doseq [f [clojure-tools-jar "exec.jar" "example-deps.edn"]]
       (let [file-in-zip (.getPath fs "ClojureTools" (into-array String [f]))]
         (Files/copy file-in-zip (.toPath (io/file destination-dir f))
