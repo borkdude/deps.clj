@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.20
+
+- Use tools version `1.10.3.998`
+- Add new `DEPS_CLJ_TOOLS_VERSION` environment variable to control tools version
+- Renamed `CLOJURE_TOOLS_DIR` to `DEPS_CLJ_TOOLS_DIR` while preserving backwards compatibility
+
 ## v0.0.19
 
 - Catch up with Clojure CLI version 1.10.3.986
