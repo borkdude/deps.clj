@@ -7,11 +7,13 @@
            [java.nio.file Files FileSystems Path CopyOption])
   (:gen-class))
 
-(set! *warn-on-reflection* true)
+;; (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
 ;; see https://github.com/clojure/brew-install/blob/1.10.3/CHANGELOG.md
-(def version "1.10.3.986")
+(def version (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
+                 "1.10.3.998"))
+
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
       (slurp)
@@ -219,7 +221,7 @@ For more info, see:
     (System/getProperty "user.home")))
 
 (defn download [source dest]
-  (warn "Attempting download from" source)
+  (warn "Downloading tools jar from" (str source) "to" (.getParent (io/file dest)))
   (let [source (URL. source)
         dest (io/file dest)
         conn ^HttpURLConnection (.openConnection ^URL source)]
@@ -235,7 +237,10 @@ For more info, see:
         _ (.mkdirs (io/file destination-dir))
         ^ClassLoader x nil
         fs (FileSystems/newFileSystem (.toPath zip-file) x)]
-    (doseq [f [clojure-tools-jar "exec.jar" "example-deps.edn"]]
+    (doseq [f [clojure-tools-jar
+               "exec.jar"
+               "example-deps.edn"
+               "tools.edn"]]
       (let [file-in-zip (.getPath fs "ClojureTools" (into-array String [f]))]
         (Files/copy file-in-zip (.toPath (io/file destination-dir f))
                     ^{:tag "[Ljava.nio.file.CopyOption;"}
@@ -437,14 +442,24 @@ For more info, see:
                       (with-open [reader (io/reader clojure-file)]
                         (let [lines (line-seq reader)]
                           (second (some #(re-matches #"^install_dir=(.*)" %) lines)))))
-        tools-dir (or (System/getenv "CLOJURE_TOOLS_DIR") ;; TODO document
+        env-tools-dir (or
+                       ;; legacy name
+                       (System/getenv "CLOJURE_TOOLS_DIR")
+                       (System/getenv "DEPS_CLJ_TOOLS_DIR"))
+        tools-dir (or env-tools-dir
                       (.getPath (io/file (home-dir)
                                          ".deps.clj"
                                          version
                                          "ClojureTools")))
-        tools-jar (io/file tools-dir
+        libexec-dir (if env-tools-dir
+                      (let [f (io/file env-tools-dir "libexec")]
+                        (if (.exists f)
+                          (.getPath f)
+                          env-tools-dir))
+                      tools-dir)
+        tools-jar (io/file libexec-dir
                            (format "clojure-tools-%s.jar" version))
-        exec-jar (io/file tools-dir "exec.jar")
+        exec-jar (io/file libexec-dir "exec.jar")
         proxy-settings (jvm-proxy-settings) ;; side effecting, sets java proxy properties for download
         tools-cp
         (or
@@ -480,12 +495,13 @@ For more info, see:
                  (not (.exists config-deps-edn))
                  (.exists example-deps-edn))
         (io/copy example-deps-edn config-deps-edn)))
-    (let [config-tools-edn (io/file config-dir "tools.edn")
-          example-tools-edn (io/file install-dir "example-tools.edn")]
+    (let [config-tools-edn (io/file config-dir "tools" "tools.edn")
+          install-tools-edn (io/file install-dir "tools.edn")]
       (when (and install-dir
                  (not (.exists config-tools-edn))
-                 (.exists example-tools-edn))
-        (io/copy example-tools-edn config-tools-edn)))
+                 (.exists install-tools-edn))
+        (io/make-parents config-tools-edn)
+        (io/copy install-tools-edn config-tools-edn)))
     ;; Determine user cache directory
     (let [user-cache-dir
           (or (System/getenv "CLJ_CACHE")

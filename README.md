@@ -168,15 +168,31 @@ Clojure 1.10.1
 user=>
 ```
 
-### Tools jars
+### Environment variables
+
+#### DEPS_CLJ_TOOLS_DIR
 
 This project will look in `$HOME/.deps.clj/<clojure-version>/ClojureTools` for
 `clojure-tools-<clojure-version>.jar`, `exec.jar` and `example-deps.edn`. If it
 cannot it find those files there, it will try to download them from
 [this](https://download.clojure.org/install/clojure-tools-1.10.1.697.zip)
 location. You can override the location of these jars with the
-`CLOJURE_TOOLS_DIR` environment variable. If the download fails for some reason,
+`DEPS_CLJ_TOOLS_DIR` environment variable. If the download fails for some reason,
 you can try to download the zip yourself and unzip it at the expected location.
+
+If you have an already installed version of clojure using e.g. brew, you can set
+`DEPS_CLJ_TOOLS_DIR` to that directory:
+
+
+
+#### DEPS_CLJ_TOOLS_VERSION
+
+This project assumes a specific version of the tools jar. However, it can be
+desirable to up- or downgrade the targetted tools jar in case of bug fixes or
+bugs in newer versions. Be aware that the code of this project is written with a
+specific version of the tools jar in mind, so use this at your own risk. Given
+that there isn't a lot of churn in the bash code that this project replaces, the
+risk should be relatively low.
 
 ## Extra features
 

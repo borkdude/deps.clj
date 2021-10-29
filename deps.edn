@@ -2,8 +2,12 @@
  :aliases
  {:test
   {:extra-paths ["test"]
-   :main-opts ["-e" "(require,'[clojure.test,:as,t],'[borkdude.deps-test]),(t/run-tests,'borkdude.deps-test)"]
-   :extra-deps {babashka/fs {:mvn/version "0.0.3"}}}
+   :extra-deps {io.github.cognitect-labs/test-runner
+                {:git/tag "v0.5.0" :git/sha "b3fd0d2"}
+                babashka/fs {:mvn/version "0.0.3"}
+                babashka/process {:mvn/version "0.0.2"}}
+   :main-opts ["-m" "cognitect.test-runner"]
+   :exec-fn cognitect.test-runner.api/test}
   :exec-test
   {:extra-paths ["test"]
    :exec-fn borkdude.exec-test/exec-fn}}}

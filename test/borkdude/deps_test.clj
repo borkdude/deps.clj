@@ -1,6 +1,7 @@
 (ns borkdude.deps-test
   (:require
    [babashka.fs :as fs]
+   [babashka.process :refer [process]]
    [borkdude.deps :as deps]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -75,3 +76,24 @@
 (spit \"%s\" (pr-str [(System/getProperty \"foo\") (System/getProperty \"baz\")]))"
                                   temp-file-path))
     (is (= ["bar" "quux"] (edn/read-string  (slurp temp-file-path))))))
+
+(deftest tools-dir-env-test
+  (fs/delete-tree "tools-dir")
+  (try
+    (let [[out err exit]
+          (-> (process "clojure -M -m borkdude.deps -Sdescribe"
+                       {:out :string
+                        :err :string
+                        :extra-env {"DEPS_CLJ_TOOLS_VERSION" "1.10.3.899"
+                                    "DEPS_CLJ_TOOLS_DIR" "tools-dir"}})
+              deref
+              ((juxt :out :err :exit)))]
+      (when-not (zero? exit)
+        (println err))
+      (is (= "1.10.3.899" (:version (edn/read-string out))))
+      (is (str/includes? err "Downloading tools jar from https://download.clojure.org/install/clojure-tools-1.10.3.899.zip to tools-dir"))
+      (is (fs/exists? (fs/file "tools-dir" "clojure-tools-1.10.3.899.jar")))
+      (is (fs/exists? (fs/file "tools-dir" "example-deps.edn")))
+      (is (fs/exists? (fs/file "tools-dir" "exec.jar")))
+      (is (fs/exists? (fs/file "tools-dir" "tools.edn"))))
+    (finally (fs/delete-tree "tools-dir"))))
