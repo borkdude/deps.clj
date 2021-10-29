@@ -3,3 +3,5 @@
 /deps.exe
 /.cpcache
 /.clj-kondo/.cache
+/deps
+/deps.build_artifacts.txt
