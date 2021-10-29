@@ -21,11 +21,6 @@ build_script:
     call lein self-install
 
 - cmd: >-
-    powershell -Command "(New-Object Net.WebClient).DownloadFile('https://download.clojure.org/install/clojure-tools-1.10.1.492.zip', 'clojure-tools.zip')"
-
-    powershell -Command "Expand-Archive -Path clojure-tools.zip -DestinationPath c:\ProgramData
-
-- cmd: >-
     call lein do clean, uberjar
 
     set /P DEPS_CLJ_VERSION=< resources\DEPS_CLJ_VERSION
