@@ -10,14 +10,14 @@
            [java.net URL HttpURLConnection]
            [java.nio.file Files FileSystems Path CopyOption]))
 
-;; (set! *warn-on-reflection* true)
+(set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
 ;; see https://github.com/clojure/brew-install/blob/1.10.3/CHANGELOG.md
 (def version (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
                  "1.10.3.998"))
 
-(def deps-clj-version "0.0.19")
+(def deps-clj-version "0.0.20-SNAPSHOT")
 
 (defn warn [& strs]
   (binding [*out* *err*]

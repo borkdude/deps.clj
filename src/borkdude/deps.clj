@@ -7,7 +7,7 @@
            [java.nio.file Files FileSystems Path CopyOption])
   (:gen-class))
 
-;; (set! *warn-on-reflection* true)
+(set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
 ;; see https://github.com/clojure/brew-install/blob/1.10.3/CHANGELOG.md
