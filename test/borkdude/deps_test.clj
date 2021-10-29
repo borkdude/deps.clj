@@ -81,7 +81,9 @@
   (fs/delete-tree "tools-dir")
   (try
     (let [[out err exit]
-          (-> (process "clojure -M -m borkdude.deps -Sdescribe"
+          (-> (process (if (= "babashka" (System/getenv "DEPS_CLJ_TEST_ENV"))
+                         "bb -cp src:resources:test -m borkdude.deps -Sdescribe"
+                         "clojure -M -m borkdude.deps -Sdescribe")
                        {:out :string
                         :err :string
                         :extra-env {"DEPS_CLJ_TOOLS_VERSION" "1.10.3.899"

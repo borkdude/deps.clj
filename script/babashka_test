@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+export DEPS_CLJ_TEST_ENV=babashka
+
 bb -cp "src:test:resources" \
    -e "(require '[clojure.test :as t] '[borkdude.deps-test])
        (let [{:keys [:fail :error]} (t/run-tests 'borkdude.deps-test)]
