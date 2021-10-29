@@ -81,8 +81,9 @@
   (fs/delete-tree "tools-dir")
   (try
     (let [[out err exit]
-          (-> (process (if (= "babashka" (System/getenv "DEPS_CLJ_TEST_ENV"))
-                         "bb -cp src:resources:test -m borkdude.deps -Sdescribe"
+          (-> (process (case (System/getenv "DEPS_CLJ_TEST_ENV")
+                         "babashka" "bb -cp src:resources:test -m borkdude.deps -Sdescribe"
+                         "native" "./deps -Sdescribe"
                          "clojure -M -m borkdude.deps -Sdescribe")
                        {:out :string
                         :err :string

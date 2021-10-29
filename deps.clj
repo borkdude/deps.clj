@@ -14,8 +14,8 @@
 (def path-separator (System/getProperty "path.separator"))
 
 ;; see https://github.com/clojure/brew-install/blob/1.10.3/CHANGELOG.md
-(def version (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-                 "1.10.3.998"))
+(def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
+                        "1.10.3.998")))
 
 (def deps-clj-version "0.0.21-SNAPSHOT")
 
@@ -102,7 +102,7 @@
 
 (def ^:private ^:dynamic *process-fn* shell-command)
 
-(def help-text (str "Version: " version "
+(def help-text (delay (str "Version: " @version "
 
 You use the Clojure tools ('clj' or 'clojure') to run Clojure programs
 on the JVM, e.g. to start a REPL or invoke a specific function with data.
@@ -180,7 +180,7 @@ Programs provided by :deps alias:
 
 For more info, see:
  https://clojure.org/guides/deps_and_cli
- https://clojure.org/reference/repl_and_main"))
+ https://clojure.org/reference/repl_and_main")))
 
 (defn describe-line [[kw val]]
   (pr kw val))
@@ -230,14 +230,14 @@ For more info, see:
     (with-open [is (.getInputStream conn)]
       (io/copy is dest))))
 
-(def clojure-tools-jar (format "clojure-tools-%s.jar" version))
+(def clojure-tools-jar (delay (format "clojure-tools-%s.jar" @version)))
 
 (defn unzip [zip-file destination-dir]
   (let [zip-file (io/file zip-file)
         _ (.mkdirs (io/file destination-dir))
         ^ClassLoader x nil
         fs (FileSystems/newFileSystem (.toPath zip-file) x)]
-    (doseq [f [clojure-tools-jar
+    (doseq [f [@clojure-tools-jar
                "exec.jar"
                "example-deps.edn"
                "tools.edn"]]
@@ -253,7 +253,7 @@ For more info, see:
   (let [dir (io/file deps-clj-config-dir)
         zip (io/file deps-clj-config-dir "tools.zip")]
     (.mkdirs dir)
-    (download (format "https://download.clojure.org/install/clojure-tools-%s.zip" version)
+    (download (format "https://download.clojure.org/install/clojure-tools-%s.zip" @version)
               zip)
     (unzip zip (.getPath dir))
     (.delete zip)))
@@ -449,7 +449,7 @@ For more info, see:
         tools-dir (or env-tools-dir
                       (.getPath (io/file (home-dir)
                                          ".deps.clj"
-                                         version
+                                         @version
                                          "ClojureTools")))
         libexec-dir (if env-tools-dir
                       (let [f (io/file env-tools-dir "libexec")]
@@ -458,7 +458,7 @@ For more info, see:
                           env-tools-dir))
                       tools-dir)
         tools-jar (io/file libexec-dir
-                           (format "clojure-tools-%s.jar" version))
+                           (format "clojure-tools-%s.jar" @version))
         exec-jar (io/file libexec-dir "exec.jar")
         proxy-settings (jvm-proxy-settings) ;; side effecting, sets java proxy properties for download
         tools-cp
@@ -554,7 +554,7 @@ For more info, see:
           basis-file (.getPath (io/file cache-dir (str ck ".basis")))
           _ (when (:verbose opts)
               (println "deps.clj version =" deps-clj-version)
-              (println "version          =" version)
+              (println "version          =" @version)
               (when install-dir (println "install_dir      =" install-dir))
               (println "config_dir       =" config-dir)
               (println "config_paths     =" (str/join " " config-paths))
@@ -633,9 +633,9 @@ For more info, see:
                          (:help opts)) nil
                      (not (str/blank? (:force-cp opts))) (:force-cp opts)
                      :else (slurp (io/file cp-file)))]
-        (cond (:help opts) (do (println help-text)
+        (cond (:help opts) (do (println @help-text)
                                (*exit-fn* 0))
-              (:version opts) (do (println "Clojure CLI version (deps.clj)" version)
+              (:version opts) (do (println "Clojure CLI version (deps.clj)" @version)
                                   (*exit-fn* 0))
               (:prep opts) (*exit-fn* 0)
               (:pom opts)
@@ -648,7 +648,7 @@ For more info, see:
               (println cp)
               (:describe opts)
               (describe [[:deps-clj-version deps-clj-version]
-                         [:version version]
+                         [:version @version]
                          [:config-files (filterv #(.exists (io/file %)) config-paths)]
                          [:config-user config-user]
                          [:config-project (relativize config-project)]
