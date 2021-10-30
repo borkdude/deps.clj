@@ -15,7 +15,7 @@
 
 ;; see https://github.com/clojure/brew-install/blob/1.10.3/CHANGELOG.md
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-                        "1.10.3.998")))
+                        "1.10.3.1007")))
 
 (def deps-clj-version "0.0.21")
 
@@ -552,6 +552,7 @@ For more info, see:
           jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
           main-file (.getPath (io/file cache-dir (str ck ".main")))
           basis-file (.getPath (io/file cache-dir (str ck ".basis")))
+          manifest-file (.getPath (io/file cache-dir (str ck ".manifest")))
           _ (when (:verbose opts)
               (println "deps.clj version =" deps-clj-version)
               (println "version          =" @version)
@@ -562,6 +563,7 @@ For more info, see:
               (println "cp_file          =" cp-file)
               (println))
           tree? (:tree opts)
+          ;; Check for stale classpath file
           stale
           (or (:force opts)
               (:trace opts)
@@ -578,7 +580,15 @@ For more info, see:
                         (let [f (io/file config-path)]
                           (when (.exists f)
                             (> (.lastModified f)
-                               (.lastModified cp-file))))) config-paths)))
+                               (.lastModified cp-file))))) config-paths))
+              (when (.exists (io/file manifest-file))
+                (let [manifests (-> manifest-file slurp str/split-lines)
+                      cp-file (io/file cp-file)]
+                  (some (fn [manifest]
+                          (let [f (io/file manifest)]
+                            (when (.exists f)
+                              (> (.lastModified f)
+                                 (.lastModified cp-file))))) manifests))))
           tools-args
           (when (or stale (:pom opts))
             (cond-> []
@@ -623,7 +633,8 @@ For more info, see:
                                         "--libs-file" (relativize libs-file)
                                         "--cp-file" (relativize cp-file)
                                         "--jvm-file" (relativize jvm-file)
-                                        "--main-file" (relativize main-file)]
+                                        "--main-file" (relativize main-file)
+                                        "--manifest-file" (relativize manifest-file)]
                                        tools-args))
                                  {:to-string? tree?})]
           (when tree?
