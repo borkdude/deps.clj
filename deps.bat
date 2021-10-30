@@ -572,6 +572,7 @@ For more info, see:
           stale
           (or (:force opts)
               (:trace opts)
+              tree?
               (:prep opts)
               (not (.exists (io/file cp-file)))
               (when tool-name
