@@ -15,7 +15,7 @@
 
 ;; see https://github.com/clojure/brew-install/blob/1.10.3/CHANGELOG.md
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-                        "1.10.3.1007")))
+                        "1.10.3.1013")))
 
 (def deps-clj-version "0.0.22")
 
