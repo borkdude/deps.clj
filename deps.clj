@@ -15,7 +15,7 @@
 
 ;; see https://github.com/clojure/brew-install/blob/1.10.3/CHANGELOG.md
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-                        "1.10.3.1013")))
+                        "1.10.3.1020")))
 
 (def deps-clj-version "0.0.22")
 
@@ -586,9 +586,9 @@ For more info, see:
                       cp-file (io/file cp-file)]
                   (some (fn [manifest]
                           (let [f (io/file manifest)]
-                            (when (.exists f)
-                              (> (.lastModified f)
-                                 (.lastModified cp-file))))) manifests))))
+                            (or (not (.exists f))
+                                (> (.lastModified f)
+                                   (.lastModified cp-file))))) manifests))))
           tools-args
           (when (or stale (:pom opts))
             (cond-> []
@@ -625,17 +625,17 @@ For more info, see:
         (when (:verbose opts)
           (warn "Refreshing classpath"))
         (let [res (shell-command (into clj-main-cmd
-                                      (concat
-                                       ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
-                                        "--config-user" config-user
-                                        "--config-project" (relativize config-project)
-                                        "--basis-file" (relativize basis-file)
-                                        "--libs-file" (relativize libs-file)
-                                        "--cp-file" (relativize cp-file)
-                                        "--jvm-file" (relativize jvm-file)
-                                        "--main-file" (relativize main-file)
-                                        "--manifest-file" (relativize manifest-file)]
-                                       tools-args))
+                                       (concat
+                                        ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
+                                         "--config-user" config-user
+                                         "--config-project" (relativize config-project)
+                                         "--basis-file" (relativize basis-file)
+                                         "--libs-file" (relativize libs-file)
+                                         "--cp-file" (relativize cp-file)
+                                         "--jvm-file" (relativize jvm-file)
+                                         "--main-file" (relativize main-file)
+                                         "--manifest-file" (relativize manifest-file)]
+                                        tools-args))
                                  {:to-string? tree?})]
           (when tree?
             (print res) (flush))))
