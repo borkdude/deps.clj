@@ -586,9 +586,9 @@ For more info, see:
                       cp-file (io/file cp-file)]
                   (some (fn [manifest]
                           (let [f (io/file manifest)]
-                            (when (.exists f)
-                              (> (.lastModified f)
-                                 (.lastModified cp-file))))) manifests))))
+                            (or (not (.exists f))
+                                (> (.lastModified f)
+                                   (.lastModified cp-file))))) manifests))))
           tools-args
           (when (or stale (:pom opts))
             (cond-> []
