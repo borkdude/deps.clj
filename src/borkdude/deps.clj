@@ -641,7 +641,8 @@ For more info, see:
             (print res) (flush))))
       (let [cp (cond (or (:describe opts)
                          (:prep opts)
-                         (:help opts)) nil
+                         (:help opts)
+                         (:version opts)) nil
                      (not (str/blank? (:force-cp opts))) (:force-cp opts)
                      :else (slurp (io/file cp-file)))]
         (cond (:help opts) (do (println @help-text)
