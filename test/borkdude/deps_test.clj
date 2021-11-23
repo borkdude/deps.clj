@@ -39,26 +39,27 @@
   (is (do (deps/-main "-X" "clojure.core/prn" ":foo" "1")
           ::success)))
 
-(deftest whitespace-test
-  (testing "jvm opts"
-    (let [temp-dir (fs/create-temp-dir)
-          temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
-          temp-file-path (str temp-file)
-          _ (deps/-main "-Sdeps" "{:aliases {:space {:jvm-opts [\"-Dfoo=\\\"foo bar\\\"\"]}}}" "-M:space" "-e"
-                        (format "(spit \"%s\" (System/getProperty \"foo\"))"
-                                temp-file-path))
-          out (slurp temp-file-path)]
-      (is (= "\"foo bar\"" out))))
-  (testing "main opts"
-    (let [temp-dir (fs/create-temp-dir)
-          temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
-          temp-file-path (str temp-file)
-          _ (deps/-main "-Sdeps"
-                        (format "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\"%s\\\" (+ 1 2 3))\"]}}}"
-                                temp-file-path)
-                        "-M:space")
-          out (slurp temp-file-path)]
-      (is (= "6" out)))))
+(when (not deps/windows?)
+  (deftest whitespace-test
+    (testing "jvm opts"
+      (let [temp-dir (fs/create-temp-dir)
+            temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
+            temp-file-path (str temp-file)
+            _ (deps/-main "-Sdeps" "{:aliases {:space {:jvm-opts [\"-Dfoo=\\\"foo bar\\\"\"]}}}" "-M:space" "-e"
+                          (format "(spit \"%s\" (System/getProperty \"foo\"))"
+                                  temp-file-path))
+            out (slurp temp-file-path)]
+        (is (= "\"foo bar\"" out))))
+    (testing "main opts"
+      (let [temp-dir (fs/create-temp-dir)
+            temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
+            temp-file-path (str temp-file)
+            _ (deps/-main "-Sdeps"
+                (format "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\"%s\\\" (+ 1 2 3))\"]}}}"
+                  temp-file-path)
+                "-M:space")
+            out (slurp temp-file-path)]
+        (is (= "6" out))))))
 
 (deftest jvm-proxy-settings-test
   (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "http://aHost:1234")))
@@ -67,22 +68,25 @@
   (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "https://user:pw@aHost:1234")))
   (is (nil? (deps/parse-proxy-info "http://aHost:abc"))))
 
-(deftest jvm-opts-test
-  (let [temp-dir (fs/create-temp-dir)
-        temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
-        temp-file-path (str temp-file)]
-    (deps/-main "-J-Dfoo=bar" "-J-Dbaz=quux"
-                "-M" "-e" (format "
+(when (not deps/windows?) 
+  (deftest jvm-opts-test
+    (let [temp-dir (fs/create-temp-dir)
+          temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
+          temp-file-path (str temp-file)]
+      (deps/-main "-J-Dfoo=bar" "-J-Dbaz=quux"
+                  "-M" "-e" (format "
 (spit \"%s\" (pr-str [(System/getProperty \"foo\") (System/getProperty \"baz\")]))"
-                                  temp-file-path))
-    (is (= ["bar" "quux"] (edn/read-string  (slurp temp-file-path))))))
+                                    temp-file-path))
+      (is (= ["bar" "quux"] (edn/read-string  (slurp temp-file-path)))))))
 
 (deftest tools-dir-env-test
   (fs/delete-tree "tools-dir")
   (try
-    (let [[out err exit]
+    (let [classpath (str/join deps/path-separator ["src" "test" "resources"])
+          bb-cmd (str "bb -cp " classpath " -m borkdude.deps -Sdescribe")
+          [out err exit]
           (-> (process (case (System/getenv "DEPS_CLJ_TEST_ENV")
-                         "babashka" "bb -cp src:resources:test -m borkdude.deps -Sdescribe"
+                         "babashka" bb-cmd
                          "native" "./deps -Sdescribe"
                          "clojure -M -m borkdude.deps -Sdescribe")
                        {:out :string
