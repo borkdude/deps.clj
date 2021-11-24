@@ -108,15 +108,23 @@
     (finally (fs/delete-tree "tools-dir"))))
 
 (deftest without-cp-file-tests
-  (doseq [option ["-Sdescribe" "-version" "--help"]]
+  (doseq [[option output-contains] 
+          [["-Sdescribe" ":deps-clj-version"] 
+           ["-version" "Clojure CLI version (deps.clj)"] 
+           ["--help" "For more info, see:"]]]
     (testing (str option " doesn't create/use cp cache file")
       (try
-        (let [{:keys [out err exit]}
-            (-> (process (str invoke-deps-cmd "-Sdeps-file force_clj_config/missing.edn -Sforce " option)
-                  {:out :string
-                   :err :string
-                   :extra-env {"CLJ_CONFIG" "missing_config"}})
-              deref)]
-        (is (empty? (fs/glob "missing_config" "**.cp" {:hidden true})))
-        (is (zero? exit)))
+        (let [{:keys [out exit]}
+              ; use bogus deps-file to force using CLJ_CONFIG instead of current directory,
+              (-> (process (str invoke-deps-cmd "-Sdeps-file force_clj_config/missing.edn " option)
+                    {:out :string
+                     :err :string
+                     :extra-env {"CLJ_CONFIG" "missing_config"}})
+                deref)]
+        (is (empty? (fs/glob "missing_config" "**.cp" {:hidden true})) 
+          (str option " should not create a cp cache file"))
+        (is (str/includes? out output-contains)
+          (str option " output should contain '" output-contains "'"))
+        (is (zero? exit)
+          (str option " should have a zero exit code")))
         (finally (fs/delete-tree "missing_config"))))))
