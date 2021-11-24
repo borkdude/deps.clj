@@ -13,7 +13,7 @@
     "babashka" (let [classpath (str/join deps/path-separator ["src" "test" "resources"])]
                  (str "bb -cp " classpath " -m borkdude.deps "))
     "native" "./deps "
-    "clojure -M -m borkdude.deps "))
+             "clojure -M -m borkdude.deps "))
 
 (deftest parse-args-test
   (is (= {:mode :repl, :jvm-opts ["-Dfoo=bar" "-Dbaz=quuz"]}
@@ -106,3 +106,17 @@
       (is (fs/exists? (fs/file "tools-dir" "exec.jar")))
       (is (fs/exists? (fs/file "tools-dir" "tools.edn"))))
     (finally (fs/delete-tree "tools-dir"))))
+
+(deftest without-cp-file-tests
+  (doseq [option ["-Sdescribe" "-version" "--help"]]
+    (testing (str option " doesn't create/use cp cache file")
+      (try
+        (let [{:keys [out err exit]}
+            (-> (process (str invoke-deps-cmd "-Sdeps-file force_clj_config/missing.edn -Sforce " option)
+                  {:out :string
+                   :err :string
+                   :extra-env {"CLJ_CONFIG" "missing_config"}})
+              deref)]
+        (is (empty? (fs/glob "missing_config" "**.cp" {:hidden true})))
+        (is (zero? exit)))
+        (finally (fs/delete-tree "missing_config"))))))
