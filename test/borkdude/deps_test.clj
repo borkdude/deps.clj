@@ -116,6 +116,7 @@
       (try
         (let [{:keys [out exit]}
               ; use bogus deps-file to force using CLJ_CONFIG instead of current directory,
+              ; meaning that the cache directory will be empty
               (-> (process (str invoke-deps-cmd "-Sdeps-file force_clj_config/missing.edn " option)
                     {:out :string
                      :err :string
