@@ -8,6 +8,13 @@
    [clojure.string :as str]
    [clojure.test :as t :refer [deftest is testing]]))
 
+(def invoke-deps-cmd
+  (case (System/getenv "DEPS_CLJ_TEST_ENV")
+    "babashka" (let [classpath (str/join deps/path-separator ["src" "test" "resources"])]
+                 (str "bb -cp " classpath " -m borkdude.deps "))
+    "native" "./deps "
+    "clojure -M -m borkdude.deps "))
+
 (deftest parse-args-test
   (is (= {:mode :repl, :jvm-opts ["-Dfoo=bar" "-Dbaz=quuz"]}
          (deps/parse-args ["-J-Dfoo=bar" "-J-Dbaz=quuz"])))
@@ -82,13 +89,8 @@
 (deftest tools-dir-env-test
   (fs/delete-tree "tools-dir")
   (try
-    (let [classpath (str/join deps/path-separator ["src" "test" "resources"])
-          bb-cmd (str "bb -cp " classpath " -m borkdude.deps -Sdescribe")
-          [out err exit]
-          (-> (process (case (System/getenv "DEPS_CLJ_TEST_ENV")
-                         "babashka" bb-cmd
-                         "native" "./deps -Sdescribe"
-                         "clojure -M -m borkdude.deps -Sdescribe")
+    (let [[out err exit]
+          (-> (process (str invoke-deps-cmd "-Sdescribe")
                        {:out :string
                         :err :string
                         :extra-env {"DEPS_CLJ_TOOLS_VERSION" "1.10.3.899"
