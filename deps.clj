@@ -15,7 +15,7 @@
 
 ;; see https://github.com/clojure/brew-install/blob/1.10.3/CHANGELOG.md
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-                        "1.10.3.1029")))
+                        "1.10.3.1040")))
 
 (def deps-clj-version "0.0.22")
 
@@ -617,11 +617,10 @@ For more info, see:
               (:trace opts)
               (conj "--trace")
               tree?
-              (conj "--tree")))]
+              (conj "--tree")))
+          classpath-not-needed? (boolean (some #(% opts) [:describe :help :version]))]
       ;;  If stale, run make-classpath to refresh cached classpath
-      (when (and stale (not (or (:describe opts)
-                                (:help opts)
-                                (:version opts))))
+      (when (and stale (not classpath-not-needed?))
         (when (:verbose opts)
           (warn "Refreshing classpath"))
         (let [res (shell-command (into clj-main-cmd
@@ -639,9 +638,8 @@ For more info, see:
                                  {:to-string? tree?})]
           (when tree?
             (print res) (flush))))
-      (let [cp (cond (or (:describe opts)
-                         (:prep opts)
-                         (:help opts)) nil
+      (let [cp (cond (or classpath-not-needed? 
+                         (:prep opts)) nil
                      (not (str/blank? (:force-cp opts))) (:force-cp opts)
                      :else (slurp (io/file cp-file)))]
         (cond (:help opts) (do (println @help-text)
