@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.0.22
+
+- Use tools version `1.10.3.1069`
+
 ## v0.0.21
 
 - Fix for `DEPS_CLJ_TOOLS_VERSION`: delay reading to runtime in binary
