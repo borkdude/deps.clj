@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.1100
+
+- Use tools version `1.11.0.1100`
+
 ## v0.1.1087
 
 - Use tools version `1.10.3.1087`
