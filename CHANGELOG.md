@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.1155-2
+
+- Fix installation of `tools/tools.edn`
+
 ## v0.1.1155
 
 - Use tools version `1.11.0.1155`
