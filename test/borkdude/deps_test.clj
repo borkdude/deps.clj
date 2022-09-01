@@ -13,7 +13,7 @@
     "babashka" (let [classpath (str/join deps/path-separator ["src" "test" "resources"])]
                  (str "bb -cp " classpath " -m borkdude.deps "))
     "native" "./deps "
-             "clojure -M -m borkdude.deps "))
+    "clojure -M -m borkdude.deps "))
 
 (deftest parse-args-test
   (is (= {:mode :repl, :jvm-opts ["-Dfoo=bar" "-Dbaz=quuz"]}
@@ -62,9 +62,9 @@
             temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
             temp-file-path (str temp-file)
             _ (deps/-main "-Sdeps"
-                (format "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\"%s\\\" (+ 1 2 3))\"]}}}"
-                  temp-file-path)
-                "-M:space")
+                          (format "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\"%s\\\" (+ 1 2 3))\"]}}}"
+                                  temp-file-path)
+                          "-M:space")
             out (slurp temp-file-path)]
         (is (= "6" out))))))
 
@@ -75,7 +75,7 @@
   (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "https://user:pw@aHost:1234")))
   (is (nil? (deps/parse-proxy-info "http://aHost:abc"))))
 
-(when (not deps/windows?) 
+(when (not deps/windows?)
   (deftest jvm-opts-test
     (let [temp-dir (fs/create-temp-dir)
           temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
@@ -100,7 +100,7 @@
       (when-not (zero? exit)
         (println err))
       (is (= "1.10.3.899" (:version (edn/read-string out))))
-      (is (str/includes? err "Downloading tools jar from https://download.clojure.org/install/clojure-tools-1.10.3.899.zip to tools-dir"))
+      (is (str/includes? err "Clojure tools not yet in expected location:"))
       (is (fs/exists? (fs/file "tools-dir" "clojure-tools-1.10.3.899.jar")))
       (is (fs/exists? (fs/file "tools-dir" "example-deps.edn")))
       (is (fs/exists? (fs/file "tools-dir" "exec.jar")))
@@ -108,24 +108,27 @@
     (finally (fs/delete-tree "tools-dir"))))
 
 (deftest without-cp-file-tests
-  (doseq [[option output-contains] 
-          [["-Sdescribe" ":deps-clj-version"] 
-           ["-version" "Clojure CLI version (deps.clj)"] 
+  (doseq [[option output-contains]
+          [["-Sdescribe" ":deps-clj-version"]
+           ["-version" "Clojure CLI version (deps.clj)"]
            ["--help" "For more info, see:"]]]
     (testing (str option " doesn't create/use cp cache file")
       (try
         (let [{:keys [out exit]}
-              ; use bogus deps-file to force using CLJ_CONFIG instead of current directory,
-              ; meaning that the cache directory will be empty
+                                        ; use bogus deps-file to force using CLJ_CONFIG instead of current directory,
+                                        ; meaning that the cache directory will be empty
               (-> (process (str invoke-deps-cmd "-Sdeps-file force_clj_config/missing.edn " option)
-                    {:out :string
-                     :err :string
-                     :extra-env {"CLJ_CONFIG" "missing_config"}})
-                deref)]
-        (is (empty? (fs/glob "missing_config" "**.cp" {:hidden true})) 
-          (str option " should not create a cp cache file"))
-        (is (str/includes? out output-contains)
-          (str option " output should contain '" output-contains "'"))
-        (is (zero? exit)
-          (str option " should have a zero exit code")))
+                           {:out :string
+                            :err :string
+                            :extra-env {"CLJ_CONFIG" "missing_config"}})
+                  deref)]
+          (is (empty? (fs/glob "missing_config" "**.cp" {:hidden true}))
+              (str option " should not create a cp cache file"))
+          (is (str/includes? out output-contains)
+              (str option " output should contain '" output-contains "'"))
+          (is (zero? exit)
+              (str option " should have a zero exit code")))
         (finally (fs/delete-tree "missing_config"))))))
+
+(deftest tools-test
+  (deps/-main "-Ttools" "list"))
