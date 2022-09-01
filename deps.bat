@@ -22,7 +22,7 @@
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
                         "1.11.1.1155")))
 
-(def deps-clj-version "0.1.1156-SNAPSHOT")
+(def deps-clj-version "0.1.1155-2")
 
 (defn warn [& strs]
   (binding [*out* *err*]
@@ -226,7 +226,7 @@ For more info, see:
     (System/getProperty "user.home")))
 
 (defn download [source dest]
-  (warn "Downloading tools jar from" (str source) "to" (.getParent (io/file dest)))
+  (warn "Downloading" (str source) "to" (str (.getParent (io/file dest))))
   (let [source (URL. source)
         dest (io/file dest)
         conn ^HttpURLConnection (.openConnection ^URL source)]
@@ -261,7 +261,8 @@ For more info, see:
     (download (format "https://download.clojure.org/install/clojure-tools-%s.zip" @version)
               zip)
     (unzip zip (.getPath dir))
-    (.delete zip)))
+    (.delete zip))
+  (warn "Successfully installed clojure tools!"))
 
 (def ^:private authenticated-proxy-re #".+:.+@(.+):(\d+).*")
 (def ^:private unauthenticated-proxy-re #"(.+):(\d+).*")
@@ -414,14 +415,14 @@ For more info, see:
       acc)))
 
 
-(defn- ^Path as-path
-  [path]
+(defn- as-path
+  ^Path [path]
   (if (instance? Path path) path
       (.toPath (io/file path))))
 
-(defn ^Path relativize
+(defn relativize
   "Returns relative path by comparing this with other."
-  [f]
+  ^Path [f]
   ;; (prn :dir *dir* :f f)
   (if-let [dir *dir*]
     (.relativize (as-path dir) (as-path f))
@@ -442,11 +443,6 @@ For more info, see:
                         (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
                     (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
                 java-cmd)))
-        clojure-file (-> (which "clojure") (io/file))
-        install-dir (when clojure-file
-                      (with-open [reader (io/reader clojure-file)]
-                        (let [lines (line-seq reader)]
-                          (second (some #(re-matches #"^install_dir=(.*)" %) lines)))))
         env-tools-dir (or
                        ;; legacy name
                        (System/getenv "CLOJURE_TOOLS_DIR")
@@ -456,6 +452,7 @@ For more info, see:
                                          ".deps.clj"
                                          @version
                                          "ClojureTools")))
+        install-dir tools-dir
         libexec-dir (if env-tools-dir
                       (let [f (io/file env-tools-dir "libexec")]
                         (if (.exists f)
@@ -470,7 +467,7 @@ For more info, see:
         (or
          (when (.exists tools-jar) (.getPath tools-jar))
          (binding [*out* *err*]
-           (println (format "Could not find %s" tools-jar))
+           (warn "Clojure tools not yet in expected location:" (str tools-jar))
            (clojure-tools-jar-download tools-dir)
            tools-jar))
         mode (:mode opts)
