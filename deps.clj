@@ -17,7 +17,7 @@
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
                         "1.11.1.1155")))
 
-(def deps-clj-version "0.1.1155-2")
+(def deps-clj-version "0.1.1156-SNAPSHOT")
 
 (defn warn [& strs]
   (binding [*out* *err*]
@@ -423,15 +423,17 @@ For more info, see:
     (.relativize (as-path dir) (as-path f))
     f))
 
+(def java-exe (if windows? "java.exe" "java"))
+
 (defn -main [& command-line-args]
   (let [opts (parse-args command-line-args)
         java-cmd
         (or (System/getenv "JAVA_CMD")
-            (let [java-cmd (which (if windows? "java.exe" "java"))]
+            (let [java-cmd (which java-exe)]
               (if (str/blank? java-cmd)
                 (let [java-home (System/getenv "JAVA_HOME")]
                   (if-not (str/blank? java-home)
-                    (let [f (io/file java-home "bin" "java")]
+                    (let [f (io/file java-home "bin" java-exe)]
                       (if (and (.exists f)
                                (.canExecute f))
                         (.getCanonicalPath f)
