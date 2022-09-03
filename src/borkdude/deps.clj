@@ -431,7 +431,7 @@ For more info, see:
               (if (str/blank? java-cmd)
                 (let [java-home (System/getenv "JAVA_HOME")]
                   (if-not (str/blank? java-home)
-                    (let [f (io/file java-home "bin" "java")]
+                    (let [f (io/file java-home "bin" (if windows? "java.exe" "java"))]
                       (if (and (.exists f)
                                (.canExecute f))
                         (.getCanonicalPath f)
