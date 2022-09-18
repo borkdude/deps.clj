@@ -1,5 +1,17 @@
 # Changelog
 
+Many releases just bump the clojure tools version and do not have new
+features. You can also accomplish that via the `DEPS_CLJ_TOOLS_VERSION`
+environment variable:
+
+```
+DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
+```
+
+## v0.1.1165
+
+- Use tools version `1.11.1.1165`
+
 ## v0.1.1155-2
 
 - Fix installation of `tools/tools.edn`
