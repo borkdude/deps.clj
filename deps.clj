@@ -17,7 +17,7 @@
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
                         "1.11.1.1165")))
 
-(def deps-clj-version "0.1.1165")
+(def deps-clj-version "0.1.1166-SNAPSHOT")
 
 (defn warn [& strs]
   (binding [*out* *err*]
