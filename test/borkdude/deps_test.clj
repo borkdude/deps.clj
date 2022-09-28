@@ -9,11 +9,16 @@
    [clojure.test :as t :refer [deftest is testing]]))
 
 (def invoke-deps-cmd
+  "Returns the command to invoke `borkdude.deps` on the current system,
+  based on the value of env variable `DEPS_CLJ_TEST_ENV`."
   (case (System/getenv "DEPS_CLJ_TEST_ENV")
     "babashka" (let [classpath (str/join deps/path-separator ["src" "test" "resources"])]
                  (str "bb -cp " classpath " -m borkdude.deps "))
     "native" "./deps "
-    "clojure -M -m borkdude.deps "))
+    (cond->>
+     "clojure -M -m borkdude.deps "
+     deps/windows?
+     (str "powershell -NoProfile -Command "))))
 
 (deftest parse-args-test
   (is (= {:mode :repl, :jvm-opts ["-Dfoo=bar" "-Dbaz=quuz"]}
@@ -132,3 +137,81 @@
 
 (deftest tools-test
   (deps/-main "-Ttools" "list"))
+
+(defmacro get-shell-command-args
+  "Executes BODY with the given ENV'ironment variables added to the
+  `babashka.deps` scope, presumbably to indirectly invoke
+  `babashka.deps/shell-command` whose invocation ARGS captures and
+  returns with this call.
+
+  It overrides `baabashka.deps/*exit-fn*` so as to never exit the
+  program, but throws an exception in case of error while is still in
+  the `babashka.deps` scope."
+  [env-vars & body]
+  (let [body-str (pr-str body)]
+    `(let [shell-command# deps/shell-command
+           ret*# (promise)
+           sh-mock# (fn mock#
+                      ([args#]
+                       (mock# args# nil))
+                      ([args# opts#]
+                       (let [ret# (shell-command# args# opts#)]
+                         (deliver ret*# args#)
+                         ret#)))]
+       ;; need to override both *process-fn* and deps/shell-command.
+       (binding [deps/*process-fn* sh-mock#
+                 deps/*exit-fn* (fn
+                                  ([exit-code#] (when-not (= exit-code# 0)
+                                                  (throw (ex-info "mock-shell-failed" {:exit-code exit-code#}))))
+                                  ([exit-code# msg#] (throw  (ex-info "mock-shell-failed"
+                                                                      {:exit-code exit-code# :msg msg#}))))
+                 deps/*getenv-fn* #(or (get ~env-vars %)
+                                      (System/getenv %))]
+         (with-redefs [deps/shell-command sh-mock#]
+           ~@body
+           (or (deref ret*# 500 false) (ex-info "No shell-command invoked in body." {:body ~body-str})))))))
+
+(deftest clj-jvm-opts+java-opts
+  ;; The `CLJ_JVM_OPTS` env var should only apply to -P and -Spom.
+  ;; The `JAVA_OPTS` env varshould only apply to everything else.
+  ;;
+  ;; Some harmless cli flags are used below to demonstrate the
+  ;; succesful passing of cli arguments to the java executable.
+
+  (let [xx-pclf "-XX:+PrintCommandLineFlags"
+        xx-gc-threads "-XX:ConcGCThreads=1"]
+
+    (testing "CLJ-JVM-OPTS with prepare deps"
+        (let [sh-args (get-shell-command-args
+                       {"CLJ_JVM_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
+                       (deps/-main "-P"))]
+          (is (some #{xx-pclf} sh-args))
+          ;; second and third args
+          (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2))))))
+
+    (testing "CLJ-JVM-OPTS with pom"
+        (let [sh-args (get-shell-command-args
+                       {"CLJ_JVM_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
+                       (deps/-main "-Spom"))]
+          (is (some #{xx-pclf} sh-args))
+          (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2))))))
+
+    (testing "CLJ-JVM-OPTS outside of prepare deps"
+        (let [sh-args (get-shell-command-args
+                       {"CLJ_JVM_OPTS" xx-pclf}
+                       (deps/-main "-e" "123"))]
+          ;; shouldn't find the flag
+          (is (not (some #{xx-pclf} sh-args)))))
+
+    (testing "JAVA-OPTS outside of prepare deps"
+      (let [sh-args (get-shell-command-args
+                     {"JAVA_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
+                     (deps/-main "-e" "123"))]
+        (is (some #{xx-pclf} sh-args))
+        (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2))))))
+
+    (testing "JAVA-OPTS with prepare deps"
+      (let [sh-args (get-shell-command-args
+                     {"JAVA_OPTS" xx-pclf}
+                     (deps/-main "-P"))]
+        (is (not (some #{xx-pclf} sh-args)))))))
