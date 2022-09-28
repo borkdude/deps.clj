@@ -193,7 +193,7 @@ For more info, see:
       (print "\n ") (describe-line line))
     (println "}")))
 
-(def ^:private ^:dynamic *getenv-fn*
+(def ^:private ^:dynamic ^String *getenv-fn*
   "Get ENV'ironment variable."
   (fn [env] (java.lang.System/getenv env)))
 
