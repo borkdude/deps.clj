@@ -296,13 +296,13 @@ $ lein run -m borkdude.deps -Spath
 To run jvm tests:
 
 ```
-$ script/jvm_test
+$ bb test
 ```
 
 To run with babashka after making changes to `src/borkdude/deps.clj`, you should run:
 
 ```
-$ script/gen_script.clj
+$ bb gen-script
 ```
 
 and then:

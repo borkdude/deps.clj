@@ -193,6 +193,11 @@ For more info, see:
       (print "\n ") (describe-line line))
     (println "}")))
 
+(defn ^:private ^:dynamic *getenv-fn*
+  "Get ENV'ironment variable."
+  ^String [env]
+  (java.lang.System/getenv env))
+
 (defn cksum
   [^String s]
   (let [hashed (.digest (java.security.MessageDigest/getInstance "MD5")
@@ -204,7 +209,7 @@ For more info, see:
     (str sw)))
 
 (defn which [executable]
-  (when-let [path (System/getenv "PATH")]
+  (when-let [path (*getenv-fn* "PATH")]
     (let [paths (.split path path-separator)]
       (loop [paths paths]
         (when-first [p paths]
@@ -217,7 +222,7 @@ For more info, see:
 (defn home-dir []
   (if windows?
     ;; workaround for https://github.com/oracle/graal/issues/1630
-    (System/getenv "userprofile")
+    (*getenv-fn* "userprofile")
     (System/getProperty "user.home")))
 
 (defn download [source dest]
@@ -289,10 +294,10 @@ For more info, see:
 
 (defn jvm-proxy-settings
   []
-  (let [http-proxy  (parse-proxy-info (or (System/getenv "http_proxy")
-                                          (System/getenv "HTTP_PROXY")))
-        https-proxy (parse-proxy-info (or (System/getenv "https_proxy")
-                                          (System/getenv "HTTPS_PROXY")))]
+  (let [http-proxy  (parse-proxy-info (or (*getenv-fn* "http_proxy")
+                                          (*getenv-fn* "HTTP_PROXY")))
+        https-proxy (parse-proxy-info (or (*getenv-fn* "https_proxy")
+                                          (*getenv-fn* "HTTPS_PROXY")))]
     (when http-proxy
       (System/setProperty "http.proxyHost" (:host http-proxy))
       (System/setProperty "http.proxyPort" (:port http-proxy)))
@@ -428,10 +433,10 @@ For more info, see:
 (defn -main [& command-line-args]
   (let [opts (parse-args command-line-args)
         java-cmd
-        (or (System/getenv "JAVA_CMD")
+        (or (*getenv-fn* "JAVA_CMD")
             (let [java-cmd (which java-exe)]
               (if (str/blank? java-cmd)
-                (let [java-home (System/getenv "JAVA_HOME")]
+                (let [java-home (*getenv-fn* "JAVA_HOME")]
                   (if-not (str/blank? java-home)
                     (let [f (io/file java-home "bin" java-exe)]
                       (if (and (.exists f)
@@ -442,8 +447,8 @@ For more info, see:
                 java-cmd)))
         env-tools-dir (or
                        ;; legacy name
-                       (System/getenv "CLOJURE_TOOLS_DIR")
-                       (System/getenv "DEPS_CLJ_TOOLS_DIR"))
+                       (*getenv-fn* "CLOJURE_TOOLS_DIR")
+                       (*getenv-fn* "DEPS_CLJ_TOOLS_DIR"))
         tools-dir (or env-tools-dir
                       (.getPath (io/file (home-dir)
                                          ".deps.clj"
@@ -475,15 +480,18 @@ For more info, see:
         deps-edn
         (or (:deps-file opts)
             (.getPath (io/file *dir* "deps.edn")))
+        clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
         clj-main-cmd
         (vec (concat [java-cmd]
+                     clj-jvm-opts
                      proxy-settings
                      ["-Xms256m" "-classpath" tools-cp "clojure.main"]))
         config-dir
-        (or (System/getenv "CLJ_CONFIG")
-            (when-let [xdg-config-home (System/getenv "XDG_CONFIG_HOME")]
+        (or (*getenv-fn* "CLJ_CONFIG")
+            (when-let [xdg-config-home (*getenv-fn* "XDG_CONFIG_HOME")]
               (.getPath (io/file xdg-config-home "clojure")))
-            (.getPath (io/file (home-dir) ".clojure")))]
+            (.getPath (io/file (home-dir) ".clojure")))
+        java-opts (some-> (*getenv-fn* "JAVA_OPTS") (str/split #" "))]
     ;; If user config directory does not exist, create it
     (let [config-dir (io/file config-dir)]
       (when-not (.exists config-dir)
@@ -503,8 +511,8 @@ For more info, see:
         (io/copy install-tools-edn config-tools-edn)))
     ;; Determine user cache directory
     (let [user-cache-dir
-          (or (System/getenv "CLJ_CACHE")
-              (when-let [xdg-config-home (System/getenv "XDG_CACHE_HOME")]
+          (or (*getenv-fn* "CLJ_CACHE")
+              (when-let [xdg-config-home (*getenv-fn* "XDG_CACHE_HOME")]
                 (.getPath (io/file xdg-config-home "clojure")))
               (.getPath (io/file config-dir ".cpcache")))
           ;; Chain deps.edn in config paths. repro=skip config dir
@@ -637,7 +645,7 @@ For more info, see:
                                  {:to-string? tree?})]
           (when tree?
             (print res) (flush))))
-      (let [cp (cond (or classpath-not-needed? 
+      (let [cp (cond (or classpath-not-needed?
                          (:prep opts)) nil
                      (not (str/blank? (:force-cp opts))) (:force-cp opts)
                      :else (slurp (io/file cp-file)))]
@@ -691,6 +699,7 @@ For more info, see:
                          (str cp path-separator exec-cp)
                          cp)
                     main-args (concat [java-cmd]
+                                      java-opts
                                       proxy-settings
                                       jvm-cache-opts
                                       (:jvm-opts opts)

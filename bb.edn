@@ -1,0 +1,16 @@
+{:paths ["resources"]
+
+ :tasks
+ {:requires [[babashka.deps :as deps]
+             [babashka.process :as p]]
+
+  gen-script {:doc "Regen `./deps[.clj|.bat]` from `src/borkdude/deps.clj`."
+              :task (load-file "script/gen_script.clj")}
+
+  test {:doc "Run all tests."
+        :task
+        (doseq [args '[[-M:test] [-M -m borkdude.deps -M:test]]]
+          (println :testing... 'clojure args)
+          (-> (deps/clojure args)
+              p/check)
+          (println))}}}
