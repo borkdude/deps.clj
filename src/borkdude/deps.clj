@@ -480,19 +480,17 @@ For more info, see:
         deps-edn
         (or (:deps-file opts)
             (.getPath (io/file *dir* "deps.edn")))
-        clj-main-cmd-insert-front
-        (fn [front-args]
-          (vec (concat [java-cmd]
-                       front-args
-                       proxy-settings
-                       ["-Xms256m" "-classpath" tools-cp "clojure.main"])))
+        clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
+        clj-main-cmd
+        (vec (concat [java-cmd]
+                     clj-jvm-opts
+                     proxy-settings
+                     ["-Xms256m" "-classpath" tools-cp "clojure.main"]))
         config-dir
         (or (*getenv-fn* "CLJ_CONFIG")
             (when-let [xdg-config-home (*getenv-fn* "XDG_CONFIG_HOME")]
               (.getPath (io/file xdg-config-home "clojure")))
             (.getPath (io/file (home-dir) ".clojure")))
-
-        clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
         java-opts (some-> (*getenv-fn* "JAVA_OPTS") (str/split #" "))]
     ;; If user config directory does not exist, create it
     (let [config-dir (io/file config-dir)]
@@ -632,7 +630,7 @@ For more info, see:
       (when (and stale (not classpath-not-needed?))
         (when (:verbose opts)
           (warn "Refreshing classpath"))
-        (let [res (shell-command (into (clj-main-cmd-insert-front clj-jvm-opts)
+        (let [res (shell-command (into clj-main-cmd
                                        (concat
                                         ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
                                          "--config-user" config-user
@@ -647,7 +645,7 @@ For more info, see:
                                  {:to-string? tree?})]
           (when tree?
             (print res) (flush))))
-      (let [cp (cond (or classpath-not-needed? 
+      (let [cp (cond (or classpath-not-needed?
                          (:prep opts)) nil
                      (not (str/blank? (:force-cp opts))) (:force-cp opts)
                      :else (slurp (io/file cp-file)))]
@@ -657,7 +655,7 @@ For more info, see:
                                   (*exit-fn* 0))
               (:prep opts) (*exit-fn* 0)
               (:pom opts)
-              (shell-command (into (clj-main-cmd-insert-front clj-jvm-opts)
+              (shell-command (into clj-main-cmd
                                    ["-m" "clojure.tools.deps.alpha.script.generate-manifest2"
                                     "--config-user" config-user
                                     "--config-project" (relativize config-project)
