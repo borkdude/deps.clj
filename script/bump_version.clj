@@ -41,9 +41,10 @@
 
 (case (first *command-line-args*)
   "release" (let [version-string (str/trim (slurp version-file))
-                  [major minor patch] (str/split version-string #"\.")
+                  numbers (str/split version-string #"\.")
+                  patch (last numbers)
                   patch (str/replace patch "-SNAPSHOT" "")
-                  new-version (str/join "." [major minor patch])]
+                  new-version (str/join "." (concat (butlast numbers) [patch]))]
               (spit version-file new-version)
               (shell-command ["script/gen_script.clj"])
               (shell-command ["git" "commit" "-a" "-m" (str "v" new-version)])
@@ -51,10 +52,12 @@
   "post-release" (do
                    (io/copy version-file released-version-file)
                    (let [version-string (str/trim (slurp version-file))
-                         [major minor patch] (str/split version-string #"\.")
+                         numbers (str/split version-string #"\.")
+                         patch (last numbers)
+                         patch (str/replace patch "-SNAPSHOT" "")
                          patch (Integer. patch)
                          patch (str (inc patch) "-SNAPSHOT")
-                         new-version (str/join "." [major minor patch])]
+                         new-version (str/join "." (concat (butlast numbers) [patch]))]
                      (spit version-file new-version)
                      (shell-command ["script/gen_script.clj"])
                      (shell-command ["git" "commit" "-a" "-m" "Version bump"])
