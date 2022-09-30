@@ -193,9 +193,10 @@ For more info, see:
       (print "\n ") (describe-line line))
     (println "}")))
 
-(def ^:private ^:dynamic ^String *getenv-fn*
+(defn ^:private ^:dynamic *getenv-fn*
   "Get ENV'ironment variable."
-  (fn [env] (java.lang.System/getenv env)))
+  ^String [env]
+  (java.lang.System/getenv env))
 
 (defn cksum
   [^String s]
