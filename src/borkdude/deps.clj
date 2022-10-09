@@ -430,21 +430,23 @@ For more info, see:
 
 (def java-exe (if windows? "java.exe" "java"))
 
+(def ^:private java-cmd
+  "The path to the java executable to invoke commands on."
+  (or (*getenv-fn* "JAVA_CMD")
+      (let [java-cmd (which java-exe)]
+        (if (str/blank? java-cmd)
+          (let [java-home (*getenv-fn* "JAVA_HOME")]
+            (if-not (str/blank? java-home)
+              (let [f (io/file java-home "bin" java-exe)]
+                (if (and (.exists f)
+                         (.canExecute f))
+                  (.getCanonicalPath f)
+                  (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+              (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+          java-cmd))))
+
 (defn -main [& command-line-args]
   (let [opts (parse-args command-line-args)
-        java-cmd
-        (or (*getenv-fn* "JAVA_CMD")
-            (let [java-cmd (which java-exe)]
-              (if (str/blank? java-cmd)
-                (let [java-home (*getenv-fn* "JAVA_HOME")]
-                  (if-not (str/blank? java-home)
-                    (let [f (io/file java-home "bin" java-exe)]
-                      (if (and (.exists f)
-                               (.canExecute f))
-                        (.getCanonicalPath f)
-                        (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-                    (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-                java-cmd)))
         env-tools-dir (or
                        ;; legacy name
                        (*getenv-fn* "CLOJURE_TOOLS_DIR")

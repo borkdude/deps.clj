@@ -36,6 +36,10 @@ build_script:
 
     call script/compile.bat
 
+test_script:
+- cmd: >-
+    call script/exe_test.bat
+    
 artifacts:
 - path: deps.clj-*-windows-amd64.zip
   name: deps.exe
