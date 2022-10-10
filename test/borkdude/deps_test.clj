@@ -85,7 +85,7 @@
   "Returns the major version number of the java executable used to run
   the java command at run time."
   []
-  (-> (process [@#'deps/java-cmd "-version"] {:err :string})
+  (-> (process [(#'deps/get-java-cmd) "-version"] {:err :string})
       check
       :err
       (->> (re-find #"version \"(\d+)"))
