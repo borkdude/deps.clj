@@ -2,15 +2,61 @@
 
  :tasks
  {:requires [[babashka.deps :as deps]
-             [babashka.process :as p]]
+             [babashka.fs :as fs]
+             [babashka.process :as p]
+             [clojure.string :as str]]
 
+  compile {:doc "Compile library to standalone jar and an executable program."
+           :task (let [graalvm-home (or (System/getenv "GRAALVM_HOME")
+                                        (throw (Exception. "Please set GRAALVM_HOME.")))
+                       java-home (str (fs/path graalvm-home "bin"))
+                       deps-clj-version (slurp "resources/DEPS_CLJ_VERSION")]
+                   (println "Building deps " deps-clj-version)
+                   (p/shell "lein" "deps.clj" "-Spath" "-Sdeps" "{:deps {borkdude/deps.clj {:mvn/version \"0.0.1\"}}}")
+                   (p/shell "lein with-profiles +native-image do clean, uberjar")
+                   (let [native-image (str (fs/path graalvm-home "bin"
+                                                    (if (fs/windows?) "native-image.cmd" "native-image")))]
+                     (println :graalvm-home graalvm-home :java-home java-home)
+                     (p/shell native-image "-jar" (format "target/deps.clj-%s-standalone.jar" deps-clj-version)
+                              "-H:Name=deps"
+                              "-H:+ReportExceptionStackTraces"
+                              "-J-Dclojure.spec.skip-macros=true"
+                              "-J-Dclojure.compiler.direct-linking=true"
+                              "-H:IncludeResources=DEPS_CLJ_VERSION"
+                              "--initialize-at-build-time"
+                              "-H:Log=registerResource:"
+                              "-H:EnableURLProtocols=http,https"
+                              "--enable-all-security-services"
+                              "--no-fallback"
+                              "--verbose"
+                              "--no-server"
+                              "-J-Xmx3g"))
+                   (p/shell "lein clean")
+                   (p/shell "./deps" "-Spath" "-Sdeps" "{:deps {borkdude/deps.clj {:mvn/version \"0.0.1\"}}}"))}
+
+  bump-version (load-file "script/bump_version.clj")
+  changelog    (load-file "script/changelog.clj")
   gen-script {:doc "Regen `./deps[.clj|.bat]` from `src/borkdude/deps.clj`."
               :task (load-file "script/gen_script.clj")}
 
-  test {:doc "Run all tests."
-        :task
-        (doseq [args '[[-M:test] [-M -m borkdude.deps -M:test]]]
-          (println :testing... 'clojure args)
-          (-> (deps/clojure args)
-              p/check)
-          (println))}}}
+  bb-test {:doc "Run tests with bb calling to bb deps lib."
+           :task (let [bb (str \" (.get (.command (.info (java.lang.ProcessHandle/current)))) \")]
+                   (p/shell {:extra-env {"DEPS_CLJ_TEST_ENV" "babashka"}}
+                            bb "-cp" "src;test;resources"
+                            "-e" "(require '[clojure.test :as t] '[borkdude.deps-test])"
+                            "-e" "(let [{:keys [:fail :error]} (t/run-tests 'borkdude.deps-test)] (System/exit (+ fail error)))"))}
+
+  exe-test {:doc "Run tests with deps exec calling to deps exec."
+            :task (p/shell {:extra-env {"DEPS_CLJ_TEST_ENV" "native"}} "./deps.exe" "-M:test")}
+
+  jvm-clj-test {:doc "Run tests with clojure calling to clojure deps lib."
+                :task (-> (deps/clojure '[-M:test])
+                          p/check)}
+  jvm-deps-test {:doc "Run tests with clojure deps lib calling to clojure deps lib."
+                 :task (-> (deps/clojure '[-M -m borkdude.deps -M:test])
+                           p/check)}
+  jvm-test {:doc "Run both jvm-clj-test and jvm-deps-test."
+            :task (doseq [task '[jvm-clj-test jvm-deps-test]]
+                    (println :running... task)
+                    (run task)
+                    (println))}}}
