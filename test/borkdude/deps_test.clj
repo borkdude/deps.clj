@@ -1,24 +1,36 @@
 (ns borkdude.deps-test
   (:require
    [babashka.fs :as fs]
-   [babashka.process :refer [process]]
+   [babashka.process :refer [check process]]
    [borkdude.deps :as deps]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as str]
    [clojure.test :as t :refer [deftest is testing]]))
 
-(def invoke-deps-cmd
-  "Returns the command to invoke `borkdude.deps` on the current system,
-  based on the value of env variable `DEPS_CLJ_TEST_ENV`."
-  (case (System/getenv "DEPS_CLJ_TEST_ENV")
+(defn invoke-deps-cmd
+  "Returns the command string that can be used to invoke the
+  `borkdude.deps/-main` fn with the given ARGS from the command line.
+
+  The tool to use for invoking the fn is selected based on the value
+  of the `DEPS_CLJ_TEST_ENV` env variable, which can be one
+  of (defaults to `clojure`):
+
+  `babashka`: Use `bb`.
+  `clojure`: Use the `clojure` cli tool.
+  `native`:  Use the `deps` native binary."
+  [& args]
+
+  (case (or (System/getenv "DEPS_CLJ_TEST_ENV") "clojure")
     "babashka" (let [classpath (str/join deps/path-separator ["src" "test" "resources"])]
-                 (str "bb -cp " classpath " -m borkdude.deps "))
-    "native" "./deps "
-    (cond->>
-     "clojure -M -m borkdude.deps "
-     deps/windows?
-     (str "powershell -NoProfile -Command "))))
+                 (apply str "bb -cp " classpath " -m borkdude.deps " args))
+    "native" (apply str "./deps " args)
+    "clojure" (cond->>
+               (apply str "clojure -M -m borkdude.deps " args)
+                deps/windows?
+                ;; the `exit` command is a workaround for
+                ;; https://ask.clojure.org/index.php/12290/clojuretools-commands-windows-properly-exit-code-failure
+                (format "powershell -NoProfile -Command %s; exit $LASTEXITCODE"))))
 
 (deftest parse-args-test
   (is (= {:mode :repl, :jvm-opts ["-Dfoo=bar" "-Dbaz=quuz"]}
@@ -51,27 +63,62 @@
   (is (do (deps/-main "-X" "clojure.core/prn" ":foo" "1")
           ::success)))
 
-(when (not deps/windows?)
-  (deftest whitespace-test
-    (testing "jvm opts"
-      (let [temp-dir (fs/create-temp-dir)
-            temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
-            temp-file-path (str temp-file)
-            _ (deps/-main "-Sdeps" "{:aliases {:space {:jvm-opts [\"-Dfoo=\\\"foo bar\\\"\"]}}}" "-M:space" "-e"
-                          (format "(spit \"%s\" (System/getProperty \"foo\"))"
-                                  temp-file-path))
-            out (slurp temp-file-path)]
-        (is (= "\"foo bar\"" out))))
-    (testing "main opts"
-      (let [temp-dir (fs/create-temp-dir)
-            temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
-            temp-file-path (str temp-file)
-            _ (deps/-main "-Sdeps"
-                          (format "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\"%s\\\" (+ 1 2 3))\"]}}}"
-                                  temp-file-path)
-                          "-M:space")
-            out (slurp temp-file-path)]
-        (is (= "6" out))))))
+(defmacro deps-main-throw
+  "Same as `babashka.deps/-main`, but throws an exception on error
+  instead of exiting the process.
+
+  The exception's additional data map keys are:
+
+  :exit-code The process's exit code.
+
+  :msg The process's error messsage (if any)."
+  [& command-line-args]
+  `(binding [deps/*exit-fn*
+             (fn
+               ([exit-code#] (when-not (= exit-code# 0)
+                               (throw (ex-info (str ::deps-main-throw) {:exit-code exit-code#}))))
+               ([exit-code# msg#] (throw  (ex-info (str ::deps-main-throw)
+                                                   {:exit-code exit-code# :msg msg#}))))]
+     (deps/-main ~@command-line-args)))
+
+(defn java-major-version-get
+  "Returns the major version number of the java executable used to run
+  the java command at run time."
+  []
+  (-> (process [(#'deps/get-java-cmd) "-version"] {:err :string})
+      check
+      :err
+      (->> (re-find #"version \"(\d+)"))
+      second
+      Integer/parseInt))
+
+(deftest whitespace-test
+  (testing "jvm opts"
+    (let [temp-dir (fs/create-temp-dir)
+          temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
+          temp-file-path (str temp-file)
+          _ (deps-main-throw "-Sdeps" "{:aliases {:space {:jvm-opts [\"-Dfoo=foo bar\"]}}}" "-M:space" "-e"
+                             (format "(spit \"%s\" (System/getProperty \"foo\"))"
+                                     (.toURI (fs/file temp-file-path))))
+          out (slurp temp-file-path)]
+      (is (= "foo bar" out))))
+  (testing "main opts"
+    (let [java-major-version (java-major-version-get)
+          temp-dir (fs/create-temp-dir)
+          temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
+          temp-file-path (str temp-file)
+          _ (deps-main-throw "-Sdeps"
+                             (format
+                              (if-not deps/windows?
+                                "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\"%s\\\" (+ 1 2 3))\"]}}}"
+
+                                (if (< java-major-version 17)
+                                  "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\\\"%s\\\\\" (+ 1 2 3))\"]}}}"
+                                  "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\"\\\\\"%s\\\"\\\\\" (+ 1 2 3))\"]}}}"))
+                              (.toURI (fs/file temp-file-path)))
+                             "-M:space")
+          out (slurp temp-file-path)]
+      (is (= "6" out)))))
 
 (deftest jvm-proxy-settings-test
   (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "http://aHost:1234")))
@@ -80,22 +127,21 @@
   (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "https://user:pw@aHost:1234")))
   (is (nil? (deps/parse-proxy-info "http://aHost:abc"))))
 
-(when (not deps/windows?)
-  (deftest jvm-opts-test
-    (let [temp-dir (fs/create-temp-dir)
-          temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
-          temp-file-path (str temp-file)]
-      (deps/-main "-J-Dfoo=bar" "-J-Dbaz=quux"
-                  "-M" "-e" (format "
+(deftest jvm-opts-test
+  (let [temp-dir (fs/create-temp-dir)
+        temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
+        temp-file-path (str temp-file)]
+    (deps-main-throw "-J-Dfoo=bar" "-J-Dbaz=quux"
+                "-M" "-e" (format "
 (spit \"%s\" (pr-str [(System/getProperty \"foo\") (System/getProperty \"baz\")]))"
-                                    temp-file-path))
-      (is (= ["bar" "quux"] (edn/read-string  (slurp temp-file-path)))))))
+                                  (.toURI (fs/file temp-file-path))))
+      (is (= ["bar" "quux"] (edn/read-string  (slurp temp-file-path))))))
 
 (deftest tools-dir-env-test
   (fs/delete-tree "tools-dir")
   (try
     (let [[out err exit]
-          (-> (process (str invoke-deps-cmd "-Sdescribe")
+          (-> (process (invoke-deps-cmd "-Sdescribe")
                        {:out :string
                         :err :string
                         :extra-env {"DEPS_CLJ_TOOLS_VERSION" "1.10.3.899"
@@ -122,7 +168,7 @@
         (let [{:keys [out exit]}
                                         ; use bogus deps-file to force using CLJ_CONFIG instead of current directory,
                                         ; meaning that the cache directory will be empty
-              (-> (process (str invoke-deps-cmd "-Sdeps-file force_clj_config/missing.edn " option)
+              (-> (process (invoke-deps-cmd "-Sdeps-file force_clj_config/missing.edn " option)
                            {:out :string
                             :err :string
                             :extra-env {"CLJ_CONFIG" "missing_config"}})
@@ -139,9 +185,9 @@
   (deps/-main "-Ttools" "list"))
 
 (defmacro get-shell-command-args
-  "Executes BODY with the given ENV'ironment variables added to the
-  `babashka.deps` scope, presumbably to indirectly invoke
-  `babashka.deps/shell-command` whose invocation ARGS captures and
+  "Executes BODY with the given extra ENV-VARS environment variables
+  added to the `babashka.deps` scope, presumbably to indirectly invoke
+  `babashka.deps/shell-command` whose invocation ARGS it captures and
   returns with this call.
 
   It overrides `baabashka.deps/*exit-fn*` so as to never exit the
@@ -166,7 +212,7 @@
                                   ([exit-code# msg#] (throw  (ex-info "mock-shell-failed"
                                                                       {:exit-code exit-code# :msg msg#}))))
                  deps/*getenv-fn* #(or (get ~env-vars %)
-                                      (System/getenv %))]
+                                       (System/getenv %))]
          (with-redefs [deps/shell-command sh-mock#]
            ~@body
            (or (deref ret*# 500 false) (ex-info "No shell-command invoked in body." {:body ~body-str})))))))
