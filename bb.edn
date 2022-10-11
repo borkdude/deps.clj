@@ -3,7 +3,8 @@
  :tasks
  {:requires [[babashka.deps :as deps]
              [babashka.fs :as fs]
-             [babashka.process :as p]]
+             [babashka.process :as p]
+             [clojure.string :as str]]
 
   compile tasks/compile-native
 
@@ -12,12 +13,12 @@
   gen-script {:doc "Regen `./deps[.clj|.bat]` from `src/borkdude/deps.clj`."
               :task (load-file "script/gen_script.clj")}
 
-  bb-test {:doc "Run tests with bb calling to bb deps lib."
-           :task (let [bb (str \" (.get (.command (.info (java.lang.ProcessHandle/current)))) \")]
-                   (p/shell {:extra-env {"DEPS_CLJ_TEST_ENV" "babashka"}}
-                            bb "-cp" "src;test;resources"
-                            "-e" "(require '[clojure.test :as t] '[borkdude.deps-test])"
-                            "-e" "(let [{:keys [:fail :error]} (t/run-tests 'borkdude.deps-test)] (System/exit (+ fail error)))"))}
+  babashka-test {:doc "Run tests with bb calling to bb deps lib."
+                 :task (let [bb (str \" (.get (.command (.info (java.lang.ProcessHandle/current)))) \")]
+                         (p/shell {:extra-env {"DEPS_CLJ_TEST_ENV" "babashka"}}
+                                  bb "-cp" (str/join fs/path-separator ["src" "test" "resources"])
+                                  "-e" "(require '[clojure.test :as t] '[borkdude.deps-test])"
+                                  "-e" "(let [{:keys [:fail :error]} (t/run-tests 'borkdude.deps-test)] (System/exit (+ fail error)))"))}
 
   exe-test {:doc "Run tests with deps exec calling to deps exec."
             :task (p/shell {:extra-env {"DEPS_CLJ_TEST_ENV" "native"}}

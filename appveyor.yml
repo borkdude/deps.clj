@@ -16,9 +16,12 @@ cache:
 
 build_script:
 - cmd: >-
-    powershell -Command "(New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein.bat', 'lein.bat')"
+    choco install lein
 
-    call lein self-install
+- cmd: >-
+    powershell -Command "if (Test-Path('bb.exe')) { return } else { (New-Object Net.WebClient).DownloadFile('https://github.com/babashka/babashka/releases/download/v0.9.162/babashka-0.9.162-windows-amd64.zip', 'bb.zip') }"
+
+    powershell -Command "if (Test-Path('bb.exe')) { return } else { Expand-Archive bb.zip . }"
 
 - cmd: >-
     call lein do clean, uberjar
@@ -34,11 +37,13 @@ build_script:
 
     powershell -Command "if (Test-Path('graalvm')) { return } else { Expand-Archive graalvm.zip graalvm }"
 
-    call script/compile.bat
+    %GRAALVM_HOME%\bin\gu.cmd install native-image
+
+    bb compile
 
 test_script:
 - cmd: >-
-    call script/exe_test.bat
+    bb exe-test
     
 artifacts:
 - path: deps.clj-*-windows-amd64.zip

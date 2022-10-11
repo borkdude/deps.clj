@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-set -eo pipefail
-
-clojure -M:test
-
-clojure -M -m borkdude.deps -M:test
