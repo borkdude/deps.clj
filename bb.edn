@@ -1,16 +1,37 @@
-{:paths ["resources"]
+{:paths ["resources" "bb"]
 
  :tasks
  {:requires [[babashka.deps :as deps]
-             [babashka.process :as p]]
+             [babashka.fs :as fs]
+             [babashka.process :as p]
+             [clojure.string :as str]]
 
+  compile tasks/compile-native
+
+  bump-version (load-file "script/bump_version.clj")
+  changelog    (load-file "script/changelog.clj")
   gen-script {:doc "Regen `./deps[.clj|.bat]` from `src/borkdude/deps.clj`."
               :task (load-file "script/gen_script.clj")}
 
-  test {:doc "Run all tests."
-        :task
-        (doseq [args '[[-M:test] [-M -m borkdude.deps -M:test]]]
-          (println :testing... 'clojure args)
-          (-> (deps/clojure args)
-              p/check)
-          (println))}}}
+  babashka-test {:doc "Run tests with bb calling to bb deps lib."
+                 :task (let [bb (str \" (.get (.command (.info (java.lang.ProcessHandle/current)))) \")]
+                         (p/shell {:extra-env {"DEPS_CLJ_TEST_ENV" "babashka"}}
+                                  bb "-cp" (str/join fs/path-separator ["src" "test" "resources"])
+                                  "-e" "(require '[clojure.test :as t] '[borkdude.deps-test])"
+                                  "-e" "(let [{:keys [:fail :error]} (t/run-tests 'borkdude.deps-test)] (System/exit (+ fail error)))"))}
+
+  exe-test {:doc "Run tests with deps exec calling to deps exec."
+            :task (p/shell {:extra-env {"DEPS_CLJ_TEST_ENV" "native"}}
+                           (if (fs/windows?) "./deps.exe" "./deps") "-M:test")}
+
+  jvm-clj-test {:doc "Run tests with clojure calling to clojure deps lib."
+                :task (-> (deps/clojure '[-M:test])
+                          p/check)}
+  jvm-deps-test {:doc "Run tests with clojure deps lib calling to clojure deps lib."
+                 :task (-> (deps/clojure '[-M -m borkdude.deps -M:test])
+                           p/check)}
+  jvm-test {:doc "Run both jvm-clj-test and jvm-deps-test."
+            :task (doseq [task '[jvm-clj-test jvm-deps-test]]
+                    (println :running... task)
+                    (run task)
+                    (println))}}}

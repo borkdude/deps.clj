@@ -25,9 +25,14 @@ jobs:
             chmod +x linux-install-1.10.3.998.sh
             sudo ./linux-install-1.10.3.998.sh
       - run:
+          name: Install babashka
+          command: |
+            bash <(curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install) --dir ~
+            sudo mv ~/bb /usr/local/bin/bb
+      - run:
           name: Run JVM tests
           command: |
-            script/jvm_test
+            bb jvm-test
       - save_cache:
           paths:
             - ~/.m2
@@ -64,7 +69,7 @@ jobs:
       - run:
           name: Run babashka tests
           command: |
-            script/babashka_test
+            bb babashka-test
       - save_cache:
           paths:
             - ~/.m2
@@ -90,6 +95,11 @@ jobs:
             chmod +x linux-install-1.10.3.998.sh
             sudo ./linux-install-1.10.3.998.sh
       - run:
+          name: Install babashka
+          command: |
+            bash <(curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install) --dir ~
+            sudo mv ~/bb /usr/local/bin/bb
+      - run:
           name: Install lsof
           command: |
             sudo apt-get install lsof
@@ -106,15 +116,16 @@ jobs:
               curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-21.0.0.2/graalvm-ce-java11-linux-amd64-21.0.0.2.tar.gz
               tar xzf graalvm-ce-java11-linux-amd64-21.0.0.2.tar.gz
             fi
+            "$GRAALVM_HOME/bin/gu" install native-image || true
       - run:
           name: Build binary
           command: |
-            script/compile
+            bb compile
           no_output_timeout: 30m
       - run:
           name: Run tests
           command: |
-            script/exe_test
+            bb exe-test
       - run:
           name: Release
           command: |
@@ -143,6 +154,11 @@ jobs:
           command: |
             .circleci/script/install-clojure /usr/local
       - run:
+          name: Install babashka
+          command: |
+            bash <(curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install) --dir ~
+            sudo mv ~/bb /usr/local/bin/bb
+      - run:
           name: Install Leiningen
           command: |
             .circleci/script/install-leiningen
@@ -155,15 +171,16 @@ jobs:
               curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-21.0.0.2/graalvm-ce-java11-darwin-amd64-21.0.0.2.tar.gz
               tar xzf graalvm-ce-java11-darwin-amd64-21.0.0.2.tar.gz
             fi
+            "$GRAALVM_HOME/bin/gu" install native-image || true
       - run:
           name: Build binary
           command: |
-            script/compile
+            bb compile
           no_output_timeout: 30m
       - run:
           name: Run tests
           command: |
-            script/exe_test
+            bb exe-test
       - run:
           name: Release
           command: |
