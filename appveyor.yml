@@ -9,44 +9,86 @@ clone_folder: C:\projects\deps.clj
 environment:
   GRAALVM_HOME: C:\projects\deps.clj\graalvm\graalvm-ce-java11-20.3.0
 
+  matrix:
+    - JDK: 1.8
+      grp: test
+      JAVA_HOME: C:\Program Files\Java\jdk1.8.0
+    - JDK: 11
+      grp: test
+      JAVA_HOME: C:\Program Files\Java\jdk11
+    - JDK: 17
+      grp: test
+      JAVA_HOME: C:\Program Files\Java\jdk17
+    - JDK: GraalVM      
+
 cache:
   - C:\ProgramData\chocolatey\lib -> project.clj, appveyor.yml
   - '%USERPROFILE%\.m2 -> project.clj'
   - 'graalvm -> appveyor.yml'
+  - '%USERPROFILE%\Documents\WindowsPowerShell\Modules -> appveyor.yml'
 
-build_script:
-- cmd: >-
-    powershell -Command "(New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein.bat', 'lein.bat')"
+install:
+  - cmd: >-
+      powershell -Command "if (Test-Path('bb.exe')) { return } else { (New-Object Net.WebClient).DownloadFile('https://github.com/babashka/babashka/releases/download/v0.9.162/babashka-0.9.162-windows-amd64.zip', 'bb.zip') }"
 
-    call lein self-install
+      powershell -Command "if (Test-Path('bb.exe')) { return } else { Expand-Archive bb.zip . }"
 
-- cmd: >-
-    powershell -Command "if (Test-Path('bb.exe')) { return } else { (New-Object Net.WebClient).DownloadFile('https://github.com/babashka/babashka/releases/download/v0.9.162/babashka-0.9.162-windows-amd64.zip', 'bb.zip') }"
+for:
+  -
+    matrix:
+      only:
+        - grp: test
 
-    powershell -Command "if (Test-Path('bb.exe')) { return } else { Expand-Archive bb.zip . }"
+    build_script:
+    - ps: >-
+        if (Test-Path("$Env:USERPROFILE\Documents\WindowsPowerShell\Modules\ClojureTools"))
+        { return }
+        else
+        { echo "1" | powershell -noprofile -command "Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://download.clojure.org/install/win-install-1.11.1.1165.ps1')" }
 
-- cmd: >-
-    call lein do clean, uberjar
+    test_script:
+    - cmd: >-
+        echo :JAVA_HOME %JAVA_HOME%
+        
+        SET PATH=%JAVA_HOME%\bin;%PATH%
 
-    set /P DEPS_CLJ_VERSION=< resources\DEPS_CLJ_VERSION
+        bb jvm-test
 
-    call java -jar "target/deps.clj-%DEPS_CLJ_VERSION%-standalone.jar" "-Sverbose" "-Spath"
+        bb babashka-test
+        
+  -
+    matrix:
+      only:
+        - JDK: GraalVM
+            
+    build_script:
+    - cmd: >-
+        powershell -Command "(New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein.bat', 'lein.bat')"
 
-- cmd: >-
-    call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
+        call lein self-install
 
-    powershell -Command "if (Test-Path('graalvm')) { return } else { (New-Object Net.WebClient).DownloadFile('https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20.3.0/graalvm-ce-java11-windows-amd64-20.3.0.zip', 'graalvm.zip') }"
+    - cmd: >-
+        call lein do clean, uberjar
 
-    powershell -Command "if (Test-Path('graalvm')) { return } else { Expand-Archive graalvm.zip graalvm }"
+        set /P DEPS_CLJ_VERSION=< resources\DEPS_CLJ_VERSION
 
-    %GRAALVM_HOME%\bin\gu.cmd install native-image
+        call java -jar "target/deps.clj-%DEPS_CLJ_VERSION%-standalone.jar" "-Sverbose" "-Spath"
 
-    bb compile
+    - cmd: >-
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
 
-test_script:
-- cmd: >-
-    bb exe-test
-    
-artifacts:
-- path: deps.clj-*-windows-amd64.zip
-  name: deps.exe
+        powershell -Command "if (Test-Path('graalvm')) { return } else { (New-Object Net.WebClient).DownloadFile('https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20.3.0/graalvm-ce-java11-windows-amd64-20.3.0.zip', 'graalvm.zip') }"
+
+        powershell -Command "if (Test-Path('graalvm')) { return } else { Expand-Archive graalvm.zip graalvm }"
+
+        %GRAALVM_HOME%\bin\gu.cmd install native-image
+
+        bb compile
+
+    test_script:
+    - cmd: >-
+        bb exe-test
+
+    artifacts:
+      - path: deps.clj-*-windows-amd64.zip
+        name: deps.exe

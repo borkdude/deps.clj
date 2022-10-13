@@ -296,7 +296,7 @@ $ lein run -m borkdude.deps -Spath
 To run jvm tests:
 
 ```
-$ bb test
+$ bb jvm-test
 ```
 
 To run with babashka after making changes to `src/borkdude/deps.clj`, you should run:
@@ -328,7 +328,7 @@ The script also assumes that you have
 Run the compile script with:
 
 ```
-$ script/compile
+$ bb compile
 ```
 
 If everything worked out, there will be a `deps` binary in the root of the
@@ -337,7 +337,7 @@ project.
 To run executable tests:
 
 ```
-$ script/exe_test
+$ bb exe-test
 ```
 
 ## License
