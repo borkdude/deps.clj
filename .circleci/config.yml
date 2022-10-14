@@ -75,12 +75,11 @@ jobs:
       - run:
           name: Install <<parameters.jdk>>
           command: |
-            brew install <<parameters.jdk>>
-
+            HOMEBREW_NO_AUTO_UPDATE=1 brew install <<parameters.jdk>>
       - run:
           name: Install Clojure
           command: |
-            brew install clojure/tools/clojure
+            .circleci/script/install-clojure /usr/local
       - run:
           name: Install babashka
           command: |
