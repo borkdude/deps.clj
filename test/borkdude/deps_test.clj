@@ -8,6 +8,14 @@
    [clojure.string :as str]
    [clojure.test :as t :refer [deftest is testing]]))
 
+;; Print out information about the java executable that will be used
+;; by deps.clj, useful for user validation.
+(let [java (#'deps/get-java-cmd)
+      version (-> (process [java "-version"] {:err :string})
+                  check
+                  :err str/split-lines first)]
+  (println :deps.clj/java :path (pr-str java) :version version))
+
 (defn invoke-deps-cmd
   "Returns the command string that can be used to invoke the
   `borkdude.deps/-main` fn with the given ARGS from the command line.
@@ -81,17 +89,6 @@
                                                    {:exit-code exit-code# :msg msg#}))))]
      (deps/-main ~@command-line-args)))
 
-(defn java-major-version-get
-  "Returns the major version number of the java executable used to run
-  the java command at run time."
-  []
-  (-> (process [(#'deps/get-java-cmd) "-version"] {:err :string})
-      check
-      :err
-      (->> (re-find #"version \"(\d+)"))
-      second
-      Integer/parseInt))
-
 (deftest whitespace-test
   (testing "jvm opts"
     (let [temp-dir (fs/create-temp-dir)
@@ -103,18 +100,14 @@
           out (slurp temp-file-path)]
       (is (= "foo bar" out))))
   (testing "main opts"
-    (let [java-major-version (java-major-version-get)
-          temp-dir (fs/create-temp-dir)
+    (let [temp-dir (fs/create-temp-dir)
           temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
           temp-file-path (str temp-file)
           _ (deps-main-throw "-Sdeps"
                              (format
                               (if-not deps/windows?
                                 "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\"%s\\\" (+ 1 2 3))\"]}}}"
-
-                                (if (< java-major-version 17)
-                                  "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\\\"%s\\\\\" (+ 1 2 3))\"]}}}"
-                                  "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\"\\\\\"%s\\\"\\\\\" (+ 1 2 3))\"]}}}"))
+                                "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\\\"%s\\\\\" (+ 1 2 3))\"]}}}")
                               (.toURI (fs/file temp-file-path)))
                              "-M:space")
           out (slurp temp-file-path)]
