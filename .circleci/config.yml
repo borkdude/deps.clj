@@ -39,6 +39,7 @@ jobs:
       - run:
           name: Run JVM tests
           command: |
+            java -version
             bb jvm-test
       - run:
           name: Run babashka tests
@@ -88,6 +89,7 @@ jobs:
       - run:
           name: Run JVM tests
           command: |
+            java -version
             bb jvm-test
       - run:
           name: Run babashka tests

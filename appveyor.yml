@@ -52,6 +52,8 @@ for:
         
         SET PATH=%JAVA_HOME%\bin;%PATH%
 
+        java -version
+        
         bb jvm-test
 
         bb babashka-test
