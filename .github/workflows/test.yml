@@ -1,0 +1,66 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test-and-maybe-uberjar:
+    # Runs the JVM and babashka tests across all OSs and JDKs, and
+    # creates an uberjar when the OS and JDK matches the UBERJAR_OS
+    # and UBERJAR_JDK env variables respectively.
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        jdk: [8, 11, 17]
+    env:
+      UBERJAR_OS: 'ubuntu'
+      UBERJAR_JDK: 8
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Prepare java ${{ matrix.jdk }}
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.jdk }}
+
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@9.5
+        with:
+          bb: '0.10.163'
+          cli: '1.10.3.1013'
+          lein: '2.9.10'
+
+      - name: Cache clojure dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+          key: cljdeps-${{ hashFiles('deps.edn', 'bb.edn', 'project.clj') }}
+          restore-keys: cljdeps-
+
+      - name: Run JVM tests
+        run: bb jvm-test
+
+      - name: Run babashka tests
+        run: bb babashka-test
+
+      - name: Create ubejar
+        if: "startsWith (matrix.os, env.UBERJAR_OS) && env.UBERJAR_JDK == matrix.jdk"
+        run: |
+          mkdir -p /tmp/release
+          lein do clean, uberjar
+          VERSION=$(cat resources/DEPS_CLJ_VERSION)
+          cp target/deps.clj-$VERSION-standalone.jar /tmp/release
+
+      - name: Upload artifacts
+        if: "startsWith (matrix.os, env.UBERJAR_OS) && env.UBERJAR_JDK == matrix.jdk"
+        uses: actions/upload-artifact@v2
+        with:
+          name: release
+          path: /tmp/release/
+          if-no-files-found: error
