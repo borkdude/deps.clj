@@ -255,7 +255,8 @@
                      (deps/-main "-P"))]
         (is (not (some #{xx-pclf} sh-args)))))))
 
-(deftest stale-cache-rm-mvn-dir-test
+;; wait for fix in upstream
+#_(deftest stale-cache-rm-mvn-dir-test
   (let [deps-map (pr-str '{:mvn/local-repo "test/mvn" :deps {medley/medley {:mvn/version "1.4.0"}
                                                              io.github.borkdude/quickblog {:git/sha "8f5898ee911101a96295f59bb5ffc7517757bc8f"}}})
         delete #(do (fs/delete-tree (fs/file "test" "mvn"))

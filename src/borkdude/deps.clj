@@ -599,7 +599,8 @@ For more info, see:
                             (or (not (.exists f))
                                 (> (.lastModified f)
                                    (.lastModified cp-file))))) manifests)))
-              (let [cp (slurp cp-file)
+              ;; this may appear in upstream, waiting for that
+              #_(let [cp (slurp cp-file)
                     entries (vec (.split ^String cp java.io.File/pathSeparator))]
                 ;; Only check .jar files for non-existence. Gitlibs should be
                 ;; covered by manifest checks above. Other dirs may not exist,
