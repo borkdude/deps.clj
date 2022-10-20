@@ -46,8 +46,8 @@ jobs:
       - name: Run JVM tests
         run: bb jvm-test
 
-      - name: Run babashka tests
-        run: bb babashka-test
+      # - name: Run babashka tests
+      #   run: bb babashka-test
 
       - name: Create ubejar
         if: "startsWith (matrix.os, env.UBERJAR_OS) && env.UBERJAR_JDK == matrix.jdk"

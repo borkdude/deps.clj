@@ -66,10 +66,10 @@ jobs:
           command: |
             bash <(curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install) --dir ~
             sudo mv ~/bb /usr/local/bin/bb
-      - run:
-          name: Run babashka tests
-          command: |
-            bb babashka-test
+      # - run:
+      #     name: Run babashka tests
+      #     command: |
+      #       bb babashka-test
       - save_cache:
           paths:
             - ~/.m2
