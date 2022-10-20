@@ -34,7 +34,7 @@
                  (apply str "bb -cp " classpath " -m borkdude.deps " args))
     "native" (apply str "./deps " args)
     "clojure" (cond->>
-               (apply str "clojure -M -m borkdude.deps " args)
+                  (apply str "clojure -M -m borkdude.deps " args)
                 deps/windows?
                 ;; the `exit` command is a workaround for
                 ;; https://ask.clojure.org/index.php/12290/clojuretools-commands-windows-properly-exit-code-failure
@@ -125,10 +125,10 @@
         temp-file (fs/create-file (fs/path temp-dir "temp.txt"))
         temp-file-path (str temp-file)]
     (deps-main-throw "-J-Dfoo=bar" "-J-Dbaz=quux"
-                "-M" "-e" (format "
+                     "-M" "-e" (format "
 (spit \"%s\" (pr-str [(System/getProperty \"foo\") (System/getProperty \"baz\")]))"
-                                  (.toURI (fs/file temp-file-path))))
-      (is (= ["bar" "quux"] (edn/read-string  (slurp temp-file-path))))))
+                                       (.toURI (fs/file temp-file-path))))
+    (is (= ["bar" "quux"] (edn/read-string  (slurp temp-file-path))))))
 
 (deftest tools-dir-env-test
   (fs/delete-tree "tools-dir")
@@ -221,26 +221,26 @@
         xx-gc-threads "-XX:ConcGCThreads=1"]
 
     (testing "CLJ-JVM-OPTS with prepare deps"
-        (let [sh-args (get-shell-command-args
-                       {"CLJ_JVM_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
-                       (deps/-main "-P"))]
-          (is (some #{xx-pclf} sh-args))
-          ;; second and third args
-          (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2))))))
+      (let [sh-args (get-shell-command-args
+                     {"CLJ_JVM_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
+                     (deps/-main "-P"))]
+        (is (some #{xx-pclf} sh-args))
+        ;; second and third args
+        (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2))))))
 
     (testing "CLJ-JVM-OPTS with pom"
-        (let [sh-args (get-shell-command-args
-                       {"CLJ_JVM_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
-                       (deps/-main "-Spom"))]
-          (is (some #{xx-pclf} sh-args))
-          (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2))))))
+      (let [sh-args (get-shell-command-args
+                     {"CLJ_JVM_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
+                     (deps/-main "-Spom"))]
+        (is (some #{xx-pclf} sh-args))
+        (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2))))))
 
     (testing "CLJ-JVM-OPTS outside of prepare deps"
-        (let [sh-args (get-shell-command-args
-                       {"CLJ_JVM_OPTS" xx-pclf}
-                       (deps/-main "-e" "123"))]
-          ;; shouldn't find the flag
-          (is (not (some #{xx-pclf} sh-args)))))
+      (let [sh-args (get-shell-command-args
+                     {"CLJ_JVM_OPTS" xx-pclf}
+                     (deps/-main "-e" "123"))]
+        ;; shouldn't find the flag
+        (is (not (some #{xx-pclf} sh-args)))))
 
     (testing "JAVA-OPTS outside of prepare deps"
       (let [sh-args (get-shell-command-args
@@ -256,7 +256,14 @@
         (is (not (some #{xx-pclf} sh-args)))))))
 
 (deftest stale-cache-rm-mvn-dir-test
-  (deps/-main "-Sdeps" "{:deps {medley/medley {:mvn/version \"1.4.0\"}}}" "-M" "-e" "(require '[medley.core])")
-  (fs/delete-tree (fs/file (System/getProperty "user.home") ".m2" "repository" "medley" "medley" "1.4.0"))
-  (deps/-main "-Sdeps" "{:deps {medley/medley {:mvn/version \"1.4.0\"}}}" "-M" "-e" "(require '[medley.core])")
-  )
+  (let [deps-map (pr-str '{:mvn/local-repo "test/mvn" :deps {medley/medley {:mvn/version "1.4.0"}
+                                                             io.github.borkdude/quickblog {:git/sha "8f5898ee911101a96295f59bb5ffc7517757bc8f"}}})
+        delete #(do (fs/delete-tree (fs/file "test" "mvn"))
+                    (fs/delete-tree (fs/file (or (some-> (System/getenv "GITLIBS") (fs/file ))
+                                                 (fs/file (System/getProperty "user.dir" ".gitlibs")))
+                                             "libs" "io.github.borkdude/quickblog" "8f5898ee911101a96295f59bb5ffc7517757bc8f")))
+        test #(deps/-main "-Sdeps" deps-map "-M" "-e" "(require '[medley.core]) (require '[quickblog.api])")]
+    (delete)
+    (test)
+    (delete)
+    (test)))
