@@ -5,6 +5,7 @@
 /.clj-kondo/.cache
 /deps
 /deps.build_artifacts.txt
+test/mvn
 
 # Emacs
 *~

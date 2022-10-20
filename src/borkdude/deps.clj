@@ -275,8 +275,8 @@ For more info, see:
   [s]
   (when s
     (let [p (cond
-              (clojure.string/starts-with? s "http://") (subs s 7)
-              (clojure.string/starts-with? s "https://") (subs s 8)
+              (str/starts-with? s "http://") (subs s 7)
+              (str/starts-with? s "https://") (subs s 8)
               :else s)
           auth-proxy-match (re-matches authenticated-proxy-re p)
           unauth-proxy-match (re-matches unauthenticated-proxy-re p)]
@@ -600,8 +600,15 @@ For more info, see:
                                 (> (.lastModified f)
                                    (.lastModified cp-file))))) manifests)))
               (let [cp (slurp cp-file)
-                    entries (vec (.split ^String cp (str java.io.File/pathSeparatorChar)))]
-                (some #(not (.exists (io/file %))) entries)))
+                    entries (vec (.split ^String cp java.io.File/pathSeparator))]
+                ;; Only check .jar files for non-existence. Gitlibs should be
+                ;; covered by manifest checks above. Other dirs may not exist,
+                ;; e.g. {:paths ["foo"]} and should not indicate staleness.
+                (some (fn [entry]
+                        (let [exists-when-jar? (or (not (str/ends-with? entry ".jar"))
+                                                   (.exists (io/file entry)))]
+                          (not exists-when-jar?)))
+                      entries)))
           tools-args
           (when (or stale (:pom opts))
             (cond-> []
