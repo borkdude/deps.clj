@@ -254,3 +254,9 @@
                      {"JAVA_OPTS" xx-pclf}
                      (deps/-main "-P"))]
         (is (not (some #{xx-pclf} sh-args)))))))
+
+(deftest stale-cache-rm-mvn-dir-test
+  (deps/-main "-Sdeps" "{:deps {medley/medley {:mvn/version \"1.4.0\"}}}" "-M" "-e" "(require '[medley.core])")
+  (fs/delete-tree (fs/file (System/getProperty "user.home") ".m2" "repository" "medley" "medley" "1.4.0"))
+  (deps/-main "-Sdeps" "{:deps {medley/medley {:mvn/version \"1.4.0\"}}}" "-M" "-e" "(require '[medley.core])")
+  )

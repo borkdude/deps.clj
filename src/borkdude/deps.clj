@@ -575,31 +575,33 @@ For more info, see:
               (println))
           tree? (:tree opts)
           ;; Check for stale classpath file
+          cp-file (io/file cp-file)
           stale
           (or (:force opts)
               (:trace opts)
               tree?
               (:prep opts)
-              (not (.exists (io/file cp-file)))
+              (not (.exists cp-file))
               (when tool-name
                 (let [tool-file (io/file config-dir "tools" (str tool-name ".edn"))]
                   (when (.exists tool-file)
                     (> (.lastModified tool-file)
-                       (.lastModified (io/file cp-file))))))
-              (let [cp-file (io/file cp-file)]
-                (some (fn [config-path]
-                        (let [f (io/file config-path)]
-                          (when (.exists f)
-                            (> (.lastModified f)
-                               (.lastModified cp-file))))) config-paths))
+                       (.lastModified cp-file)))))
+              (some (fn [config-path]
+                      (let [f (io/file config-path)]
+                        (when (.exists f)
+                          (> (.lastModified f)
+                             (.lastModified cp-file))))) config-paths)
               (when (.exists (io/file manifest-file))
-                (let [manifests (-> manifest-file slurp str/split-lines)
-                      cp-file (io/file cp-file)]
+                (let [manifests (-> manifest-file slurp str/split-lines)]
                   (some (fn [manifest]
                           (let [f (io/file manifest)]
                             (or (not (.exists f))
                                 (> (.lastModified f)
-                                   (.lastModified cp-file))))) manifests))))
+                                   (.lastModified cp-file))))) manifests)))
+              (let [cp (slurp cp-file)
+                    entries (vec (.split ^String cp (str java.io.File/pathSeparatorChar)))]
+                (some #(not (.exists (io/file %))) entries)))
           tools-args
           (when (or stale (:pom opts))
             (cond-> []
@@ -652,7 +654,7 @@ For more info, see:
       (let [cp (cond (or classpath-not-needed?
                          (:prep opts)) nil
                      (not (str/blank? (:force-cp opts))) (:force-cp opts)
-                     :else (slurp (io/file cp-file)))]
+                     :else (slurp cp-file))]
         (cond (:help opts) (do (println @help-text)
                                (*exit-fn* 0))
               (:version opts) (do (println "Clojure CLI version (deps.clj)" @version)
