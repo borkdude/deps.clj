@@ -8,6 +8,10 @@ environment variable:
 DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 ```
 
+## Unreleased
+
+- [#71](https://github.com/borkdude/deps.clj/issues/71): Port stale check for jar files ([commit](https://github.com/clojure/brew-install/commit/f791abf1d93563c1ed8f256830bd0bfc085fdd53)]
+
 ## v1.11.1.1165
 
 - Add support for `CLJ_JVM_OPTS` and `JAVA_OPTS` environment variables ([@ikappaki](https://github.com/ikappaki))

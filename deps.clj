@@ -275,8 +275,8 @@ For more info, see:
   [s]
   (when s
     (let [p (cond
-              (clojure.string/starts-with? s "http://") (subs s 7)
-              (clojure.string/starts-with? s "https://") (subs s 8)
+              (str/starts-with? s "http://") (subs s 7)
+              (str/starts-with? s "https://") (subs s 8)
               :else s)
           auth-proxy-match (re-matches authenticated-proxy-re p)
           unauth-proxy-match (re-matches unauthenticated-proxy-re p)]
@@ -430,21 +430,25 @@ For more info, see:
 
 (def java-exe (if windows? "java.exe" "java"))
 
+(defn- get-java-cmd
+  "Returns the path to java executable to invoke commands on."
+  []
+  (or (*getenv-fn* "JAVA_CMD")
+      (let [java-cmd (which java-exe)]
+        (if (str/blank? java-cmd)
+          (let [java-home (*getenv-fn* "JAVA_HOME")]
+            (if-not (str/blank? java-home)
+              (let [f (io/file java-home "bin" java-exe)]
+                (if (and (.exists f)
+                         (.canExecute f))
+                  (.getCanonicalPath f)
+                  (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+              (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+          java-cmd))))
+
 (defn -main [& command-line-args]
   (let [opts (parse-args command-line-args)
-        java-cmd
-        (or (*getenv-fn* "JAVA_CMD")
-            (let [java-cmd (which java-exe)]
-              (if (str/blank? java-cmd)
-                (let [java-home (*getenv-fn* "JAVA_HOME")]
-                  (if-not (str/blank? java-home)
-                    (let [f (io/file java-home "bin" java-exe)]
-                      (if (and (.exists f)
-                               (.canExecute f))
-                        (.getCanonicalPath f)
-                        (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-                    (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-                java-cmd)))
+        java-cmd (get-java-cmd)
         env-tools-dir (or
                        ;; legacy name
                        (*getenv-fn* "CLOJURE_TOOLS_DIR")
@@ -571,31 +575,38 @@ For more info, see:
               (println))
           tree? (:tree opts)
           ;; Check for stale classpath file
+          cp-file (io/file cp-file)
           stale
           (or (:force opts)
               (:trace opts)
               tree?
               (:prep opts)
-              (not (.exists (io/file cp-file)))
+              (not (.exists cp-file))
               (when tool-name
                 (let [tool-file (io/file config-dir "tools" (str tool-name ".edn"))]
                   (when (.exists tool-file)
                     (> (.lastModified tool-file)
-                       (.lastModified (io/file cp-file))))))
-              (let [cp-file (io/file cp-file)]
-                (some (fn [config-path]
-                        (let [f (io/file config-path)]
-                          (when (.exists f)
-                            (> (.lastModified f)
-                               (.lastModified cp-file))))) config-paths))
+                       (.lastModified cp-file)))))
+              (some (fn [config-path]
+                      (let [f (io/file config-path)]
+                        (when (.exists f)
+                          (> (.lastModified f)
+                             (.lastModified cp-file))))) config-paths)
+              ;; Are deps.edn files stale?
               (when (.exists (io/file manifest-file))
-                (let [manifests (-> manifest-file slurp str/split-lines)
-                      cp-file (io/file cp-file)]
+                (let [manifests (-> manifest-file slurp str/split-lines)]
                   (some (fn [manifest]
                           (let [f (io/file manifest)]
                             (or (not (.exists f))
                                 (> (.lastModified f)
-                                   (.lastModified cp-file))))) manifests))))
+                                   (.lastModified cp-file))))) manifests)))
+              ;; Are .jar files in classpath missing?
+              (let [cp (slurp cp-file)
+                    entries (vec (.split ^String cp java.io.File/pathSeparator))]
+                (some (fn [entry]
+                        (when (str/ends-with? entry ".jar")
+                          (not (.exists (io/file entry)))))
+                      entries)))
           tools-args
           (when (or stale (:pom opts))
             (cond-> []
@@ -648,7 +659,7 @@ For more info, see:
       (let [cp (cond (or classpath-not-needed?
                          (:prep opts)) nil
                      (not (str/blank? (:force-cp opts))) (:force-cp opts)
-                     :else (slurp (io/file cp-file)))]
+                     :else (slurp cp-file))]
         (cond (:help opts) (do (println @help-text)
                                (*exit-fn* 0))
               (:version opts) (do (println "Clojure CLI version (deps.clj)" @version)
