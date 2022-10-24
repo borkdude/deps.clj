@@ -11,6 +11,7 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 ## Unreleased
 
 - [#71](https://github.com/borkdude/deps.clj/issues/71): Port stale check for jar files ([commit](https://github.com/clojure/brew-install/commit/f791abf1d93563c1ed8f256830bd0bfc085fdd53)]
+- Bump tools jar to `1.11.1.1174`
 
 ## v1.11.1.1165
 
