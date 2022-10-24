@@ -10,7 +10,7 @@
 (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
 
-;; see https://github.com/clojure/brew-install/blob/1.10.3/CHANGELOG.md
+;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
                         "1.11.1.1165")))
 
@@ -592,6 +592,7 @@ For more info, see:
                         (when (.exists f)
                           (> (.lastModified f)
                              (.lastModified cp-file))))) config-paths)
+              ;; Are deps.edn files stale?
               (when (.exists (io/file manifest-file))
                 (let [manifests (-> manifest-file slurp str/split-lines)]
                   (some (fn [manifest]
@@ -599,16 +600,12 @@ For more info, see:
                             (or (not (.exists f))
                                 (> (.lastModified f)
                                    (.lastModified cp-file))))) manifests)))
-              ;; this may appear in upstream, waiting for that
-              #_(let [cp (slurp cp-file)
+              ;; Are .jar files in classpath missing?
+              (let [cp (slurp cp-file)
                     entries (vec (.split ^String cp java.io.File/pathSeparator))]
-                ;; Only check .jar files for non-existence. Gitlibs should be
-                ;; covered by manifest checks above. Other dirs may not exist,
-                ;; e.g. {:paths ["foo"]} and should not indicate staleness.
                 (some (fn [entry]
-                        (let [exists-when-jar? (or (not (str/ends-with? entry ".jar"))
-                                                   (.exists (io/file entry)))]
-                          (not exists-when-jar?)))
+                        (when (str/ends-with? entry ".jar")
+                          (not (.exists (io/file entry)))))
                       entries)))
           tools-args
           (when (or stale (:pom opts))
