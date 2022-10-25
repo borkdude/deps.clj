@@ -608,8 +608,7 @@ public class ClojureToolsDownloader {
          (binding [*out* *err*]
            (warn "Clojure tools not yet in expected location:" (str tools-jar))
            (let [java-clj-jvm-opts (when clj-jvm-opts (vec (concat clj-jvm-opts
-                                                                   proxy-settings
-                                                                   ["-Xms256m"])))]
+                                                                   proxy-settings)))]
              (clojure-tools-jar-download libexec-dir java-clj-jvm-opts {:debug debug}))
            tools-jar))
         mode (:mode opts)
@@ -624,7 +623,7 @@ public class ClojureToolsDownloader {
         (vec (concat [java-cmd]
                      clj-jvm-opts
                      proxy-settings
-                     ["-Xms256m" "-classpath" tools-cp "clojure.main"]))
+                     ["-classpath" tools-cp "clojure.main"]))
         config-dir
         (or (*getenv-fn* "CLJ_CONFIG")
             (when-let [xdg-config-home (*getenv-fn* "XDG_CONFIG_HOME")]
