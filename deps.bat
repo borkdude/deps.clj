@@ -11,9 +11,14 @@
   (:require
    [clojure.java.io :as io]
    [clojure.string :as str])
-  (:import [java.lang ProcessBuilder$Redirect]
-           [java.net URL HttpURLConnection]
-           [java.nio.file Files FileSystems Path CopyOption]))
+  (:import
+   [java.lang ProcessBuilder$Redirect]
+   [java.net HttpURLConnection URL URLConnection]
+   [java.nio.file
+    CopyOption
+    FileSystems
+    Files
+    Path]))
 
 (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
@@ -230,43 +235,169 @@ For more info, see:
     (*getenv-fn* "userprofile")
     (System/getProperty "user.home")))
 
-(defn download [source dest]
-  (warn "Downloading" (str source) "to" (str (.getParent (io/file dest))))
-  (let [source (URL. source)
-        dest (io/file dest)
-        conn ^HttpURLConnection (.openConnection ^URL source)]
-    (.setInstanceFollowRedirects conn true)
-    (.connect conn)
-    (with-open [is (.getInputStream conn)]
-      (io/copy is dest))))
+(def java-exe (if windows? "java.exe" "java"))
 
-(def clojure-tools-jar (delay (format "clojure-tools-%s.jar" @version)))
+(defn- get-java-cmd
+  "Returns the path to java executable to invoke sub commands with."
+  []
+  (or (*getenv-fn* "JAVA_CMD")
+      (let [java-cmd (which java-exe)]
+        (if (str/blank? java-cmd)
+          (let [java-home (*getenv-fn* "JAVA_HOME")]
+            (if-not (str/blank? java-home)
+              (let [f (io/file java-home "bin" java-exe)]
+                (if (and (.exists f)
+                         (.canExecute f))
+                  (.getCanonicalPath f)
+                  (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+              (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+          java-cmd))))
+
+(defn clojure-tools-download-direct
+  "Downloads from SOURCE url to DEST file returning true on success."
+  [source dest]
+  (try
+    (let [source (URL. source)
+          dest (io/file dest)
+          conn ^URLConnection (.openConnection ^URL source)]
+      (when (instance? HttpURLConnection conn)
+        (.setInstanceFollowRedirects #^java.net.HttpURLConnection conn true))
+      (.connect conn)
+      (with-open [is (.getInputStream conn)]
+        (io/copy is dest))
+      true)
+    (catch Exception e
+      (warn ::direct-download (.getMessage e))
+      false)))
+
+(def ^:private clojure-tools-info*
+  "A delay'd map with information about the clojure tools archive, where
+  to download it from, which files to extract and where to.
+
+  The map contains:
+
+  :ct-base-dir The relative top dir name to extract the archive files to.
+
+  :ct-error-exit-code The process exit code to return if the archive
+  cannot be downloaded.
+
+  :ct-aux-files-names Other important files in the archive.
+
+  :ct-jar-name The main clojure tools jar file in the archive.
+
+  :ct-url-str The url to download the archive from.
+
+  :ct-zip-name The file name to store the archive as."
+  (delay (let [version @version]
+           {:ct-base-dir  "ClojureTools"
+            :ct-error-exit-code 99
+            :ct-aux-files-names ["exec.jar" "example-deps.edn" "tools.edn"]
+            :ct-jar-name (format "clojure-tools-%s.jar" version)
+            :ct-url-str (format "https://download.clojure.org/install/clojure-tools-%s.zip" version)
+            :ct-zip-name "tools.zip"})))
 
 (defn unzip [zip-file destination-dir]
-  (let [zip-file (io/file zip-file)
+  (let [{:keys [ct-base-dir ct-aux-files-names ct-jar-name]} @clojure-tools-info*
+        zip-file (io/file zip-file)
         _ (.mkdirs (io/file destination-dir))
-        ^ClassLoader x nil
-        fs (FileSystems/newFileSystem (.toPath zip-file) x)]
-    (doseq [f [@clojure-tools-jar
-               "exec.jar"
-               "example-deps.edn"
-               "tools.edn"]]
-      (let [file-in-zip (.getPath fs "ClojureTools" (into-array String [f]))]
-        (Files/copy file-in-zip (.toPath (io/file destination-dir f))
-                    ^{:tag "[Ljava.nio.file.CopyOption;"}
-                    (into-array CopyOption
-                                [java.nio.file.StandardCopyOption/REPLACE_EXISTING]))))))
+        ^ClassLoader x nil]
+    (with-open [fs (FileSystems/newFileSystem (.toPath zip-file) x)]
+      (doseq [f (into [ct-jar-name] ct-aux-files-names)]
+        (let [file-in-zip (.getPath fs ct-base-dir (into-array String [f]))]
+          (Files/copy file-in-zip (.toPath (io/file destination-dir f))
+                      ^{:tag "[Ljava.nio.file.CopyOption;"}
+                      (into-array CopyOption
+                                  [java.nio.file.StandardCopyOption/REPLACE_EXISTING])))))))
+
+(defn- clojure-tools-java-downloader-spit
+  "Spits out and returns the path to `ClojureToolsDownloader.java` file
+  in DEST-DIR'ectory that when invoked (presumambly by the `java`
+  executable directly) with a source URL and destination file path in
+  args[0] and args[1] respectively, will download the source to
+  destination. No arguments validation is performed and returns exit
+  code 1 on failure."
+  [dest-dir]
+  (let [dest-file (.getCanonicalPath (io/file dest-dir "ClojureToolsDownloader.java"))]
+    (spit dest-file
+          (str "
+/** Auto-generated by " *file* ". **/
+package borkdude.deps;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.URLConnection;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.channels.Channels;import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
+public class ClojureToolsDownloader {
+    public static void main (String[] args) {
+    try {
+        URL url = new URL(args[0]);
+//        System.err.println (\":0 \" +args [0]+ \" :1 \"+args [1]);
+        URLConnection conn = url.openConnection();
+        if (conn instanceof HttpURLConnection)
+           {((HttpURLConnection) conn).setInstanceFollowRedirects(true);}
+        ReadableByteChannel readableByteChannel = Channels.newChannel(conn.getInputStream());
+        FileOutputStream fileOutputStream = new FileOutputStream(args[1]);
+        FileChannel fileChannel = fileOutputStream.getChannel();
+        fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
+        System.exit(0);
+    } catch (IOException e) {
+        e.printStackTrace();
+        System.exit(1); }}}"))
+    dest-file))
+
+(defn- clojure-tools-download-java
+  "Downloads URL file to DEST-ZIP-FILE by invoking `java` with JVM-OPTS
+  on a `.java` program file, and returns true on success. Requires
+  Java 11+ (JEP 330)."
+  [url dest-zip-file jvm-opts]
+  (let [dest-dir (.getCanonicalPath (io/file dest-zip-file ".."))
+        dlr-path (clojure-tools-java-downloader-spit dest-dir)
+        java-cmd (get-java-cmd)
+        success?* (atom true)]
+    (binding [*exit-fn* (fn
+                          ([exit-code] (when-not (= exit-code 0) (reset! success?* false)))
+                          ([exit-code msg] (when-not (= exit-code 0)
+                                             (warn msg)
+                                             (reset! success?* false))))]
+      (shell-command (vec (concat [java-cmd]
+                                  jvm-opts
+                                  [dlr-path url (str dest-zip-file)])))
+      (io/delete-file dlr-path true)
+      @success?*)))
 
 (defn clojure-tools-jar-download
-  "Downloads clojure tools jar into deps-clj-config-dir."
-  [deps-clj-config-dir]
-  (let [dir (io/file deps-clj-config-dir)
-        zip (io/file deps-clj-config-dir "tools.zip")]
-    (.mkdirs dir)
-    (download (format "https://download.clojure.org/install/clojure-tools-%s.zip" @version)
-              zip)
-    (unzip zip (.getPath dir))
-    (.delete zip))
+  "Downloads clojure tools archive in OUT-DIR, if not already there,
+  and extracts in-place the clojure tools jar file and other important
+  files.
+
+  The download is attempted directly from this process, unless
+  JAVA-ARGS-WITH-CLJ-JVM-OPTS is set, in which case a java subprocess
+  is created to download the archive passing in its value as command
+  line options.
+
+  It calls `*exit-fn*` if it cannot download the archive, with
+  instructions how to manually download it."
+  [out-dir java-args-with-clj-jvm-opts {:keys [debug] :as _opts}]
+  (let [{:keys [ct-error-exit-code ct-url-str ct-zip-name]} @clojure-tools-info*
+        dir (io/file out-dir)
+        zip-file (io/file out-dir ct-zip-name)]
+    (when-not (.exists zip-file)
+      (warn "Downloading" ct-url-str "to" (str zip-file))
+      (.mkdirs dir)
+      (or (when java-args-with-clj-jvm-opts
+            (when debug (warn "Attempting download using java subprocess... (requires Java11+"))
+            (clojure-tools-download-java ct-url-str (str zip-file) java-args-with-clj-jvm-opts))
+          (do (when debug (warn "Attempting direct download..."))
+              (clojure-tools-download-direct ct-url-str zip-file))
+          (*exit-fn* ct-error-exit-code (str "Error: Cannot download Clojure tools."
+                                             " Please download manually from " ct-url-str
+                                             " to " (str (io/file dir ct-zip-name))))
+          {:url ct-url-str :dest-dir (str dir)}))
+    (warn "Unziping" (str zip-file) "...")
+    (unzip zip-file (.getPath dir))
+    (.delete zip-file))
   (warn "Successfully installed clojure tools!"))
 
 (def ^:private authenticated-proxy-re #".+:.+@(.+):(\d+).*")
@@ -433,26 +564,27 @@ For more info, see:
     (.relativize (as-path dir) (as-path f))
     f))
 
-(def java-exe (if windows? "java.exe" "java"))
+(defn -main
+  "See `help-text`.
 
-(defn- get-java-cmd
-  "Returns the path to java executable to invoke commands on."
-  []
-  (or (*getenv-fn* "JAVA_CMD")
-      (let [java-cmd (which java-exe)]
-        (if (str/blank? java-cmd)
-          (let [java-home (*getenv-fn* "JAVA_HOME")]
-            (if-not (str/blank? java-home)
-              (let [f (io/file java-home "bin" java-exe)]
-                (if (and (.exists f)
-                         (.canExecute f))
-                  (.getCanonicalPath f)
-                  (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-              (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-          java-cmd))))
+  In addition
 
-(defn -main [& command-line-args]
+  - the values of the `CLJ_JVM_OPTS` and `JAVA_OPTIONS` environment
+  variables are passed to the java subprocess as command line options
+  when downloading dependencies and running any other commands
+  respectively.
+
+  - if the clojure tools jar cannot be located and the clojure tools
+  archive is not found, an attempt is made to download the archive
+  from the official site and extract its contents locally. The archive
+  is downloaded from this process directly, unless the `CLJ_JVM_OPTS`
+  env variable is set and a succesful attempt is made to download the
+  archive by invoking a java subprocess passing the env variable value
+  as command line options."
+  [& command-line-args]
   (let [opts (parse-args command-line-args)
+        {:keys [ct-base-dir ct-jar-name]} @clojure-tools-info*
+        debug (*getenv-fn* "DEPS_CLJ_DEBUG")
         java-cmd (get-java-cmd)
         env-tools-dir (or
                        ;; legacy name
@@ -462,7 +594,7 @@ For more info, see:
                       (.getPath (io/file (home-dir)
                                          ".deps.clj"
                                          @version
-                                         "ClojureTools")))
+                                         ct-base-dir)))
         install-dir tools-dir
         libexec-dir (if env-tools-dir
                       (let [f (io/file env-tools-dir "libexec")]
@@ -470,16 +602,19 @@ For more info, see:
                           (.getPath f)
                           env-tools-dir))
                       tools-dir)
-        tools-jar (io/file libexec-dir
-                           (format "clojure-tools-%s.jar" @version))
+        tools-jar (io/file libexec-dir ct-jar-name)
         exec-jar (io/file libexec-dir "exec.jar")
         proxy-settings (jvm-proxy-settings) ;; side effecting, sets java proxy properties for download
+        clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
         tools-cp
         (or
          (when (.exists tools-jar) (.getPath tools-jar))
          (binding [*out* *err*]
            (warn "Clojure tools not yet in expected location:" (str tools-jar))
-           (clojure-tools-jar-download tools-dir)
+           (let [java-clj-jvm-opts (when clj-jvm-opts (vec (concat clj-jvm-opts
+                                                                   proxy-settings
+                                                                   ["-Xms256m"])))]
+             (clojure-tools-jar-download libexec-dir java-clj-jvm-opts {:debug debug}))
            tools-jar))
         mode (:mode opts)
         exec? (= :exec mode)
@@ -489,7 +624,6 @@ For more info, see:
         deps-edn
         (or (:deps-file opts)
             (.getPath (io/file *dir* "deps.edn")))
-        clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
         clj-main-cmd
         (vec (concat [java-cmd]
                      clj-jvm-opts

@@ -2,9 +2,14 @@
   (:require
    [clojure.java.io :as io]
    [clojure.string :as str])
-  (:import [java.lang ProcessBuilder$Redirect]
-           [java.net URL URLConnection HttpURLConnection]
-           [java.nio.file Files FileSystems Path CopyOption])
+  (:import
+   [java.lang ProcessBuilder$Redirect]
+   [java.net HttpURLConnection URL URLConnection]
+   [java.nio.file
+    CopyOption
+    FileSystems
+    Files
+    Path])
   (:gen-class))
 
 (set! *warn-on-reflection* true)
@@ -250,7 +255,7 @@ For more info, see:
     (let [source (URL. source)
           dest (io/file dest)
           conn ^URLConnection (.openConnection ^URL source)]
-      (when (instance? java.net.HttpURLConnection conn)
+      (when (instance? HttpURLConnection conn)
         (.setInstanceFollowRedirects #^java.net.HttpURLConnection conn true))
       (.connect conn)
       (with-open [is (.getInputStream conn)]
@@ -369,7 +374,7 @@ public class ClojureToolsDownloader {
 
   It calls `*exit-fn*` if it cannot download the archive, with
   instructions how to manually download it."
-  [out-dir java-args-with-clj-jvm-opts & {:keys [debug?] :as _opts}]
+  [out-dir java-args-with-clj-jvm-opts {:keys [debug] :as _opts}]
   (let [{:keys [ct-error-exit-code ct-url-str ct-zip-name]} @clojure-tools-info*
         dir (io/file out-dir)
         zip-file (io/file out-dir ct-zip-name)]
@@ -377,9 +382,9 @@ public class ClojureToolsDownloader {
       (warn "Downloading" ct-url-str "to" (str zip-file))
       (.mkdirs dir)
       (or (when java-args-with-clj-jvm-opts
-            (when debug? (warn "Attempting download using java subprocess... (requires Java11+"))
+            (when debug (warn "Attempting download using java subprocess... (requires Java11+"))
             (clojure-tools-download-java ct-url-str (str zip-file) java-args-with-clj-jvm-opts))
-          (do (when debug? (warn "Attempting direct download..."))
+          (do (when debug (warn "Attempting direct download..."))
               (clojure-tools-download-direct ct-url-str zip-file))
           (*exit-fn* ct-error-exit-code (str "Error: Cannot download Clojure tools."
                                              " Please download manually from " ct-url-str
@@ -574,7 +579,7 @@ public class ClojureToolsDownloader {
   [& command-line-args]
   (let [opts (parse-args command-line-args)
         {:keys [ct-base-dir ct-jar-name]} @clojure-tools-info*
-        debug? (*getenv-fn* "DEPS_CLJ_DEBUG")
+        debug (*getenv-fn* "DEPS_CLJ_DEBUG")
         java-cmd (get-java-cmd)
         env-tools-dir (or
                        ;; legacy name
@@ -604,7 +609,7 @@ public class ClojureToolsDownloader {
            (let [java-clj-jvm-opts (when clj-jvm-opts (vec (concat clj-jvm-opts
                                                                    proxy-settings
                                                                    ["-Xms256m"])))]
-             (clojure-tools-jar-download libexec-dir java-clj-jvm-opts :debug? debug?))
+             (clojure-tools-jar-download libexec-dir java-clj-jvm-opts {:debug debug}))
            tools-jar))
         mode (:mode opts)
         exec? (= :exec mode)
