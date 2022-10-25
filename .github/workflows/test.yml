@@ -30,9 +30,28 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@9.5
         with:
-          bb: '0.10.163'
+          # bb: '0.10.163'
           cli: '1.10.3.1013'
           lein: '2.9.10'
+
+      - name: Install Babashka REVIEW
+        if: "!startsWith (matrix.os, 'win')"
+        run: |
+          curl -sLO https://raw.githubusercontent.com/babashka/babashka/master/install
+          chmod +x ./install
+          ./install --version 1.0.165-SNAPSHOT
+
+      - name: Install Babashka REVIEW (win)
+        if: "startsWith (matrix.os, 'win')"
+        shell: cmd
+        run: |
+          set LOCAL_BIN_DIR=%USERPROFILE%\.local\bin
+
+          mkdir %LOCAL_BIN_DIR%
+
+          curl.exe  -fsSL https://github.com/babashka/babashka-dev-builds/releases/download/v1.0.165-SNAPSHOT/babashka-1.0.165-SNAPSHOT-windows-amd64.zip -o bb-snap.zip || exit /b
+          unzip bb-snap.zip -d %LOCAL_BIN_DIR% || exit /b
+          echo %LOCAL_BIN_DIR%>> %GITHUB_PATH%
 
       - name: Cache clojure dependencies
         uses: actions/cache@v3
@@ -46,8 +65,8 @@ jobs:
       - name: Run JVM tests
         run: bb jvm-test
 
-      # - name: Run babashka tests
-      #   run: bb babashka-test
+      - name: Run babashka tests
+        run: bb babashka-test
 
       - name: Create ubejar
         if: "startsWith (matrix.os, env.UBERJAR_OS) && env.UBERJAR_JDK == matrix.jdk"

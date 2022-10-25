@@ -239,10 +239,10 @@
       file)))
 
 (deftest clojure-tools-download
-  ;; Test clojure tools download methods:
+  ;; Test clojure tools download methods
   ;;
-  ;; - via java subprocess, respecting CLJ_JVM_OPTS (requires java11+).
-  ;; - direct download, if the above fails.
+  ;; - via java subprocess, when CLJ_JVM_OPTS (requires java11+).
+  ;; - direct download, when the above is not ran or fails.
   ;; - manual download, simulating a user following manual instructions.
   (let [java-version (java-major-version-get)
         {:keys [ct-error-exit-code ct-jar-name ct-url-str ct-zip-name]} @@#'deps/clojure-tools-info*]
@@ -261,25 +261,12 @@
                 (is (fs/exists? dest-zip-file)))))))
 
     (when (>= java-version 11)
-      (testing "java downloader called from -main"
+      (testing "java downloader called from -main when CLJ_JVM_OPTS is set"
         (fs/with-temp-dir
           [temp-dir {}]
           (let [dest-jar-file (fs/file temp-dir ct-jar-name)]
             (with-redefs [deps/clojure-tools-download-direct
-                          (fn [& _] (throw (Exception. "Direct hould not be called.")))]
-              (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)
-                                                    "CLJ_JVM_OPTS" nil} %)
-                                              (System/getenv %))]
-
-                (deps-main-throw "--version")
-                (is (fs/exists? dest-jar-file)))))))
-
-      (testing "java downloader called from -main with CLJ_JVM_OPTS set"
-        (fs/with-temp-dir
-          [temp-dir {}]
-          (let [dest-jar-file (fs/file temp-dir ct-jar-name)]
-            (with-redefs [deps/clojure-tools-download-direct
-                          (fn [& _] (throw (Exception. "Direct hould not be called.")))]
+                          (fn [& _] (throw (Exception. "Direct should not be called.")))]
               (let [xx-pclf "-XX:+PrintCommandLineFlags"
                     xx-gc-threads "-XX:ConcGCThreads=1"
                     sh-args (get-shell-command-args
@@ -299,15 +286,12 @@
           (is (= true (deps/clojure-tools-download-direct url-str dest-zip-file)))
           (is (fs/exists? dest-zip-file)))))
 
-    (testing "direct downloader called from -main"
+    (testing "direct downloader called from -main (CLJ_JVM_OPTS not set)"
       (fs/with-temp-dir
         [temp-dir {}]
         (let [dest-jar-file (fs/file temp-dir ct-jar-name)]
           (with-redefs [deps/clojure-tools-download-java
-                      ;; indicate failure so that direct downloader is
-                      ;; called.
-                        (fn [_url _dest-zip-file _jvm-opts]
-                          false)]
+                        (fn [& _] (throw (Exception. "Java subprocess should not be called.")))]
             (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)
                                                   "CLJ_JVM_OPTS" nil} %)
                                             (System/getenv %))]
@@ -323,9 +307,9 @@
               dest-jar-file (fs/file temp-dir ct-jar-name)]
           (fs/copy tools-zip-file dest-zip-file) ;; user copies downloaded file
           (with-redefs [deps/clojure-tools-download-java
-                        (fn [& _] (throw (Exception. "Java hould not be called.")))
+                        (fn [& _] (throw (Exception. "Java should not be called.")))
                         deps/clojure-tools-download-direct
-                        (fn [& _] (throw (Exception. "Direct hould not be called.")))]
+                        (fn [& _] (throw (Exception. "Direct should not be called.")))]
             (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)} %)
                                             (System/getenv %))]
 
