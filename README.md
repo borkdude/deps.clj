@@ -50,6 +50,11 @@ Windows binary from [Github
 releases](https://github.com/borkdude/deps.clj/releases) and place it on your
 path.
 
+As of 1.11.1.1165, the scripts passes the values of the `CLJ_JVM_OPTS`
+or `JAVA_OPTIONS` to `java` when downloading dependencies or executing
+all other commands respectively (useful for setting up network
+connectivity behind firewalls).
+
 ## Why
 
 Originally this project was created as a proof of concept to see if the
@@ -176,9 +181,10 @@ This project will look in `$HOME/.deps.clj/<clojure-version>/ClojureTools` for
 `clojure-tools-<clojure-version>.jar`, `exec.jar` and `example-deps.edn`. If it
 cannot it find those files there, it will try to download them from
 [this](https://download.clojure.org/install/clojure-tools-1.10.1.697.zip)
-location. You can override the location of these jars with the
-`DEPS_CLJ_TOOLS_DIR` environment variable. If the download fails for some reason,
-you can try to download the zip yourself and unzip it at the expected location.
+location invoking `java` using the value of the `CLJ_JVM_OPTS` environment variable as options.
+You can override the location of these jars with the `DEPS_CLJ_TOOLS_DIR` environment variable.
+If the download fails for some reason, you can try to download the zip yourself at the location
+suggested by the failure message.
 
 If you have an already installed version of clojure using e.g. brew, you can set
 `DEPS_CLJ_TOOLS_DIR` to that directory:
@@ -296,7 +302,7 @@ $ lein run -m borkdude.deps -Spath
 To run jvm tests:
 
 ```
-$ bb test
+$ bb jvm-test
 ```
 
 To run with babashka after making changes to `src/borkdude/deps.clj`, you should run:
@@ -328,7 +334,7 @@ The script also assumes that you have
 Run the compile script with:
 
 ```
-$ script/compile
+$ bb compile
 ```
 
 If everything worked out, there will be a `deps` binary in the root of the
@@ -337,7 +343,7 @@ project.
 To run executable tests:
 
 ```
-$ script/exe_test
+$ bb exe-test
 ```
 
 ## License

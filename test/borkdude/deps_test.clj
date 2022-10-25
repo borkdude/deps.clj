@@ -6,7 +6,9 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as str]
-   [clojure.test :as t :refer [deftest is testing]]))
+   [clojure.test :as t :refer [deftest is testing]])
+
+  (:import [java.util.zip ZipEntry ZipOutputStream]))
 
 ;; Print out information about the java executable that will be used
 ;; by deps.clj, useful for user validation.
@@ -133,16 +135,15 @@
 (deftest tools-dir-env-test
   (fs/delete-tree "tools-dir")
   (try
-    (let [[out err exit]
+    (let [[out err]
           (-> (process (invoke-deps-cmd "-Sdescribe")
                        {:out :string
                         :err :string
                         :extra-env {"DEPS_CLJ_TOOLS_VERSION" "1.10.3.899"
                                     "DEPS_CLJ_TOOLS_DIR" "tools-dir"}})
-              deref
-              ((juxt :out :err :exit)))]
-      (when-not (zero? exit)
-        (println err))
+              check
+              ((juxt :out :err)))]
+      (println err)
       (is (= "1.10.3.899" (:version (edn/read-string out))))
       (is (str/includes? err "Clojure tools not yet in expected location:"))
       (is (fs/exists? (fs/file "tools-dir" "clojure-tools-1.10.3.899.jar")))
@@ -209,6 +210,128 @@
          (with-redefs [deps/shell-command sh-mock#]
            ~@body
            (or (deref ret*# 500 false) (ex-info "No shell-command invoked in body." {:body ~body-str})))))))
+
+(defn java-major-version-get
+  "Returns the major version number of the java executable used to run
+  the java commands at run time. For implementation simplicity the
+  major version before java 11 is returned as 1."
+  []
+  (-> (process [(#'deps/get-java-cmd) "-version"] {:err :string})
+      check
+      :err
+      (->> (re-find #"version \"(\d+)"))
+      second
+      Integer/parseInt))
+
+(defn clojure-tools-dummy-zip-file-create
+  "Creates a dummy clojure tools zip file in OUT-DIR and returns its
+  path."
+  [out-dir]
+  (let [{:keys [ct-base-dir ct-aux-files-names ct-jar-name]} @@#'deps/clojure-tools-info*
+        file (io/file out-dir "borkdude-deps-test-dummy-tools.zip")]
+    (with-open [os (io/output-stream file)
+                zip  (ZipOutputStream. os)]
+      (doseq [entry (into [ct-jar-name] ct-aux-files-names)]
+        (doto zip
+          (.putNextEntry (ZipEntry. (str ct-base-dir "/" entry)))
+          (.write (.getBytes (str "dummy-" entry)))
+          (.closeEntry)))
+      file)))
+
+(deftest clojure-tools-download
+  ;; Test clojure tools download methods
+  ;;
+  ;; - via java subprocess, when CLJ_JVM_OPTS (requires java11+).
+  ;; - direct download, when the above is not ran or fails.
+  ;; - manual download, simulating a user following manual instructions.
+  (let [java-version (java-major-version-get)
+        {:keys [ct-error-exit-code ct-jar-name ct-url-str ct-zip-name]} @@#'deps/clojure-tools-info*]
+    (testing "java downloader"
+      (fs/with-temp-dir
+        [temp-dir {}]
+        (let [tools-zip (clojure-tools-dummy-zip-file-create (str temp-dir))
+              url (io/as-url tools-zip)
+              dest-zip-file (fs/file temp-dir ct-zip-name)]
+          (if (< java-version 11)
+            ;; requires java11+, fails otherwise
+            (do (is (= false (#'deps/clojure-tools-download-java url dest-zip-file [])))
+                (is (not (fs/exists? dest-zip-file))))
+
+            (do (is (= true (#'deps/clojure-tools-download-java url dest-zip-file [])))
+                (is (fs/exists? dest-zip-file)))))))
+
+    (when (>= java-version 11)
+      (testing "java downloader called from -main when CLJ_JVM_OPTS is set"
+        (fs/with-temp-dir
+          [temp-dir {}]
+          (let [dest-jar-file (fs/file temp-dir ct-jar-name)]
+            (with-redefs [deps/clojure-tools-download-direct
+                          (fn [& _] (throw (Exception. "Direct should not be called.")))]
+              (let [xx-pclf "-XX:+PrintCommandLineFlags"
+                    xx-gc-threads "-XX:ConcGCThreads=1"
+                    sh-args (get-shell-command-args
+                             {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)
+                              "CLJ_JVM_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
+                             (deps/-main "--version"))]
+                (is (some #{xx-pclf} sh-args))
+                ;; second and third args
+                (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2)))))
+              (is (fs/exists? dest-jar-file)))))))
+
+    (testing "direct downloader"
+      (fs/with-temp-dir
+        [temp-dir {}]
+        (let [url-str ct-url-str
+              dest-zip-file (fs/file temp-dir ct-zip-name)]
+          (is (= true (deps/clojure-tools-download-direct url-str dest-zip-file)))
+          (is (fs/exists? dest-zip-file)))))
+
+    (testing "direct downloader called from -main (CLJ_JVM_OPTS not set)"
+      (fs/with-temp-dir
+        [temp-dir {}]
+        (let [dest-jar-file (fs/file temp-dir ct-jar-name)]
+          (with-redefs [deps/clojure-tools-download-java
+                        (fn [& _] (throw (Exception. "Java subprocess should not be called.")))]
+            (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)
+                                                  "CLJ_JVM_OPTS" nil} %)
+                                            (System/getenv %))]
+
+              (deps-main-throw "--version")
+              (is (fs/exists? dest-jar-file)))))))
+
+    (testing "manual user installation"
+      (fs/with-temp-dir
+        [temp-dir {}]
+        (let [tools-zip-file (clojure-tools-dummy-zip-file-create (str temp-dir))
+              dest-zip-file (fs/file temp-dir ct-zip-name)
+              dest-jar-file (fs/file temp-dir ct-jar-name)]
+          (fs/copy tools-zip-file dest-zip-file) ;; user copies downloaded file
+          (with-redefs [deps/clojure-tools-download-java
+                        (fn [& _] (throw (Exception. "Java should not be called.")))
+                        deps/clojure-tools-download-direct
+                        (fn [& _] (throw (Exception. "Direct should not be called.")))]
+            (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)} %)
+                                            (System/getenv %))]
+
+              (deps-main-throw "--version")
+              (is (fs/exists? dest-jar-file)))))))
+
+    (testing "prompt for manual user install"
+      (fs/with-temp-dir
+        [temp-dir {}]
+        (with-redefs [deps/clojure-tools-download-java
+                      (fn [& _] false)
+                      deps/clojure-tools-download-direct
+                      (fn [& _] false)]
+          (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)} %)
+                                          (System/getenv %))]
+
+            (let [exit-data* (atom {})]
+              (try (deps-main-throw "--version")
+                   (catch Exception e
+                     (reset! exit-data* (ex-data e))))
+              (let [exit-data @exit-data*]
+                (is (= ct-error-exit-code (:exit-code exit-data)) exit-data)))))))))
 
 (deftest clj-jvm-opts+java-opts
   ;; The `CLJ_JVM_OPTS` env var should only apply to -P and -Spom.
