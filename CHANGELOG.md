@@ -8,10 +8,10 @@ environment variable:
 DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 ```
 
-## Unreleased
+## v1.11.1.1182
 
 - [#71](https://github.com/borkdude/deps.clj/issues/71): Port stale check for jar files ([commit](https://github.com/clojure/brew-install/commit/f791abf1d93563c1ed8f256830bd0bfc085fdd53)]
-- Bump tools jar to `1.11.1.1177`
+- Bump tools jar to `1.11.1.1182`
 - [#66](https://github.com/borkdude/deps.clj/issues/66): Respect `CLJ_JVM_OPTS` while downloading tools zip file ([@ikappaki](https://github.com/ikappaki))
 
 ## v1.11.1.1165
