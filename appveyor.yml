@@ -45,11 +45,12 @@ build_script:
 
     echo Creating zip archive
     jar -cMf deps.clj-%DEPS_CLJ_VERSION%-windows-amd64.zip deps.exe
+    dir
 
 artifacts:
 - path: deps.clj-*-windows-amd64.zip
   name: deps.exe
 
-test_script:
-- cmd: >-
-    bb exe-test
+# test_script:
+# - cmd: >-
+#     bb exe-test
