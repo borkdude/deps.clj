@@ -1,6 +1,7 @@
 (ns tasks
   (:require [babashka.fs :as fs]
-            [babashka.process :as p]))
+            [babashka.process :as p]
+            [clojure.string :as str]))
 
 (defn compile-native
   "Compile library to standalone jar and a native executable program.
@@ -16,7 +17,7 @@
         lein (let [lein (cond-> "./lein" (fs/windows?) (str ".bat"))]
                (str (or (if (fs/executable? lein) lein (fs/which "lein"))
                         (throw (Exception. "Cannot find lein in the cwd or in PATH.")))))
-        deps-clj-version (slurp "resources/DEPS_CLJ_VERSION")]
+        deps-clj-version (str/trim (slurp "resources/DEPS_CLJ_VERSION"))]
     (println "Building deps " deps-clj-version)
     (println :lein lein :graalvm-home graalvm-home :java-home java-home)
     (p/shell lein "deps.clj" "-Spath" "-Sdeps" "{:deps {borkdude/deps.clj {:mvn/version \"0.0.1\"}}}")
