@@ -44,7 +44,10 @@ build_script:
     bb compile
 
     echo Creating zip archive
+
     jar -cMf deps.clj-%DEPS_CLJ_VERSION%-windows-amd64.zip deps.exe
+
+    dir
 
 artifacts:
 - path: deps.clj-*-windows-amd64.zip
