@@ -15,11 +15,8 @@
   (:import
    [java.lang ProcessBuilder$Redirect]
    [java.net HttpURLConnection URL URLConnection]
-   [java.nio.file
-    CopyOption
-    FileSystems
-    Files
-    Path]))
+   [java.nio.file CopyOption Files Path]
+   [java.util.zip ZipInputStream]))
 
 (set! *warn-on-reflection* true)
 (def path-separator (System/getProperty "path.separator"))
@@ -297,18 +294,30 @@ For more info, see:
             :ct-url-str (format "https://download.clojure.org/install/clojure-tools-%s.zip" version)
             :ct-zip-name "tools.zip"})))
 
-(defn unzip [zip-file destination-dir]
-  (let [{:keys [ct-base-dir ct-aux-files-names ct-jar-name]} @clojure-tools-info*
+(defn unzip
+  [zip-file destination-dir]
+  (let [{:keys [ct-aux-files-names ct-jar-name]} @clojure-tools-info*
         zip-file (io/file zip-file)
-        _ (.mkdirs (io/file destination-dir))
-        ^ClassLoader x nil]
-    (with-open [fs (FileSystems/newFileSystem (.toPath zip-file) x)]
-      (doseq [f (into [ct-jar-name] ct-aux-files-names)]
-        (let [file-in-zip (.getPath fs ct-base-dir (into-array String [f]))]
-          (Files/copy file-in-zip (.toPath (io/file destination-dir f))
-                      ^{:tag "[Ljava.nio.file.CopyOption;"}
-                      (into-array CopyOption
-                                  [java.nio.file.StandardCopyOption/REPLACE_EXISTING])))))))
+        destination-dir (io/file destination-dir)
+        _ (.mkdirs destination-dir)
+        destination-dir (.toPath destination-dir)
+        zip-file (.toPath zip-file)
+        files (into #{ct-jar-name} ct-aux-files-names)]
+    (with-open
+      [fis (Files/newInputStream zip-file (into-array java.nio.file.OpenOption []))
+       zis (ZipInputStream. fis)]
+      (loop []
+        (when-let [entry (.getNextEntry zis)]
+          (let [entry-name (.getName entry)
+                file-name (.getName (io/file entry-name))]
+            (when (contains? files file-name)
+              (let [new-path (.resolve destination-dir file-name)]
+                (Files/copy ^java.io.InputStream zis
+                            new-path
+                            ^"[Ljava.nio.file.CopyOption;"
+                            (into-array CopyOption
+                                        [java.nio.file.StandardCopyOption/REPLACE_EXISTING]))))
+            (recur)))))))
 
 (defn- clojure-tools-java-downloader-spit
   "Spits out and returns the path to `ClojureToolsDownloader.java` file
