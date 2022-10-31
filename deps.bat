@@ -460,8 +460,8 @@ public class ClojureToolsDownloader {
   {"-J" :jvm-opts
    "-R" :resolve-aliases
    "-C" :classpath-aliases
-   "-A" :repl-aliases
-   })
+   "-A" :repl-aliases})
+   
 
 (def bool-opts->keyword
   {"-Spath" :print-classpath
@@ -574,25 +574,9 @@ public class ClojureToolsDownloader {
     (.relativize (as-path dir) (as-path f))
     f))
 
-(defn -main
-  "See `help-text`.
-
-  In addition
-
-  - the values of the `CLJ_JVM_OPTS` and `JAVA_OPTIONS` environment
-  variables are passed to the java subprocess as command line options
-  when downloading dependencies and running any other commands
-  respectively.
-
-  - if the clojure tools jar cannot be located and the clojure tools
-  archive is not found, an attempt is made to download the archive
-  from the official site and extract its contents locally. The archive
-  is downloaded from this process directly, unless the `CLJ_JVM_OPTS`
-  env variable is set and a succesful attempt is made to download the
-  archive by invoking a java subprocess passing the env variable value
-  as command line options."
-  [& command-line-args]
-  (let [opts (parse-args command-line-args)
+(defn parsed-args->java-args
+  [opts]
+  (let [
         {:keys [ct-base-dir ct-jar-name]} @clojure-tools-info*
         debug (*getenv-fn* "DEPS_CLJ_DEBUG")
         java-cmd (get-java-cmd)
@@ -846,6 +830,8 @@ public class ClojureToolsDownloader {
                     command (str/split command #"\s+")
                     command (into command (:args opts))]
                 (*process-fn* command))
+
+
               :else
               (let [jvm-cache-opts (when (.exists (io/file jvm-file))
                                      (-> jvm-file slurp str/split-lines))
@@ -857,21 +843,74 @@ public class ClojureToolsDownloader {
                     cp (if (or exec? tool?)
                          (str cp path-separator exec-cp)
                          cp)
-                    main-args (concat [java-cmd]
-                                      java-opts
-                                      proxy-settings
-                                      jvm-cache-opts
-                                      (:jvm-opts opts)
-                                      [(str "-Dclojure.basis=" (relativize basis-file))
-                                       (str "-Dclojure.libfile=" (relativize libs-file))
-                                       "-classpath" cp
-                                       "clojure.main"]
-                                      main-opts)
-                    main-args (filterv some? main-args)
-                    main-args (into main-args (:args opts))]
+                    main-args-map {:java-cmd [java-cmd]
+                                   :java-opts java-opts
+                                   :proxy-settings proxy-settings
+                                   :jvm-cache-opts jvm-cache-opts
+                                   :jvm-opts (:jvm-opts opts)
+                                   :clojure-jvm-opts [(str "-Dclojure.basis=" (relativize basis-file))
+                                                      (str "-Dclojure.libfile=" (relativize libs-file))]
+                                   :classpath cp
+                                   :args (:args opts)
+                                   :main-opts main-opts}]
+                    
                 (when (and (= :repl mode)
                            (pos? (count (:args opts))))
                   (warn "WARNING: Implicit use of clojure.main with options is deprecated, use -M"))
-                (*process-fn* main-args)))))))
+                main-args-map))))))
+
+(defn prepare-process [args-map]
+  (let [main-args
+        (concat (:java-cmd args-map)
+                (:java-opts args-map)
+                (:proxy-settings args-map)
+                (:jvm-cache-opts args-map)
+                (:jvm-opts args-map)
+                (:clojure-jvm-opts args-map)
+                ["-classpath" (:classpath args-map)
+                 "clojure.main"]
+                (:main-opts args-map))
+        main-args (filterv some? main-args)
+        main-args (into main-args (:args args-map))]
+    main-args))
+
+    ;; (*process-fn* main-args)
+
+
+(defn -main
+    "See `help-text`.
+
+  In addition
+
+  - the values of the `CLJ_JVM_OPTS` and `JAVA_OPTIONS` environment
+  variables are passed to the java subprocess as command line options
+  when downloading dependencies and running any other commands
+  respectively.
+
+  - if the clojure tools jar cannot be located and the clojure tools
+  archive is not found, an attempt is made to download the archive
+  from the official site and extract its contents locally. The archive
+  is downloaded from this process directly, unless the `CLJ_JVM_OPTS`
+  env variable is set and a succesful attempt is made to download the
+  archive by invoking a java subprocess passing the env variable value
+  as command line options."
+
+  [& command-line-args]
+  (some-> command-line-args
+          parse-args
+          parsed-args->java-args
+          prepare-process
+          *process-fn*))
+
+
+(comment
+  (-> ["-X:exec-test" ":foo" "1"]
+      (parse-args)
+      parsed-args->java-args
+      prepare-process)
+
+
+
+  :ok)
 
 (apply -main *command-line-args*)
