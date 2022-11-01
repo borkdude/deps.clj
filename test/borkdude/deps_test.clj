@@ -42,12 +42,12 @@
                 ;; https://ask.clojure.org/index.php/12290/clojuretools-commands-windows-properly-exit-code-failure
                 (format "powershell -NoProfile -Command %s; exit $LASTEXITCODE"))))
 
-(deftest parse-args-test
+(deftest parse-clojure-args-test
   (is (= {:mode :repl, :jvm-opts ["-Dfoo=bar" "-Dbaz=quuz"]}
-         (deps/parse-args ["-J-Dfoo=bar" "-J-Dbaz=quuz"])))
+         (deps/parse-clojure-args ["-J-Dfoo=bar" "-J-Dbaz=quuz"])))
   (is (= {:mode :main, :main-aliases nil, :args '("-e" "(+ 1 2 3)")}
-         (deps/parse-args ["-M" "-e" "(+ 1 2 3)"])))
-  (is (= {:mode :main, :main-aliases ":foo", :args nil} (deps/parse-args ["-M:foo"]))))
+         (deps/parse-clojure-args ["-M" "-e" "(+ 1 2 3)"])))
+  (is (= {:mode :main, :main-aliases ":foo", :args nil} (deps/parse-clojure-args ["-M:foo"]))))
 
 (deftest path-test
   (is (str/includes? (with-out-str

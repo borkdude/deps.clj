@@ -482,7 +482,7 @@ public class ClojureToolsDownloader {
 
 (def vconj (fnil conj []))
 
-(defn parse-args [args]
+(defn parse-clojure-args [args]
   (loop [args (seq args)
          acc {:mode :repl}]
     (if args
@@ -569,7 +569,7 @@ public class ClojureToolsDownloader {
     (.relativize (as-path dir) (as-path f))
     f))
 
-(defn parsed-args->java-args
+(defn resolve-args
   [opts]
   (let [
         {:keys [ct-base-dir ct-jar-name]} @clojure-tools-info*
@@ -854,7 +854,7 @@ public class ClojureToolsDownloader {
                   (warn "WARNING: Implicit use of clojure.main with options is deprecated, use -M"))
                 main-args-map))))))
 
-(defn prepare-process [args-map]
+(defn ->java-args [args-map]
   (let [main-args
         (concat (:java-cmd args-map)
                 (:java-opts args-map)
@@ -869,7 +869,6 @@ public class ClojureToolsDownloader {
         main-args (into main-args (:args args-map))]
     main-args))
 
-    ;; (*process-fn* main-args)
 
 
 (defn -main
@@ -892,18 +891,53 @@ public class ClojureToolsDownloader {
 
   [& command-line-args]
   (some-> command-line-args
-          parse-args
-          parsed-args->java-args
-          prepare-process
+          parse-clojure-args
+          resolve-args
+          ->java-args
           *process-fn*))
 
 
 (comment
-  (-> ["-X:exec-test" ":foo" "1"]
-      (parse-args)
-      parsed-args->java-args
-      prepare-process)
 
 
+  (-> ["Stree"]
+      (parse-clojure-args))
+  ;; => {:mode :repl, :args ("Stree")}
+
+
+
+  (-> ["Stree"]
+      (parse-clojure-args)
+      resolve-args)
+  ;; => WARNING: Implicit use of clojure.main with options is deprecated, use -M
+  ;;    {:args ("Stree"),
+  ;;     :classpath
+  ;;     "src:resources:/home/carsten/.m2/repository/org/clojure/clojure/1.10.3/clojure-1.10.3.jar:/home/carsten/.m2/repository/org/clojure/core.specs.alpha/0.2.56/core.specs.alpha-0.2.56.jar:/home/carsten/.m2/repository/org/clojure/spec.alpha/0.2.194/spec.alpha-0.2.194.jar",
+  ;;     :java-cmd ["/usr/lib/jvm/java-17-openjdk/bin/java"],
+  ;;     :java-opts nil,
+  ;;     :main-opts nil,
+  ;;     :jvm-cache-opts nil,
+  ;;     :clojure-jvm-opts
+  ;;     ["-Dclojure.basis=.cpcache/DF11EE9ECE61859619D37AF34FB981BE.basis"
+  ;;      "-Dclojure.libfile=.cpcache/DF11EE9ECE61859619D37AF34FB981BE.libs"],
+  ;;     :jvm-opts nil,
+  ;;     :proxy-settings []}
+      
+
+  (-> ["Stree"]
+      (parse-clojure-args)
+      resolve-args
+      ->java-args)
+
+
+
+  ;; => WARNING: Implicit use of clojure.main with options is deprecated, use -M
+  ;;    ["/usr/lib/jvm/java-17-openjdk/bin/java"
+  ;;     "-Dclojure.basis=.cpcache/DF11EE9ECE61859619D37AF34FB981BE.basis"
+  ;;     "-Dclojure.libfile=.cpcache/DF11EE9ECE61859619D37AF34FB981BE.libs"
+  ;;     "-classpath"
+  ;;     "src:resources:/home/carsten/.m2/repository/org/clojure/clojure/1.10.3/clojure-1.10.3.jar:/home/carsten/.m2/repository/org/clojure/core.specs.alpha/0.2.56/core.specs.alpha-0.2.56.jar:/home/carsten/.m2/repository/org/clojure/spec.alpha/0.2.194/spec.alpha-0.2.194.jar"
+  ;;     "clojure.main"
+  ;;     "Stree"]
 
   :ok)
