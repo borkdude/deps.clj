@@ -61,18 +61,11 @@ jobs:
             - v1-dependencies-{{ checksum "deps.edn" }}
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
-      # - run:
-      #     name: Install babashka
-      #     command: |
-      #       bash <(curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install) --dir ~
-      #       sudo mv ~/bb /usr/local/bin/bb
-
       - run:
-          name: Install babashka REVIEW
+          name: Install babashka
           command: |
-            curl -sLO https://raw.githubusercontent.com/babashka/babashka/master/install
-            chmod +x ./install
-            sudo ./install --version 1.0.165-SNAPSHOT
+            bash <(curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install) --dir ~
+            sudo mv ~/bb /usr/local/bin/bb
 
       - run:
           name: Run babashka tests

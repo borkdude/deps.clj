@@ -1,5 +1,7 @@
 {:paths ["resources" "bb"]
 
+ :min-bb-version "1.0.165"
+ 
  :tasks
  {:requires [[babashka.deps :as deps]
              [babashka.fs :as fs]
