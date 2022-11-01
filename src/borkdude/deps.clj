@@ -838,36 +838,36 @@ public class ClojureToolsDownloader {
                     cp (if (or exec? tool?)
                          (str cp path-separator exec-cp)
                          cp)
-                    main-args-map {:java-cmd [java-cmd]
-                                   :java-opts java-opts
-                                   :proxy-settings proxy-settings
-                                   :jvm-cache-opts jvm-cache-opts
-                                   :jvm-opts (:jvm-opts opts)
-                                   :clojure-jvm-opts [(str "-Dclojure.basis=" (relativize basis-file))
-                                                      (str "-Dclojure.libfile=" (relativize libs-file))]
-                                   :classpath cp
-                                   :args (:args opts)
-                                   :main-opts main-opts}]
+                    resolved-args-map {:java-cmd [java-cmd]
+                                       :java-opts java-opts
+                                       :proxy-settings proxy-settings
+                                       :jvm-cache-opts jvm-cache-opts
+                                       :jvm-opts (:jvm-opts opts)
+                                       :clojure-jvm-opts [(str "-Dclojure.basis=" (relativize basis-file))
+                                                          (str "-Dclojure.libfile=" (relativize libs-file))]
+                                       :classpath cp
+                                       :args (:args opts)
+                                       :main-opts main-opts}]
                     
                 (when (and (= :repl mode)
                            (pos? (count (:args opts))))
                   (warn "WARNING: Implicit use of clojure.main with options is deprecated, use -M"))
-                main-args-map))))))
+                resolved-args-map))))))
 
-(defn ->java-args [args-map]
-  (let [main-args
-        (concat (:java-cmd args-map)
-                (:java-opts args-map)
-                (:proxy-settings args-map)
-                (:jvm-cache-opts args-map)
-                (:jvm-opts args-map)
-                (:clojure-jvm-opts args-map)
-                ["-classpath" (:classpath args-map)
+(defn ->java-args [resolved-args-map]
+  (let [java-args
+        (concat (:java-cmd resolved-args-map)
+                (:java-opts resolved-args-map)
+                (:proxy-settings resolved-args-map)
+                (:jvm-cache-opts resolved-args-map)
+                (:jvm-opts resolved-args-map)
+                (:clojure-jvm-opts resolved-args-map)
+                ["-classpath" (:classpath resolved-args-map)
                  "clojure.main"]
-                (:main-opts args-map))
-        main-args (filterv some? main-args)
-        main-args (into main-args (:args args-map))]
-    main-args))
+                (:main-opts resolved-args-map))
+        java-args (filterv some? java-args)
+        java-args (into java-args (:args resolved-args-map))]
+    java-args))
 
 
 
