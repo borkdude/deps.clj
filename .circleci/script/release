@@ -6,10 +6,15 @@ cp deps /tmp/release
 
 VERSION=$(cat resources/DEPS_CLJ_VERSION)
 
-cd /tmp/release
+pushd /tmp/release
 
 ## release binary as zip archive
 
-zip "deps.clj-$VERSION-$DEPS_CLJ_PLATFORM-amd64.zip" deps
+artifact="deps.clj-$VERSION-$DEPS_CLJ_PLATFORM-amd64.zip"
+zip "$artifact" deps
+
+popd
+
+bb upload-artifact :file "/tmp/release/$artifact"
 
 rm deps

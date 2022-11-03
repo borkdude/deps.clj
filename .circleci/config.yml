@@ -43,7 +43,9 @@ jobs:
             mkdir -p /tmp/release
             lein do clean, uberjar
             VERSION=$(cat resources/DEPS_CLJ_VERSION)
-            cp target/deps.clj-$VERSION-standalone.jar /tmp/release
+            artifact="target/deps.clj-$VERSION-standalone.jar"
+            cp "$artifact" /tmp/release
+            bb upload-artifact :file "$artifact"
       - store_artifacts:
           path: /tmp/release
           destination: release
@@ -100,6 +102,7 @@ jobs:
           command: |
             bash <(curl -s https://raw.githubusercontent.com/borkdude/babashka/master/install) --dir ~
             sudo mv ~/bb /usr/local/bin/bb
+            bb --version
       - run:
           name: Install lsof
           command: |

@@ -45,7 +45,11 @@ build_script:
 
     echo Creating zip archive
 
-    jar -cMf deps.clj-%DEPS_CLJ_VERSION%-windows-amd64.zip deps.exe
+    set ARTIFACT=deps.clj-%DEPS_CLJ_VERSION%-windows-amd64.zip
+
+    jar -cMf %ARTIFACT% deps.exe
+
+    bb upload-artifact :file %ARTIFACT%
 
     dir
 

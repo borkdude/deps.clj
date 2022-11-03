@@ -1,7 +1,8 @@
 {:paths ["resources" "bb"]
+ :deps {io.github.borkdude/gh-release-artifact {:git/sha "db5e79559fdbfa009ed4a0921079e20e1e76b269"}}
 
  :min-bb-version "1.0.165"
- 
+
  :tasks
  {:requires [[babashka.deps :as deps]
              [babashka.fs :as fs]
@@ -36,4 +37,6 @@
             :task (doseq [task '[jvm-clj-test jvm-deps-test]]
                     (println :running... task)
                     (run task)
-                    (println))}}}
+                    (println))}
+
+  upload-artifact {:task (exec 'artifact/upload)}}}
