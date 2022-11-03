@@ -15,7 +15,7 @@
 
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-                        "1.11.1.1182")))
+                        "1.11.1.1189")))
 
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
@@ -176,10 +176,13 @@ main-opt:
  -h, -?, --help      Print this help message and exit
 
 Programs provided by :deps alias:
- -X:deps mvn-install       Install a maven jar to the local repository cache
- -X:deps git-resolve-tags  Resolve git coord tags to shas and update deps.edn
+ -X:deps list              List full transitive deps set and licenses
+ -X:deps tree              Print deps tree
+ -X:deps find-versions     Find available versions of a library
  -X:deps find-versions     Find available versions of a library
  -X:deps prep              Prepare all unprepped libs in the dep tree
+ -X:deps mvn-install       Install a maven jar to the local repository cache
+ -X:deps git-resolve-tags  Resolve git coord tags to shas and update deps.edn
 
 For more info, see:
  https://clojure.org/guides/deps_and_cli
