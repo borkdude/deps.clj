@@ -149,6 +149,11 @@ Scoop bucket.
 
 <img src="assets/windows-scoop.png">
 
+##### clj-msi
+
+If you're interested in installing deps.clj as `clj.exe` and `clojure.exe` via
+an MSI installer, take a look at [clj-msi](https://github.com/casselc/clj-msi)!
+
 ### Script
 
 The script, `deps.clj`, requires a working installation of `java` and
