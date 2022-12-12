@@ -234,7 +234,7 @@ For more info, see:
 (def java-exe (if windows? "java.exe" "java"))
 
 (defn- get-java-cmd
-  "Returns the path to java executable to invoke sub commands with."
+  "Returns path to java executable to invoke sub commands with."
   []
   (or (*getenv-fn* "JAVA_CMD")
       (let [java-cmd (which java-exe)]
@@ -362,14 +362,14 @@ public class ClojureToolsDownloader {
   [url dest-zip-file jvm-opts]
   (let [dest-dir (.getCanonicalPath (io/file dest-zip-file ".."))
         dlr-path (clojure-tools-java-downloader-spit dest-dir)
-        java-cmd (get-java-cmd)
+        java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
         success?* (atom true)]
     (binding [*exit-fn* (fn
                           ([exit-code] (when-not (= exit-code 0) (reset! success?* false)))
                           ([exit-code msg] (when-not (= exit-code 0)
                                              (warn msg)
                                              (reset! success?* false))))]
-      (shell-command (vec (concat [java-cmd]
+      (shell-command (vec (concat java-cmd
                                   jvm-opts
                                   [dlr-path url (str dest-zip-file)])))
       (io/delete-file dlr-path true)
@@ -593,7 +593,7 @@ public class ClojureToolsDownloader {
   (let [opts (parse-args command-line-args)
         {:keys [ct-base-dir ct-jar-name]} @clojure-tools-info*
         debug (*getenv-fn* "DEPS_CLJ_DEBUG")
-        java-cmd (get-java-cmd)
+        java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
         env-tools-dir (or
                        ;; legacy name
                        (*getenv-fn* "CLOJURE_TOOLS_DIR")
@@ -632,7 +632,7 @@ public class ClojureToolsDownloader {
         (or (:deps-file opts)
             (.getPath (io/file *dir* "deps.edn")))
         clj-main-cmd
-        (vec (concat [java-cmd]
+        (vec (concat java-cmd
                      clj-jvm-opts
                      proxy-settings
                      ["-classpath" tools-cp "clojure.main"]))
@@ -855,7 +855,7 @@ public class ClojureToolsDownloader {
                     cp (if (or exec? tool?)
                          (str cp path-separator exec-cp)
                          cp)
-                    main-args (concat [java-cmd]
+                    main-args (concat java-cmd
                                       java-opts
                                       proxy-settings
                                       jvm-cache-opts

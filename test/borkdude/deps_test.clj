@@ -6,7 +6,8 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as str]
-   [clojure.test :as t :refer [deftest is testing]])
+   [clojure.test :as t :refer [deftest is testing]]
+   [clojure.set :as set])
 
   (:import [java.util.zip ZipEntry ZipOutputStream]))
 
@@ -238,7 +239,7 @@
           (.closeEntry)))
       file)))
 
-(deftest clojure-tools-download
+(deftest clojure-tools-download-test
   ;; Test clojure tools download methods
   ;;
   ;; - via java subprocess, when CLJ_JVM_OPTS (requires java11+).
@@ -275,7 +276,7 @@
                              (deps/-main "--version"))]
                 (is (some #{xx-pclf} sh-args))
                 ;; second and third args
-                (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2)))))
+                (is (set/subset? #{xx-pclf xx-gc-threads} (->> (rest sh-args) set))))
               (is (fs/exists? dest-jar-file)))))))
 
     (testing "direct downloader"
@@ -349,14 +350,14 @@
                      (deps/-main "-P"))]
         (is (some #{xx-pclf} sh-args))
         ;; second and third args
-        (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2))))))
+        (is (set/subset? #{xx-pclf xx-gc-threads} (->> (rest sh-args) set)))))
 
     (testing "CLJ-JVM-OPTS with pom"
       (let [sh-args (get-shell-command-args
                      {"CLJ_JVM_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
                      (deps/-main "-Spom"))]
         (is (some #{xx-pclf} sh-args))
-        (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2))))))
+        (is (set/subset? #{xx-pclf xx-gc-threads} (->> (rest sh-args) set)))))
 
     (testing "CLJ-JVM-OPTS outside of prepare deps"
       (let [sh-args (get-shell-command-args
@@ -370,7 +371,7 @@
                      {"JAVA_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
                      (deps/-main "-e" "123"))]
         (is (some #{xx-pclf} sh-args))
-        (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2))))))
+        (is (set/subset? #{xx-pclf xx-gc-threads} (->> (rest sh-args) set)))))
 
     (testing "JAVA-OPTS with prepare deps"
       (let [sh-args (get-shell-command-args
