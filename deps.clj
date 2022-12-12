@@ -18,7 +18,7 @@
 
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-                        "1.11.1.1200")))
+                        "1.11.1.1208")))
 
 (def deps-clj-version "1.11.1.1201-SNAPSHOT")
 
@@ -789,7 +789,7 @@ public class ClojureToolsDownloader {
           (warn "Refreshing classpath"))
         (let [res (shell-command (into clj-main-cmd
                                        (concat
-                                        ["-m" "clojure.tools.deps.alpha.script.make-classpath2"
+                                        ["-m" "clojure.tools.deps.script.make-classpath2"
                                          "--config-user" config-user
                                          "--config-project" (relativize config-project)
                                          "--basis-file" (relativize basis-file)
@@ -813,7 +813,7 @@ public class ClojureToolsDownloader {
               (:prep opts) (*exit-fn* 0)
               (:pom opts)
               (shell-command (into clj-main-cmd
-                                   ["-m" "clojure.tools.deps.alpha.script.generate-manifest2"
+                                   ["-m" "clojure.tools.deps.script.generate-manifest2"
                                     "--config-user" config-user
                                     "--config-project" (relativize config-project)
                                     "--gen=pom" (str/join " " tools-args)]))
