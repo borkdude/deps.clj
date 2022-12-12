@@ -350,14 +350,14 @@
                      (deps/-main "-P"))]
         (is (some #{xx-pclf} sh-args))
         ;; second and third args
-        (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2))))))
+        (is (set/subset? #{xx-pclf xx-gc-threads} (->> (rest sh-args) set)))))
 
     (testing "CLJ-JVM-OPTS with pom"
       (let [sh-args (get-shell-command-args
                      {"CLJ_JVM_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
                      (deps/-main "-Spom"))]
         (is (some #{xx-pclf} sh-args))
-        (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2))))))
+        (is (set/subset? #{xx-pclf xx-gc-threads} (->> (rest sh-args) set)))))
 
     (testing "CLJ-JVM-OPTS outside of prepare deps"
       (let [sh-args (get-shell-command-args
@@ -371,7 +371,7 @@
                      {"JAVA_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
                      (deps/-main "-e" "123"))]
         (is (some #{xx-pclf} sh-args))
-        (is (= [xx-pclf xx-gc-threads] (->> (rest sh-args) (take 2))))))
+        (is (set/subset? #{xx-pclf xx-gc-threads} (->> (rest sh-args) set)))))
 
     (testing "JAVA-OPTS with prepare deps"
       (let [sh-args (get-shell-command-args
