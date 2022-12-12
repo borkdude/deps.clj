@@ -247,7 +247,7 @@ For more info, see:
                   (.getCanonicalPath f)
                   (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
               (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-          java-cmd))))
+          [java-cmd "-XX:-OmitStackTraceInFastThrow"]))))
 
 (defn clojure-tools-download-direct
   "Downloads from SOURCE url to DEST file returning true on success."
@@ -369,7 +369,7 @@ public class ClojureToolsDownloader {
                           ([exit-code msg] (when-not (= exit-code 0)
                                              (warn msg)
                                              (reset! success?* false))))]
-      (shell-command (vec (concat [java-cmd]
+      (shell-command (vec (concat java-cmd
                                   jvm-opts
                                   [dlr-path url (str dest-zip-file)])))
       (io/delete-file dlr-path true)
@@ -632,7 +632,7 @@ public class ClojureToolsDownloader {
         (or (:deps-file opts)
             (.getPath (io/file *dir* "deps.edn")))
         clj-main-cmd
-        (vec (concat [java-cmd]
+        (vec (concat java-cmd
                      clj-jvm-opts
                      proxy-settings
                      ["-classpath" tools-cp "clojure.main"]))
@@ -855,7 +855,7 @@ public class ClojureToolsDownloader {
                     cp (if (or exec? tool?)
                          (str cp path-separator exec-cp)
                          cp)
-                    main-args (concat [java-cmd]
+                    main-args (concat java-cmd
                                       java-opts
                                       proxy-settings
                                       jvm-cache-opts
