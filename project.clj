@@ -15,6 +15,8 @@
                                   "-Dclojure.spec.skip-macros=true"]
                        :main borkdude.deps
                        :aot :all}
+             :dev {:dependencies [[babashka/fs "0.1.11"]
+                                  [babashka/process "0.0.2"]]}
              :native-image {}}
   :aliases {"deps.clj" ["run" "-m" "borkdude.deps"]}
   :deploy-repositories [["clojars" {:url "https://clojars.org/repo"

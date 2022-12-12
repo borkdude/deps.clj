@@ -234,7 +234,7 @@ For more info, see:
 (def java-exe (if windows? "java.exe" "java"))
 
 (defn- get-java-cmd
-  "Returns the path to java executable to invoke sub commands with."
+  "Returns path to java executable to invoke sub commands with."
   []
   (or (*getenv-fn* "JAVA_CMD")
       (let [java-cmd (which java-exe)]
@@ -247,7 +247,7 @@ For more info, see:
                   (.getCanonicalPath f)
                   (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
               (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-          [java-cmd "-XX:-OmitStackTraceInFastThrow"]))))
+          java-cmd))))
 
 (defn clojure-tools-download-direct
   "Downloads from SOURCE url to DEST file returning true on success."
@@ -362,7 +362,7 @@ public class ClojureToolsDownloader {
   [url dest-zip-file jvm-opts]
   (let [dest-dir (.getCanonicalPath (io/file dest-zip-file ".."))
         dlr-path (clojure-tools-java-downloader-spit dest-dir)
-        java-cmd (get-java-cmd)
+        java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
         success?* (atom true)]
     (binding [*exit-fn* (fn
                           ([exit-code] (when-not (= exit-code 0) (reset! success?* false)))
@@ -593,7 +593,7 @@ public class ClojureToolsDownloader {
   (let [opts (parse-args command-line-args)
         {:keys [ct-base-dir ct-jar-name]} @clojure-tools-info*
         debug (*getenv-fn* "DEPS_CLJ_DEBUG")
-        java-cmd (get-java-cmd)
+        java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
         env-tools-dir (or
                        ;; legacy name
                        (*getenv-fn* "CLOJURE_TOOLS_DIR")
