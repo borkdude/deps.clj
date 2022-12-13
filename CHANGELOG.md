@@ -8,6 +8,10 @@ environment variable:
 DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 ```
 
+## v1.11.1.1208
+
+- Catch up with clojure CLI 1.11.1.1208
+
 ## v1.11.1.1200
 
 - Catch up with clojure CLI 1.11.1.1200
