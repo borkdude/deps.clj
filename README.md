@@ -129,6 +129,13 @@ user=>
 On Windows you might want to install `deps.clj` using
 [scoop](https://github.com/littleli/scoop-clojure).
 
+To install deps.clj as a _replacement_ for the `clj` command, install `clj-deps`:
+
+``` shell
+scoop bucket add scoop-clojure https://github.com/littleli/scoop-clojure
+scoop install clj-deps
+```
+
 Alternatively you can install `deps.exe` using by executing the following line:
 
 ``` shell
