@@ -564,12 +564,19 @@ public class ClojureToolsDownloader {
   (if (instance? Path path) path
       (.toPath (io/file path))))
 
+(defn unixify
+  ^Path [f]
+  (as-path (if windows?
+             (-> f as-path .toUri .getPath)
+             (str f))))
+
 (defn relativize
   "Returns relative path by comparing this with other."
   ^Path [f]
   ;; (prn :dir *dir* :f f)
   (if-let [dir *dir*]
-    (.relativize (as-path dir) (as-path f))
+    (.relativize (unixify (.toAbsolutePath (as-path dir)))
+                 (unixify (.toAbsolutePath (as-path f))))
     f))
 
 (defn -main
