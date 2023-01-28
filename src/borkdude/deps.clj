@@ -26,6 +26,11 @@
   (binding [*out* *err*]
     (apply println strs)))
 
+(defn- -debug [& strs]
+  (.println System/err
+            (with-out-str
+              (apply println strs))))
+
 (def ^:private ^:dynamic *exit-fn*
   (fn
     ([exit-code] (System/exit exit-code))
@@ -570,14 +575,15 @@ public class ClojureToolsDownloader {
              (-> f as-path .toUri .getPath)
              (str f))))
 
-(defn relativize
-  "Returns relative path by comparing this with other."
+(defn- relativize
+  "Returns relative path by comparing this with other. Returns absolute path unchanged."
   ^Path [f]
-  ;; (prn :dir *dir* :f f)
-  (if-let [dir *dir*]
-    (.relativize (unixify (.toAbsolutePath (as-path dir)))
-                 (unixify (.toAbsolutePath (as-path f))))
-    f))
+  (if (.isAbsolute (as-path f))
+    f
+    (if-let [dir *dir*]
+      (str (.relativize (unixify (.toAbsolutePath (as-path dir)))
+                        (unixify (.toAbsolutePath (as-path f)))))
+      f)))
 
 (defn -main
   "See `help-text`.
