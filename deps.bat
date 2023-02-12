@@ -23,13 +23,18 @@
 
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-                        "1.11.1.1208")))
+                        "1.11.1.1224")))
 
 (def deps-clj-version "1.11.1.1209-SNAPSHOT")
 
 (defn warn [& strs]
   (binding [*out* *err*]
     (apply println strs)))
+
+(defn- -debug [& strs]
+  (.println System/err
+            (with-out-str
+              (apply println strs))))
 
 (def ^:private ^:dynamic *exit-fn*
   (fn
@@ -569,13 +574,21 @@ public class ClojureToolsDownloader {
   (if (instance? Path path) path
       (.toPath (io/file path))))
 
-(defn relativize
-  "Returns relative path by comparing this with other."
+(defn unixify
   ^Path [f]
-  ;; (prn :dir *dir* :f f)
-  (if-let [dir *dir*]
-    (.relativize (as-path dir) (as-path f))
-    f))
+  (as-path (if windows?
+             (-> f as-path .toUri .getPath)
+             (str f))))
+
+(defn- relativize
+  "Returns relative path by comparing this with other. Returns absolute path unchanged."
+  ^Path [f]
+  (if (.isAbsolute (as-path f))
+    f
+    (if-let [dir *dir*]
+      (str (.relativize (unixify (.toAbsolutePath (as-path dir)))
+                        (unixify (.toAbsolutePath (as-path f)))))
+      f)))
 
 (defn -main
   "See `help-text`.
