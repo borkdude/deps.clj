@@ -22,7 +22,7 @@
 
 (def cache-version "2")
 
-(def deps-clj-version "1.11.1.1237")
+(def deps-clj-version "1.11.1.1238-SNAPSHOT")
 
 (defn warn [& strs]
   (binding [*out* *err*]
