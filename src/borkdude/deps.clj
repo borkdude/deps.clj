@@ -136,7 +136,7 @@ in a terminal, and should be preferred unless you don't want that support,
 then use 'clojure'.
 
 Usage:
-  Start a REPL  clj     [clj-opt*] [-Aaliases] [init-opt*]
+  Start a REPL  clj     [clj-opt*] [-Aaliases]
   Exec fn(s)    clojure [clj-opt*] -X[aliases] [a/fn*] [kpath v]*
   Run main      clojure [clj-opt*] -M[aliases] [init-opt*] [main-opt] [arg*]
   Run tool      clojure [clj-opt*] -T[name|aliases] a/fn [kpath v] kv-map?
