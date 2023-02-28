@@ -720,6 +720,7 @@ public class ClojureToolsDownloader {
                                      "NIL"))
                                  config-paths)))
           ck (cksum val*)
+          libs-file (.getPath (io/file cache-dir (str ck ".libs")))
           cp-file (.getPath (io/file cache-dir (str ck ".cp")))
           jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
           main-file (.getPath (io/file cache-dir (str ck ".main")))
@@ -804,6 +805,7 @@ public class ClojureToolsDownloader {
                                          "--config-user" config-user
                                          "--config-project" (relativize config-project)
                                          "--basis-file" (relativize basis-file)
+                                         "--libs-file" (relativize libs-file)
                                          "--cp-file" (relativize cp-file)
                                          "--jvm-file" (relativize jvm-file)
                                          "--main-file" (relativize main-file)
