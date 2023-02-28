@@ -23,7 +23,9 @@
 
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-                        "1.11.1.1224")))
+                        "1.11.1.1237")))
+
+(def cache-version "2")
 
 (def deps-clj-version "1.11.1.1225-SNAPSHOT")
 
@@ -139,7 +141,7 @@ in a terminal, and should be preferred unless you don't want that support,
 then use 'clojure'.
 
 Usage:
-  Start a REPL  clj     [clj-opt*] [-Aaliases] [init-opt*]
+  Start a REPL  clj     [clj-opt*] [-Aaliases]
   Exec fn(s)    clojure [clj-opt*] -X[aliases] [a/fn*] [kpath v]*
   Run main      clojure [clj-opt*] -M[aliases] [init-opt*] [main-opt] [arg*]
   Run tool      clojure [clj-opt*] -T[name|aliases] a/fn [kpath v] kv-map?
@@ -188,7 +190,6 @@ main-opt:
 Programs provided by :deps alias:
  -X:deps list              List full transitive deps set and licenses
  -X:deps tree              Print deps tree
- -X:deps find-versions     Find available versions of a library
  -X:deps find-versions     Find available versions of a library
  -X:deps prep              Prepare all unprepped libs in the dep tree
  -X:deps mvn-install       Install a maven jar to the local repository cache
@@ -534,12 +535,10 @@ public class ClojureToolsDownloader {
                  :args (next args))
           ;; deprecations
           (some #(str/starts-with? arg %) ["-R" "-C"])
-          (do (warn arg "is deprecated, use -A with repl, -M for main, or -X for exec")
-              (recur (next args)
-                     (update acc (get parse-opts->keyword (subs arg 0 2))
-                             vconj (subs arg 2))))
+          (do (warn arg "-R is no longer supported, use -A with repl, -M for main, or -X for exec, -T for tool")
+              (*exit-fn* 1))
           (some #(str/starts-with? arg %) ["-O"])
-          (let [msg (str arg " is no longer supported, use -A with repl, -M for main, or -X for exec")]
+          (let [msg (str arg " is no longer supported, use -A with repl, -M for main, or -X for exec, -T for tool")]
             (*exit-fn* 1 msg))
           (= "-Sresolve-tags" arg)
           (let [msg "Option changed, use: clj -X:deps git-resolve-tags"]
@@ -708,8 +707,7 @@ public class ClojureToolsDownloader {
           tool-aliases (:tool-aliases opts)
           val*
           (str/join "|"
-                    (concat (:resolve-aliases opts)
-                            (:classpath-aliases opts)
+                    (concat [cache-version]
                             (:repl-aliases opts)
                             [(:exec-aliases opts)
                              (:main-aliases opts)
@@ -722,7 +720,6 @@ public class ClojureToolsDownloader {
                                      "NIL"))
                                  config-paths)))
           ck (cksum val*)
-          libs-file (.getPath (io/file cache-dir (str ck ".libs")))
           cp-file (.getPath (io/file cache-dir (str ck ".cp")))
           jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
           main-file (.getPath (io/file cache-dir (str ck ".main")))
@@ -776,10 +773,6 @@ public class ClojureToolsDownloader {
             (cond-> []
               (not (str/blank? (:deps-data opts)))
               (conj "--config-data" (:deps-data opts))
-              (:resolve-aliases opts)
-              (conj (str "-R" (str/join "" (:resolve-aliases opts))))
-              (:classpath-aliases opts)
-              (conj (str "-C" (str/join "" (:classpath-aliases opts))))
               (:main-aliases opts)
               (conj (str "-M" (:main-aliases opts)))
               (:repl-aliases opts)
@@ -811,7 +804,6 @@ public class ClojureToolsDownloader {
                                          "--config-user" config-user
                                          "--config-project" (relativize config-project)
                                          "--basis-file" (relativize basis-file)
-                                         "--libs-file" (relativize libs-file)
                                          "--cp-file" (relativize cp-file)
                                          "--jvm-file" (relativize jvm-file)
                                          "--main-file" (relativize main-file)
@@ -879,7 +871,6 @@ public class ClojureToolsDownloader {
                                       jvm-cache-opts
                                       (:jvm-opts opts)
                                       [(str "-Dclojure.basis=" (relativize basis-file))
-                                       (str "-Dclojure.libfile=" (relativize libs-file))
                                        "-classpath" cp
                                        "clojure.main"]
                                       main-opts)
