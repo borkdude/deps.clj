@@ -531,10 +531,8 @@ public class ClojureToolsDownloader {
                  :args (next args))
           ;; deprecations
           (some #(str/starts-with? arg %) ["-R" "-C"])
-          (do (warn arg "is deprecated, use -A with repl, -M for main, or -X for exec")
-              (recur (next args)
-                     (update acc (get parse-opts->keyword (subs arg 0 2))
-                             vconj (subs arg 2))))
+          (do (warn arg "-R is no longer supported, use -A with repl, -M for main, or -X for exec")
+              (*exit-fn* 1))
           (some #(str/starts-with? arg %) ["-O"])
           (let [msg (str arg " is no longer supported, use -A with repl, -M for main, or -X for exec")]
             (*exit-fn* 1 msg))
@@ -706,8 +704,6 @@ public class ClojureToolsDownloader {
           val*
           (str/join "|"
                     (concat [cache-version]
-                            (:resolve-aliases opts)
-                            (:classpath-aliases opts)
                             (:repl-aliases opts)
                             [(:exec-aliases opts)
                              (:main-aliases opts)
@@ -720,7 +716,6 @@ public class ClojureToolsDownloader {
                                      "NIL"))
                                  config-paths)))
           ck (cksum val*)
-          libs-file (.getPath (io/file cache-dir (str ck ".libs")))
           cp-file (.getPath (io/file cache-dir (str ck ".cp")))
           jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
           main-file (.getPath (io/file cache-dir (str ck ".main")))
@@ -775,10 +770,6 @@ public class ClojureToolsDownloader {
             (cond-> []
               (not (str/blank? (:deps-data opts)))
               (conj "--config-data" (:deps-data opts))
-              (:resolve-aliases opts)
-              (conj (str "-R" (str/join "" (:resolve-aliases opts))))
-              (:classpath-aliases opts)
-              (conj (str "-C" (str/join "" (:classpath-aliases opts))))
               (:main-aliases opts)
               (conj (str "-M" (:main-aliases opts)))
               (:repl-aliases opts)
