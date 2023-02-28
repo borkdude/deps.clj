@@ -17,7 +17,7 @@
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
                         "1.11.1.1224")))
 
-(def cache-version "1")
+(def cache-version "2")
 
 (def deps-clj-version
   (-> (io/resource "DEPS_CLJ_VERSION")
@@ -721,7 +721,6 @@ public class ClojureToolsDownloader {
           main-file (.getPath (io/file cache-dir (str ck ".main")))
           basis-file (.getPath (io/file cache-dir (str ck ".basis")))
           manifest-file (.getPath (io/file cache-dir (str ck ".manifest")))
-          exec-file (.getPath (io/file cache-dir (str ck ".exec")))
           _ (when (:verbose opts)
               (println "deps.clj version =" deps-clj-version)
               (println "version          =" @version)
@@ -804,8 +803,7 @@ public class ClojureToolsDownloader {
                                          "--cp-file" (relativize cp-file)
                                          "--jvm-file" (relativize jvm-file)
                                          "--main-file" (relativize main-file)
-                                         "--manifest-file" (relativize manifest-file)
-                                         "--exec-file" (relativize exec-file)]
+                                         "--manifest-file" (relativize manifest-file)]
                                         tools-args))
                                  {:to-string? tree?})]
           (when tree?
@@ -869,7 +867,6 @@ public class ClojureToolsDownloader {
                                       jvm-cache-opts
                                       (:jvm-opts opts)
                                       [(str "-Dclojure.basis=" (relativize basis-file))
-                                       (str "-Dclojure.exec=" (relativize exec-file))
                                        "-classpath" cp
                                        "clojure.main"]
                                       main-opts)
