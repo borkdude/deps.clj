@@ -530,10 +530,10 @@ public class ClojureToolsDownloader {
                  :args (next args))
           ;; deprecations
           (some #(str/starts-with? arg %) ["-R" "-C"])
-          (do (warn arg "-R is no longer supported, use -A with repl, -M for main, or -X for exec")
+          (do (warn arg "-R is no longer supported, use -A with repl, -M for main, or -X for exec, -T for tool")
               (*exit-fn* 1))
           (some #(str/starts-with? arg %) ["-O"])
-          (let [msg (str arg " is no longer supported, use -A with repl, -M for main, or -X for exec")]
+          (let [msg (str arg " is no longer supported, use -A with repl, -M for main, or -X for exec, -T for tool")]
             (*exit-fn* 1 msg))
           (= "-Sresolve-tags" arg)
           (let [msg "Option changed, use: clj -X:deps git-resolve-tags"]
