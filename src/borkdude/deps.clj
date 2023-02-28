@@ -186,7 +186,6 @@ Programs provided by :deps alias:
  -X:deps list              List full transitive deps set and licenses
  -X:deps tree              Print deps tree
  -X:deps find-versions     Find available versions of a library
- -X:deps find-versions     Find available versions of a library
  -X:deps prep              Prepare all unprepped libs in the dep tree
  -X:deps mvn-install       Install a maven jar to the local repository cache
  -X:deps git-resolve-tags  Resolve git coord tags to shas and update deps.edn
