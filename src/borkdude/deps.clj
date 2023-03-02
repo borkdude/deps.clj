@@ -684,8 +684,9 @@ public class ClojureToolsDownloader {
           config-project deps-edn
           config-paths
           (if (:repro opts)
-            (if install-dir [(.getPath (io/file install-dir "deps.edn")) deps-edn]
-                [])
+            (if install-dir
+              [(.getPath (io/file install-dir "deps.edn")) deps-edn]
+              [deps-edn])
             (if install-dir
               [(.getPath (io/file install-dir "deps.edn"))
                (.getPath (io/file config-dir "deps.edn"))
