@@ -23,11 +23,11 @@
 
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-                        "1.11.1.1237")))
+                        "1.11.1.1252")))
 
-(def cache-version "2")
+(def cache-version "3")
 
-(def deps-clj-version "1.11.1.1238-SNAPSHOT")
+(def deps-clj-version "1.11.1.1252")
 
 (defn warn [& strs]
   (binding [*out* *err*]
@@ -689,8 +689,9 @@ public class ClojureToolsDownloader {
           config-project deps-edn
           config-paths
           (if (:repro opts)
-            (if install-dir [(.getPath (io/file install-dir "deps.edn")) deps-edn]
-                [])
+            (if install-dir
+              [(.getPath (io/file install-dir "deps.edn")) deps-edn]
+              [deps-edn])
             (if install-dir
               [(.getPath (io/file install-dir "deps.edn"))
                (.getPath (io/file config-dir "deps.edn"))
@@ -720,7 +721,6 @@ public class ClojureToolsDownloader {
                                      "NIL"))
                                  config-paths)))
           ck (cksum val*)
-          libs-file (.getPath (io/file cache-dir (str ck ".libs")))
           cp-file (.getPath (io/file cache-dir (str ck ".cp")))
           jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
           main-file (.getPath (io/file cache-dir (str ck ".main")))
@@ -805,7 +805,6 @@ public class ClojureToolsDownloader {
                                          "--config-user" config-user
                                          "--config-project" (relativize config-project)
                                          "--basis-file" (relativize basis-file)
-                                         "--libs-file" (relativize libs-file)
                                          "--cp-file" (relativize cp-file)
                                          "--jvm-file" (relativize jvm-file)
                                          "--main-file" (relativize main-file)
