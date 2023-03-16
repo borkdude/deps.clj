@@ -17,12 +17,13 @@
 (def path-separator (System/getProperty "path.separator"))
 
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
-(def version (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-                        "1.11.1.1252")))
+(def version
+  (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
+             "1.11.1.1257")))
 
-(def cache-version "3")
+(def cache-version "4")
 
-(def deps-clj-version "1.11.1.1252")
+(def deps-clj-version "1.11.1.1258-SNAPSHOT")
 
 (defn warn [& strs]
   (binding [*out* *err*]
