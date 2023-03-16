@@ -11,3 +11,4 @@ test/mvn
 *~
 \#*\#
 .nrepl-port
+.lein-failures
