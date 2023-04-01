@@ -16,7 +16,7 @@
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.11.1.1262")))
+             "1.11.1.1267")))
 
 (def cache-version "4")
 
@@ -29,6 +29,7 @@
   (binding [*out* *err*]
     (apply println strs)))
 
+#_{:clj-kondo/ignore [:unused-private-var]}
 (defn- -debug [& strs]
   (.println System/err
             (with-out-str
