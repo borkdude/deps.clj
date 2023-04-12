@@ -16,7 +16,7 @@
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.11.1.1267")))
+             "1.11.1.1273")))
 
 (def cache-version "4")
 
@@ -154,7 +154,6 @@ clj-opts:
  -Jopt          Pass opt through in java_opts, ex: -J-Xmx512m
  -Sdeps EDN     Deps data to use as the last deps file to be merged
  -Spath         Compute classpath and echo to stdout only
- -Spom          Generate (or update) pom.xml with deps and paths
  -Stree         Print dependency tree
  -Scp CP        Do NOT compute or cache classpath, use this one instead
  -Srepro        Ignore the ~/.clojure/deps.edn config file
@@ -185,6 +184,7 @@ main-opt:
  -h, -?, --help      Print this help message and exit
 
 Programs provided by :deps alias:
+ -X:deps mvn-pom Generate (or update) pom.xml with deps and paths
  -X:deps list              List full transitive deps set and licenses
  -X:deps tree              Print deps tree
  -X:deps find-versions     Find available versions of a library
