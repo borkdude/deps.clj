@@ -99,5 +99,11 @@ ensure_in_path("$deps_clj_dir")
 Write-Output "Cleaning up..."
 Remove-Item "$tmp_zip_file"
 
-Write-Output "Succesfully installed deps.exe."
+if (${as-clj}) {
+    Write-Output "Succesfully installed clojure.exe."
+}
+else {
+    Write-Output "Successfully installed deps.exe."
+}
+
 Write-Output "Restart cmd.exe for changes to the path to take effect."
