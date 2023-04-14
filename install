@@ -6,39 +6,123 @@ print_help() {
     echo "Installs latest version of deps.clj. Installation directory defaults to /usr/local/bin."
     echo -e
     echo "Usage:"
-    echo "install [<dir>]"
+    echo "install --dir [<dir>] [--as-clj]"
     exit 1
 }
 
 default_install_dir="/usr/local/bin"
 install_dir=$default_install_dir
-install_dir_opt=${1:-}
-if [ "$install_dir_opt" ]; then
-    install_dir="$install_dir_opt"
+download_dir=""
+version=""
+as_clj="false"
+
+while [[ $# -gt 0 ]]
+do
+    key="$1"
+    case "$key" in
+        --dir)
+            install_dir="$2"
+            shift
+            shift
+            ;;
+        --download-dir)
+            download_dir="$2"
+            shift
+            shift
+            ;;
+        --version)
+            version="$2"
+            shift
+            shift
+            ;;
+        --as-clj)
+            as_clj="true"
+            shift
+            ;;
+        *)  # unknown option
+            print_help
+            shift
+            ;;
+    esac
+done
+
+if [[ -z "$download_dir" ]]; then
+    download_dir="$(mktemp -d)"
+    trap 'rm -rf "$download_dir"' EXIT
 fi
 
-download_dir=/tmp
-
-latest_release="$(curl -sL https://raw.githubusercontent.com/borkdude/deps.clj/master/resources/DEPS_CLJ_RELEASED_VERSION)"
+if [[ "$version" == "" ]]; then
+    version="$(curl -sL https://raw.githubusercontent.com/borkdude/deps.clj/master/resources/DEPS_CLJ_RELEASED_VERSION)"
+fi
 
 case "$(uname -s)" in
     Linux*)     platform=linux;;
     Darwin*)    platform=macos;;
 esac
 
-download_url="https://github.com/borkdude/deps.clj/releases/download/v$latest_release/deps.clj-$latest_release-$platform-amd64.zip"
+download_url="https://github.com/borkdude/deps.clj/releases/download/v$version/deps.clj-$version-$platform-amd64.zip"
 
 cd "$download_dir"
 echo -e "Downloading $download_url."
-curl -o "deps.clj-$latest_release-$platform-amd64.zip" -sL "https://github.com/borkdude/deps.clj/releases/download/v$latest_release/deps.clj-$latest_release-$platform-amd64.zip"
-unzip -qqo "deps.clj-$latest_release-$platform-amd64.zip"
-rm "deps.clj-$latest_release-$platform-amd64.zip"
+curl -o "deps.clj-$version-$platform-amd64.zip" -sL "https://github.com/borkdude/deps.clj/releases/download/v$version/deps.clj-$version-$platform-amd64.zip"
+unzip -qqo "deps.clj-$version-$platform-amd64.zip"
+rm "deps.clj-$version-$platform-amd64.zip"
 
-cd "$install_dir"
-if [ -f deps ]; then
-    echo "Moving $install_dir/deps to $install_dir/deps.old"
+
+
+if [[ "$download_dir" != "$install_dir" ]]
+then
+    mkdir -p "$install_dir"
+    cd "$install_dir"
+    if [[ $as_clj == "true" ]]
+    then
+        if [ -f clj ]; then
+            echo "Moving $install_dir/clj to $install_dir/clj.old"
+            mv "$install_dir/clj" "$install_dir/clj.old"
+        fi
+
+        cp "$download_dir/deps" "$PWD/clj"
+
+        if [ -f clojure ]; then
+            echo "Moving $install_dir/clojure to $install_dir/clojure.old"
+            mv "$install_dir/clojure" "$install_dir/clojure.old"
+        fi
+
+        cp "$download_dir/deps" "$PWD/clojure"
+
+        rm "$download_dir/deps"
+    else
+        if [ -f deps ]; then
+            echo "Moving $install_dir/deps to $install_dir/deps.old"
+            mv "$install_dir/deps" "$install_dir/deps.old"
+        fi
+
+        mv -f "$download_dir/deps" "$PWD/deps"
+    fi
+else
+    if [[ $as_clj == "true" ]]
+    then
+        if [ -f clj ]; then
+            echo "Moving $install_dir/clj to $install_dir/clj.old"
+            mv "$install_dir/clj" "$install_dir/clj.old"
+        fi
+
+        cp "$download_dir/deps" "$PWD/clj"
+
+        if [ -f clojure ]; then
+            echo "Moving $install_dir/clojure to $install_dir/clojure.old"
+            mv "$install_dir/clojure" "$install_dir/clojure.old"
+        fi
+
+        cp "$download_dir/deps" "$PWD/clojure"
+
+        rm "$download_dir/deps"
+    fi
 fi
 
-mv -f "$download_dir/deps" "$PWD/deps"
-
-echo "Successfully installed deps in $install_dir."
+if [[ $as_clj == "true" ]]
+then
+    echo "Successfully installed clojure in $install_dir."
+else
+    echo "Successfully installed deps in $install_dir."
+fi
