@@ -46,7 +46,12 @@ Clojure 1.10.1
 user=>
 ```
 
-To install `deps` / `deps.exe` as `clojure` / `clojure.exe` on your system, add the `--as-clj` flag:
+To install `deps` / `deps.exe` as `clojure` / `clojure.exe` on your system, add
+the `--as-clj` flag:
+
+``` shell
+$ bash <(curl -s https://raw.githubusercontent.com/borkdude/deps.clj/master/install) --as-clj
+```
 
 ``` shell
 C:\Temp> PowerShell -Command "irm https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1" > install_clojure.ps1
