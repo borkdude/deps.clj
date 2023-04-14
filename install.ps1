@@ -1,5 +1,9 @@
 #Requires -Version 5
 
+Param(
+    [switch]${as-clj} = $false
+    )
+
 $erroractionpreference = 'stop' # quit if anything goes wrong
 
 if (($PSVersionTable.PSVersion.Major) -lt 5) {
@@ -35,7 +39,6 @@ Write-Output "Downloading..."
 (New-Object System.Net.WebClient).DownloadFile($download_url,"$tmp_zip_file")
 Write-Output 'Extracting...'
 Expand-Archive -LiteralPath "$tmp_zip_file" -DestinationPath "$tmp_dir" -Force
-
 function Make-Dir($dir) {
     if(!(test-path $dir)) {
         mkdir $dir > $null }; 
@@ -43,15 +46,28 @@ function Make-Dir($dir) {
 
 $deps_clj_dir = "$env:USERPROFILE\deps.clj"
 $tmp_exe_file = "$tmp_dir\deps.exe"
-$installed_exe_file = "$deps_clj_dir\deps.exe"
-$installed_exe_file_backup = "$deps_clj_dir\deps.exe.bak"
+
+if (${as-clj}) {
+    Write-Output "Installing clojure.exe to $deps_clj_dir..."
+    $installed_exe_files = @("$deps_clj_dir\clj.exe","$deps_clj_dir\clojure.exe")
+    $installed_exe_files_backup = @("$deps_clj_dir\clj.exe.bak","$deps_clj_dir\clojure.exe.bak")
+}
+else {
+    Write-Output "Installing deps.exe to $deps_clj_dir..."
+    $installed_exe_files = @("$deps_clj_dir\deps.exe")
+    $installed_exe_files_backup = @("$deps_clj_dir\deps.exe.bak")
+}
 
 Make-Dir($deps_clj_dir)
-Write-Output "Installing deps.exe to $deps_clj_dir..."
-if (Test-Path -Path "$installed_exe_file") {
-  Move-Item -Path "$installed_exe_file" -Destination "$installed_exe_file_backup" -Force
+for ($i = 0; $i -le ($installed_exe_files.length - 1); $i += 1) {
+  $installed_exe_file = $installed_exe_files[$i]
+  $installed_exe_file_backup = $installed_exe_files_backup[$i]
+  if (Test-Path -Path "$installed_exe_file") {
+    Move-Item -Path "$installed_exe_file" -Destination "$installed_exe_file_backup" -Force
+  }
+  Copy-Item -Path "$tmp_exe_file" -Destination "$installed_exe_file" -Force
 }
-Move-Item -Path "$tmp_exe_file" -Destination "$installed_exe_file" -Force
+Remove-Item $tmp_exe_file
 
 function env($name,$global,$val='__get') {
     $target = 'User'; if($global) {$target = 'Machine'}
