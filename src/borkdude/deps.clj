@@ -488,8 +488,8 @@ public class ClojureToolsDownloader {
   {"-J" :jvm-opts
    "-R" :resolve-aliases
    "-C" :classpath-aliases
-   "-A" :repl-aliases})
-
+   "-A" :repl-aliases
+   })
 
 (def bool-opts->keyword
   {"-Spath" :print-classpath

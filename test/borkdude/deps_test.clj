@@ -401,7 +401,7 @@
   (let [deps-map (pr-str '{:mvn/local-repo "test/mvn" :deps {medley/medley {:mvn/version "1.4.0"}
                                                              io.github.borkdude/quickblog {:git/sha "8f5898ee911101a96295f59bb5ffc7517757bc8f"}}})
         delete #(do (fs/delete-tree (fs/file "test" "mvn"))
-                    (fs/delete-tree (fs/file (or (some-> (System/getenv "GITLIBS") (fs/file))
+                    (fs/delete-tree (fs/file (or (some-> (System/getenv "GITLIBS") (fs/file ))
                                                  (fs/file (System/getProperty "user.dir" ".gitlibs")))
                                              "libs" "io.github.borkdude/quickblog" "8f5898ee911101a96295f59bb5ffc7517757bc8f")))
         test #(deps/-main "-Sdeps" deps-map "-M" "-e" "(require '[medley.core]) (require '[quickblog.api])")]
