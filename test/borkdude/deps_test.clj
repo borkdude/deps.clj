@@ -121,7 +121,25 @@
   (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "http://user:pw@aHost:1234")))
   (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "https://aHost:1234")))
   (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "https://user:pw@aHost:1234")))
-  (is (nil? (deps/parse-proxy-info "http://aHost:abc"))))
+  (is (nil? (deps/parse-proxy-info "http://aHost:abc")))
+  (is (= {:http-proxy {:host "aHost" :port "1234"}}
+         (binding [deps/*getenv-fn* {"http_proxy" "http://aHost:1234"}]
+           (deps/env-proxy-info))))
+  (is (= {:http-proxy {:host "aHost" :port "1234"}}
+         (binding [deps/*getenv-fn* {"HTTP_PROXY" "http://aHost:1234"}]
+           (deps/env-proxy-info))))
+  (is (= {:https-proxy {:host "aHost" :port "1234"}}
+         (binding [deps/*getenv-fn* {"https_proxy" "http://aHost:1234"}]
+           (deps/env-proxy-info))))
+  (is (= {:https-proxy {:host "aHost" :port "1234"}}
+         (binding [deps/*getenv-fn* {"HTTPS_PROXY" "http://aHost:1234"}]
+           (deps/env-proxy-info))))
+  (is (= {}
+         (binding [deps/*getenv-fn* {}]
+           (deps/env-proxy-info))))
+  (is (= {}
+         (binding [deps/*getenv-fn* {"http_proxy" "http://aHost:abc"}]
+           (deps/env-proxy-info)))))
 
 (deftest jvm-opts-test
   (let [temp-dir (fs/create-temp-dir)
@@ -383,7 +401,7 @@
   (let [deps-map (pr-str '{:mvn/local-repo "test/mvn" :deps {medley/medley {:mvn/version "1.4.0"}
                                                              io.github.borkdude/quickblog {:git/sha "8f5898ee911101a96295f59bb5ffc7517757bc8f"}}})
         delete #(do (fs/delete-tree (fs/file "test" "mvn"))
-                    (fs/delete-tree (fs/file (or (some-> (System/getenv "GITLIBS") (fs/file ))
+                    (fs/delete-tree (fs/file (or (some-> (System/getenv "GITLIBS") (fs/file))
                                                  (fs/file (System/getProperty "user.dir" ".gitlibs")))
                                              "libs" "io.github.borkdude/quickblog" "8f5898ee911101a96295f59bb5ffc7517757bc8f")))
         test #(deps/-main "-Sdeps" deps-map "-M" "-e" "(require '[medley.core]) (require '[quickblog.api])")]
