@@ -79,7 +79,7 @@ jobs:
           key: v1-dependencies-{{ checksum "deps.edn" }}
   linux:
     docker:
-      - image: circleci/clojure:lein-2.8.1
+      - image: circleci/clojure:lein-2.9.8
     working_directory: ~/repo
     environment:
       LEIN_ROOT: "true"
