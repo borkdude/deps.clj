@@ -12,3 +12,7 @@ test/mvn
 \#*\#
 .nrepl-port
 .lein-failures
+
+# IntelliJ
+.idea
+deps.clj.iml
