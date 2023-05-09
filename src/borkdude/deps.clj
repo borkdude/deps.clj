@@ -257,10 +257,66 @@ For more info, see:
               (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
           java-cmd))))
 
+(def ^:private authenticated-proxy-re #".+:.+@(.+):(\d+).*")
+(def ^:private unauthenticated-proxy-re #"(.+):(\d+).*")
+
+(defn proxy-info [m]
+  {:host (nth m 1)
+   :port (nth m 2)})
+
+(defn parse-proxy-info
+  [s]
+  (when s
+    (let [p (cond
+              (str/starts-with? s "http://") (subs s 7)
+              (str/starts-with? s "https://") (subs s 8)
+              :else s)
+          auth-proxy-match (re-matches authenticated-proxy-re p)
+          unauth-proxy-match (re-matches unauthenticated-proxy-re p)]
+      (cond
+        auth-proxy-match
+        (do (warn "WARNING: Proxy info is of authenticated type - discarding the user/pw as we do not support it!")
+            (proxy-info auth-proxy-match))
+
+        unauth-proxy-match
+        (proxy-info unauth-proxy-match)
+
+        :else
+        (do (warn "WARNING: Can't parse proxy info - found:" s "- proceeding without using proxy!")
+            nil)))))
+
+(defn env-proxy-info
+  "Returns a map with proxy information parsed from env vars. The map
+   will contain :http-proxy and :https-proxy entries if the relevant
+   env vars are set and parsed correctly. The value for each is a map
+   with :host and :port entries."
+  []
+  (let [http-proxy  (parse-proxy-info (or (*getenv-fn* "http_proxy")
+                                          (*getenv-fn* "HTTP_PROXY")))
+        https-proxy (parse-proxy-info (or (*getenv-fn* "https_proxy")
+                                          (*getenv-fn* "HTTPS_PROXY")))]
+    (cond-> {}
+      http-proxy (assoc :http-proxy http-proxy)
+      https-proxy (assoc :https-proxy https-proxy))))
+
+(defn set-proxy-system-props!
+  "Sets the proxy system properties in the current JVM.
+   proxy-info parameter is as returned from env-proxy-info."
+  [proxy-info]
+  (let [{:keys [http-proxy https-proxy]} proxy-info]
+    (when http-proxy
+      (System/setProperty "http.proxyHost" (:host http-proxy))
+      (System/setProperty "http.proxyPort" (:port http-proxy)))
+    (when https-proxy
+      (System/setProperty "https.proxyHost" (:host https-proxy))
+      (System/setProperty "https.proxyPort" (:port https-proxy)))))
+
+
 (defn clojure-tools-download-direct
   "Downloads from SOURCE url to DEST file returning true on success."
   [source dest]
   (try
+    (set-proxy-system-props! (env-proxy-info))
     (let [source (URL. source)
           dest (io/file dest)
           conn ^URLConnection (.openConnection ^URL source)]
@@ -416,46 +472,12 @@ public class ClojureToolsDownloader {
     (.delete zip-file))
   (warn "Successfully installed clojure tools!"))
 
-(def ^:private authenticated-proxy-re #".+:.+@(.+):(\d+).*")
-(def ^:private unauthenticated-proxy-re #"(.+):(\d+).*")
-
-(defn proxy-info [m]
-  {:host (nth m 1)
-   :port (nth m 2)})
-
-(defn parse-proxy-info
-  [s]
-  (when s
-    (let [p (cond
-              (str/starts-with? s "http://") (subs s 7)
-              (str/starts-with? s "https://") (subs s 8)
-              :else s)
-          auth-proxy-match (re-matches authenticated-proxy-re p)
-          unauth-proxy-match (re-matches unauthenticated-proxy-re p)]
-      (cond
-        auth-proxy-match
-        (do (warn "WARNING: Proxy info is of authenticated type - discarding the user/pw as we do not support it!")
-            (proxy-info auth-proxy-match))
-
-        unauth-proxy-match
-        (proxy-info unauth-proxy-match)
-
-        :else
-        (do (warn "WARNING: Can't parse proxy info - found:" s "- proceeding without using proxy!")
-            nil)))))
-
 (defn jvm-proxy-settings
-  []
-  (let [http-proxy  (parse-proxy-info (or (*getenv-fn* "http_proxy")
-                                          (*getenv-fn* "HTTP_PROXY")))
-        https-proxy (parse-proxy-info (or (*getenv-fn* "https_proxy")
-                                          (*getenv-fn* "HTTPS_PROXY")))]
-    (when http-proxy
-      (System/setProperty "http.proxyHost" (:host http-proxy))
-      (System/setProperty "http.proxyPort" (:port http-proxy)))
-    (when https-proxy
-      (System/setProperty "https.proxyHost" (:host https-proxy))
-      (System/setProperty "https.proxyPort" (:port https-proxy)))
+  "Returns a vector containing the JVM args to be passed to a new process
+   to set its proxy system properties.
+   proxy-info parameter is as returned from env-proxy-info."
+  [proxy-info]
+  (let [{:keys [http-proxy https-proxy]} proxy-info]
     (cond-> []
       http-proxy (concat  [(str "-Dhttp.proxyHost=" (:host http-proxy))
                            (str "-Dhttp.proxyPort=" (:port http-proxy))])
@@ -466,8 +488,8 @@ public class ClojureToolsDownloader {
   {"-J" :jvm-opts
    "-R" :resolve-aliases
    "-C" :classpath-aliases
-   "-A" :repl-aliases
-   })
+   "-A" :repl-aliases})
+
 
 (def bool-opts->keyword
   {"-Spath" :print-classpath
@@ -626,7 +648,7 @@ public class ClojureToolsDownloader {
                       tools-dir)
         tools-jar (io/file libexec-dir ct-jar-name)
         exec-jar (io/file libexec-dir "exec.jar")
-        proxy-settings (jvm-proxy-settings) ;; side effecting, sets java proxy properties for download
+        proxy-settings (jvm-proxy-settings (env-proxy-info))
         clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
         tools-cp
         (or
