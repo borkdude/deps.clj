@@ -262,6 +262,7 @@
   ;;
   ;; - via java subprocess, when CLJ_JVM_OPTS (requires java11+).
   ;; - direct download, when the above is not ran or fails.
+  ;; - custom download using user supplied function
   ;; - manual download, simulating a user following manual instructions.
   (let [java-version (java-major-version-get)
         {:keys [ct-error-exit-code ct-jar-name ct-url-str ct-zip-name]} @@#'deps/clojure-tools-info*]
@@ -331,6 +332,28 @@
                         (fn [& _] (throw (Exception. "Direct should not be called.")))]
             (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)} %)
                                             (System/getenv %))]
+
+              (deps-main-throw "--version")
+              (is (fs/exists? dest-jar-file)))))))
+
+    (testing "custom user function"
+      (fs/with-temp-dir
+        [temp-dir {}]
+        (let [dest-jar-file (fs/file temp-dir ct-jar-name)]
+          (with-redefs [deps/clojure-tools-download-java
+                        (fn [& _] (throw (Exception. "Java should not be called.")))
+                        deps/clojure-tools-download-direct
+                        (fn [& _] (throw (Exception. "Direct should not be called.")))]
+            (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)} %)
+                                            (System/getenv %))
+                      deps/*custom-clojure-tool-downloader*
+                      (fn [_url dest-path _proxy-info]
+                        ; Simulate download by creating dummy file and copying to
+                        ; specified destination location
+                        (let [tools-zip-file (clojure-tools-dummy-zip-file-create (str temp-dir))
+                              dest-zip-file (fs/file dest-path)]
+                          (fs/copy tools-zip-file dest-zip-file)
+                          true))]
 
               (deps-main-throw "--version")
               (is (fs/exists? dest-jar-file)))))))

@@ -439,6 +439,17 @@ public class ClojureToolsDownloader {
       (io/delete-file dlr-path true)
       @success?*)))
 
+
+(def ^:private ^:dynamic *custom-clojure-tool-downloader*
+  "Can be dynamically rebound to customise the download of the Clojure tools.
+   Should be bound to a function accepting three parameters:
+   - The URL to download, as a string
+   - The path to the file to download it to, as a string
+   - a proxy info structure, as returned by env-proxy-info
+   Should return true if the download was successful, or false if not."
+  nil)
+
+
 (defn clojure-tools-jar-download
   "Downloads clojure tools archive in OUT-DIR, if not already there,
   and extracts in-place the clojure tools jar file and other important
@@ -458,8 +469,11 @@ public class ClojureToolsDownloader {
     (when-not (.exists zip-file)
       (warn "Downloading" ct-url-str "to" (str zip-file))
       (.mkdirs dir)
-      (or (when java-args-with-clj-jvm-opts
-            (when debug (warn "Attempting download using java subprocess... (requires Java11+"))
+      (or (when *custom-clojure-tool-downloader*
+            (when debug (warn "Attempting download using custom download function..."))
+            (*custom-clojure-tool-downloader* ct-url-str (str zip-file) (env-proxy-info)))
+          (when java-args-with-clj-jvm-opts
+            (when debug (warn "Attempting download using java subprocess... (requires Java11+)"))
             (clojure-tools-download-java ct-url-str (str zip-file) java-args-with-clj-jvm-opts))
           (do (when debug (warn "Attempting direct download..."))
               (clojure-tools-download-direct ct-url-str zip-file))
