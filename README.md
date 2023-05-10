@@ -5,6 +5,7 @@
 [![Clojars Project](https://img.shields.io/clojars/v/borkdude/deps.clj.svg)](https://clojars.org/borkdude/deps.clj)
 
 ## About
+
 A faithful port of the Clojure CLI bash script to Clojure. Used as native
 CLI, deps resolver in babashka, and getting started REPL in Calva.
 
@@ -31,7 +32,9 @@ Clojure itself.
 Linux and macOS:
 
 ``` shell
-$ bash <(curl -s https://raw.githubusercontent.com/borkdude/deps.clj/master/install)
+$ curl -sL https://raw.githubusercontent.com/borkdude/deps.clj/master/install > install_clojure
+$ chmod +x ./install_clojure
+$ ./install_clojure # you may need sudo, depending on your system
 $ deps
 Clojure 1.10.1
 user=>
@@ -40,7 +43,8 @@ user=>
 Windows:
 
 ``` shell
-C:\> PowerShell -Command "iwr -useb https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1 | iex"
+C:\Temp> PowerShell -Command "irm https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1" > install_clojure.ps1
+C:\Temp> PowerShell -f install_clojure.ps1
 C:\> deps.exe
 Clojure 1.10.1
 user=>
@@ -50,12 +54,7 @@ To install `deps` / `deps.exe` as `clojure` / `clojure.exe` on your system, add
 the `--as-clj` flag:
 
 ``` shell
-$ bash <(curl -s https://raw.githubusercontent.com/borkdude/deps.clj/master/install) --as-clj
-```
-
-``` shell
-C:\Temp> PowerShell -Command "irm https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1" > install_clojure.ps1
-C:\Temp> PowerShell -f install_clojure.ps1 --as-clj
+$ ./install_clojure --as-clj
 ```
 
 If your Windows system does not run PowerShell, you can simply download a
@@ -127,11 +126,11 @@ releases](https://github.com/borkdude/deps.clj/releases) page.
 
 #### Linux and macOS
 
-Install using the installation script on linux or macOS:
-
 ``` shell
-$ bash <(curl -s https://raw.githubusercontent.com/borkdude/deps.clj/master/install) /tmp
-$ /tmp/deps
+$ curl -sL https://raw.githubusercontent.com/borkdude/deps.clj/master/install > install_clojure
+$ chmod +x ./install_clojure
+$ ./install_clojure # you may need sudo, depending on your system
+$ deps
 Clojure 1.10.1
 user=>
 ```
@@ -151,13 +150,16 @@ scoop install clj-deps
 Alternatively you can install `deps.exe` using by executing the following line:
 
 ``` shell
-C:\> PowerShell -Command "iwr -useb https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1 | iex"
+C:\Temp> PowerShell -Command "irm https://raw.githubusercontent.com/borkdude/deps.clj/master/install.ps1" > install_clojure.ps1
+C:\Temp> PowerShell -f install_clojure.ps1
 C:\> deps.exe
 Clojure 1.10.1
 user=>
 ```
 
-It's automatically added to your path. In Powershell you can use it right away. In `cmd.exe` you'll have to restart the session for it to become available on the path.
+It's automatically added to your path. In Powershell you can use it right
+away. In `cmd.exe` you'll have to restart the session for it to become available
+on the path.
 
 When you get a message about a missing `MSVCR100.dll`, also install the
 [Microsoft Visual C++ 2010 Redistributable Package
