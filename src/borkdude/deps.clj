@@ -632,11 +632,9 @@ public class ClojureToolsDownloader {
   (or (:deps-file opts)
       (.getPath (io/file *dir* "deps.edn"))))
 
-(defn calculate-cache-dir [opts]
+(defn calculate-cache-dir [deps-edn config-dir]
   ;; Determine whether to use user or project cache
-  (let [config-dir (calculate-config-dir)
-        deps-edn (calculate-deps-edn opts)
-        user-cache-dir
+  (let [user-cache-dir
         (or (*getenv-fn* "CLJ_CACHE")
             (when-let [xdg-config-home (*getenv-fn* "XDG_CACHE_HOME")]
               (.getPath (io/file xdg-config-home "clojure")))
@@ -645,24 +643,20 @@ public class ClojureToolsDownloader {
       (.getPath (io/file *dir* ".cpcache"))
       user-cache-dir)))
 
-(defn calculate-config-paths [opts]
-  (let [deps-edn (calculate-deps-edn opts)
-        config-dir (calculate-config-dir)
-        install-dir (calculate-tools-dir)]
-    (if (:repro opts)
-      (if install-dir
-        [(.getPath (io/file install-dir "deps.edn")) deps-edn]
-        [deps-edn])
-      (if install-dir
-        [(.getPath (io/file install-dir "deps.edn"))
-         (.getPath (io/file config-dir "deps.edn"))
-         deps-edn]
-        [(.getPath (io/file config-dir "deps.edn"))
-         deps-edn]))))
+(defn calculate-config-paths [opts deps-edn config-dir install-dir]
+  (if (:repro opts)
+    (if install-dir
+      [(.getPath (io/file install-dir "deps.edn")) deps-edn]
+      [deps-edn])
+    (if install-dir
+      [(.getPath (io/file install-dir "deps.edn"))
+       (.getPath (io/file config-dir "deps.edn"))
+       deps-edn]
+      [(.getPath (io/file config-dir "deps.edn"))
+       deps-edn])))
 
-(defn- calculate-checksum [opts]
-  (let [config-paths (calculate-config-paths opts)
-        val*
+(defn- calculate-checksum [opts config-paths]
+  (let [val*
         (str/join "|"
                   (concat [cache-version]
                           (:repl-aliases opts)
@@ -758,12 +752,12 @@ public class ClojureToolsDownloader {
           (when-not (:repro opts)
             (.getPath (io/file config-dir "deps.edn")))
           config-project deps-edn
-          config-paths (calculate-config-paths opts)
-          cache-dir (calculate-cache-dir opts)
+          config-paths (calculate-config-paths opts deps-edn config-dir install-dir)
+          cache-dir (calculate-cache-dir deps-edn config-dir)
           ;; Construct location of cached classpath file
           tool-name (:tool-name opts)
           tool-aliases (:tool-aliases opts)
-          ck (calculate-checksum opts)
+          ck (calculate-checksum opts config-paths)
           cp-file (.getPath (io/file cache-dir (str ck ".cp")))
           jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
           main-file (.getPath (io/file cache-dir (str ck ".main")))
