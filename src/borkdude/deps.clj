@@ -47,10 +47,15 @@
       (str/lower-case)
       (str/includes? "windows")))
 
-(def ^:private ^:dynamic *dir* nil)
+(def ^:dynamic *dir* "Directory in which deps.clj should be executed."
+  nil)
 
-(def ^:private ^:dynamic *env* nil)
-(def ^:private ^:dynamic *extra-env* nil)
+(def ^:dynamic *env* "Replaces environment in calls to external processes."
+  nil)
+
+(def ^:dynamic *extra-env*
+  "Adds to environment in calls to external processes."
+  nil)
 
 (defn- as-string-map
   "Helper to coerce a Clojure map with keyword keys into something coerceable to Map<String,String>
@@ -208,7 +213,7 @@ For more info, see:
     (println "}")))
 
 (defn- ^:dynamic *getenv-fn*
-  "Get ENV'ironment variable."
+  "Get ENV'ironment variable. Only used for testing, not part of the public API (yet)."
   ^String [env]
   (java.lang.System/getenv env))
 
@@ -449,7 +454,7 @@ public class ClojureToolsDownloader {
       @success?*)))
 
 
-(def ^:private ^:dynamic *clojure-tools-download-fn*
+(def ^:dynamic *clojure-tools-download-fn*
   "Can be dynamically rebound to customise the download of the Clojure tools.
    Should be bound to a function accepting a map with:
    - `:url`: The URL to download, as a string
