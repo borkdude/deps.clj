@@ -33,22 +33,22 @@
   [& args]
 
   (case (or (System/getenv "DEPS_CLJ_TEST_ENV") "clojure")
-    "babashka" (let [classpath (str/join deps/path-separator ["src" "test" "resources"])]
+    "babashka" (let [classpath (str/join #'deps/path-separator ["src" "test" "resources"])]
                  (apply str "bb -cp " classpath " -m borkdude.deps " args))
     "native" (apply str "./deps " args)
     "clojure" (cond->>
                   (apply str "clojure -M -m borkdude.deps " args)
-                deps/windows?
+                #'deps/windows?
                 ;; the `exit` command is a workaround for
                 ;; https://ask.clojure.org/index.php/12290/clojuretools-commands-windows-properly-exit-code-failure
                 (format "powershell -NoProfile -Command %s; exit $LASTEXITCODE"))))
 
-(deftest parse-args-test
+(deftest parse-cli-opts-test
   (is (= {:mode :repl, :jvm-opts ["-Dfoo=bar" "-Dbaz=quuz"]}
-         (deps/parse-args ["-J-Dfoo=bar" "-J-Dbaz=quuz"])))
+         (deps/parse-cli-opts ["-J-Dfoo=bar" "-J-Dbaz=quuz"])))
   (is (= {:mode :main, :main-aliases nil, :args '("-e" "(+ 1 2 3)")}
-         (deps/parse-args ["-M" "-e" "(+ 1 2 3)"])))
-  (is (= {:mode :main, :main-aliases ":foo", :args nil} (deps/parse-args ["-M:foo"]))))
+         (deps/parse-cli-opts ["-M" "-e" "(+ 1 2 3)"])))
+  (is (= {:mode :main, :main-aliases ":foo", :args nil} (deps/parse-cli-opts ["-M:foo"]))))
 
 (deftest path-test
   (is (str/includes? (with-out-str
@@ -108,7 +108,7 @@
           temp-file-path (str temp-file)
           _ (deps-main-throw "-Sdeps"
                              (format
-                              (if-not deps/windows?
+                              (if-not #'deps/windows?
                                 "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\"%s\\\" (+ 1 2 3))\"]}}}"
                                 "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\\\"%s\\\\\" (+ 1 2 3))\"]}}}")
                               (.toURI (fs/file temp-file-path)))
@@ -117,29 +117,29 @@
       (is (= "6" out)))))
 
 (deftest jvm-proxy-settings-test
-  (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "http://aHost:1234")))
-  (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "http://user:pw@aHost:1234")))
-  (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "https://aHost:1234")))
-  (is (= {:host "aHost" :port "1234"} (deps/parse-proxy-info "https://user:pw@aHost:1234")))
-  (is (nil? (deps/parse-proxy-info "http://aHost:abc")))
+  (is (= {:host "aHost" :port "1234"} (#'deps/parse-proxy-info "http://aHost:1234")))
+  (is (= {:host "aHost" :port "1234"} (#'deps/parse-proxy-info "http://user:pw@aHost:1234")))
+  (is (= {:host "aHost" :port "1234"} (#'deps/parse-proxy-info "https://aHost:1234")))
+  (is (= {:host "aHost" :port "1234"} (#'deps/parse-proxy-info "https://user:pw@aHost:1234")))
+  (is (nil? (#'deps/parse-proxy-info "http://aHost:abc")))
   (is (= {:http-proxy {:host "aHost" :port "1234"}}
          (binding [deps/*getenv-fn* {"http_proxy" "http://aHost:1234"}]
-           (deps/env-proxy-info))))
+           (deps/get-proxy-info))))
   (is (= {:http-proxy {:host "aHost" :port "1234"}}
          (binding [deps/*getenv-fn* {"HTTP_PROXY" "http://aHost:1234"}]
-           (deps/env-proxy-info))))
+           (deps/get-proxy-info))))
   (is (= {:https-proxy {:host "aHost" :port "1234"}}
          (binding [deps/*getenv-fn* {"https_proxy" "http://aHost:1234"}]
-           (deps/env-proxy-info))))
+           (deps/get-proxy-info))))
   (is (= {:https-proxy {:host "aHost" :port "1234"}}
          (binding [deps/*getenv-fn* {"HTTPS_PROXY" "http://aHost:1234"}]
-           (deps/env-proxy-info))))
+           (deps/get-proxy-info))))
   (is (= {}
          (binding [deps/*getenv-fn* {}]
-           (deps/env-proxy-info))))
+           (deps/get-proxy-info))))
   (is (= {}
          (binding [deps/*getenv-fn* {"http_proxy" "http://aHost:abc"}]
-           (deps/env-proxy-info)))))
+           (deps/get-proxy-info)))))
 
 (deftest jvm-opts-test
   (let [temp-dir (fs/create-temp-dir)
@@ -274,10 +274,10 @@
               dest-zip-file (fs/file temp-dir ct-zip-name)]
           (if (< java-version 11)
             ;; requires java11+, fails otherwise
-            (do (is (= false (#'deps/clojure-tools-download-java url dest-zip-file [])))
+            (do (is (= false (#'deps/clojure-tools-download-java! {:url url :dest dest-zip-file})))
                 (is (not (fs/exists? dest-zip-file))))
 
-            (do (is (= true (#'deps/clojure-tools-download-java url dest-zip-file [])))
+            (do (is (= true (#'deps/clojure-tools-download-java! {:url url :dest dest-zip-file})))
                 (is (fs/exists? dest-zip-file)))))))
 
     (when (>= java-version 11)
@@ -285,7 +285,7 @@
         (fs/with-temp-dir
           [temp-dir {}]
           (let [dest-jar-file (fs/file temp-dir ct-jar-name)]
-            (with-redefs [deps/clojure-tools-download-direct
+            (with-redefs [deps/clojure-tools-download-direct!
                           (fn [& _] (throw (Exception. "Direct should not be called.")))]
               (let [xx-pclf "-XX:+PrintCommandLineFlags"
                     xx-gc-threads "-XX:ConcGCThreads=1"
@@ -303,14 +303,14 @@
         [temp-dir {}]
         (let [url-str ct-url-str
               dest-zip-file (fs/file temp-dir ct-zip-name)]
-          (is (= true (deps/clojure-tools-download-direct url-str dest-zip-file)))
+          (is (= true (deps/clojure-tools-download-direct! {:url url-str :dest dest-zip-file})))
           (is (fs/exists? dest-zip-file)))))
 
     (testing "direct downloader called from -main (CLJ_JVM_OPTS not set)"
       (fs/with-temp-dir
         [temp-dir {}]
         (let [dest-jar-file (fs/file temp-dir ct-jar-name)]
-          (with-redefs [deps/clojure-tools-download-java
+          (with-redefs [deps/clojure-tools-download-java!
                         (fn [& _] (throw (Exception. "Java subprocess should not be called.")))]
             (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)
                                                   "CLJ_JVM_OPTS" nil} %)
@@ -326,9 +326,9 @@
               dest-zip-file (fs/file temp-dir ct-zip-name)
               dest-jar-file (fs/file temp-dir ct-jar-name)]
           (fs/copy tools-zip-file dest-zip-file) ;; user copies downloaded file
-          (with-redefs [deps/clojure-tools-download-java
+          (with-redefs [deps/clojure-tools-download-java!
                         (fn [& _] (throw (Exception. "Java should not be called.")))
-                        deps/clojure-tools-download-direct
+                        deps/clojure-tools-download-direct!
                         (fn [& _] (throw (Exception. "Direct should not be called.")))]
             (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)} %)
                                             (System/getenv %))]
@@ -340,9 +340,9 @@
       (fs/with-temp-dir
         [temp-dir {}]
         (let [dest-jar-file (fs/file temp-dir ct-jar-name)]
-          (with-redefs [deps/clojure-tools-download-java
+          (with-redefs [deps/clojure-tools-download-java!
                         (fn [& _] (throw (Exception. "Java should not be called.")))
-                        deps/clojure-tools-download-direct
+                        deps/clojure-tools-download-direct!
                         (fn [& _] (throw (Exception. "Direct should not be called.")))]
             (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)} %)
                                             (System/getenv %))
@@ -361,9 +361,9 @@
     (testing "prompt for manual user install"
       (fs/with-temp-dir
         [temp-dir {}]
-        (with-redefs [deps/clojure-tools-download-java
+        (with-redefs [deps/clojure-tools-download-java!
                       (fn [& _] false)
-                      deps/clojure-tools-download-direct
+                      deps/clojure-tools-download-direct!
                       (fn [& _] false)]
           (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)} %)
                                           (System/getenv %))]
