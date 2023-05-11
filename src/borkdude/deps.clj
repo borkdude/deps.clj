@@ -620,7 +620,7 @@ public class ClojureToolsDownloader {
                         (unixify (.toAbsolutePath (as-path f)))))
       f)))
 
-(defn get-env-tools-dir
+(defn- get-env-tools-dir
   "Retrieves the tools-directory from environment variable `DEPS_CLJ_TOOLS_DIR`"
   []
   (or
@@ -628,10 +628,10 @@ public class ClojureToolsDownloader {
     (*getenv-fn* "CLOJURE_TOOLS_DIR")
     (*getenv-fn* "DEPS_CLJ_TOOLS_DIR")))
 
-(defn get-tools-dir
-  "Retrieves the tools directory where tools jar is located (after download).
+(defn get-install-dir
+  "Retrieves the install directory where tools jar is located (after download).
   Defaults to ~/.deps.clj/<version>/ClojureTools."
-  [{:keys []}]
+  []
   (let [{:keys [ct-base-dir]} @clojure-tools-info*]
     (or (get-env-tools-dir)
         (.getPath (io/file (home-dir)
@@ -642,7 +642,7 @@ public class ClojureToolsDownloader {
 (defn get-config-dir
   "Retrieves configuration directory.
   First tries `CLJ_CONFIG` env var, then `$XDG_CONFIG_HOME/clojure`, then ~/.clojure."
-  [{:keys []}]
+  []
   (or (*getenv-fn* "CLJ_CONFIG")
       (when-let [xdg-config-home (*getenv-fn* "XDG_CONFIG_HOME")]
         (.getPath (io/file xdg-config-home "clojure")))
@@ -670,6 +670,10 @@ public class ClojureToolsDownloader {
       user-cache-dir)))
 
 (defn get-config-paths
+  "Returns vec of configuration paths, i.e. deps.edn from:
+  - `:install-dir` as obtained thrhough `get-install-dir`
+  - `:config-dir` as obtained through `get-config-dir`
+  - `:deps-edn` as obtained through `get-local-deps-edn`"
   [{:keys [cli-opts deps-edn config-dir install-dir]}]
   (if (:repro cli-opts)
     (if install-dir
@@ -722,14 +726,13 @@ public class ClojureToolsDownloader {
         debug (*getenv-fn* "DEPS_CLJ_DEBUG")
         java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
         env-tools-dir (get-env-tools-dir)
-        tools-dir (get-tools-dir {})
-        install-dir tools-dir
+        install-dir (get-install-dir)
         libexec-dir (if env-tools-dir
                       (let [f (io/file env-tools-dir "libexec")]
                         (if (.exists f)
                           (.getPath f)
                           env-tools-dir))
-                      tools-dir)
+                      install-dir)
         tools-jar (io/file libexec-dir ct-jar-name)
         exec-jar (io/file libexec-dir "exec.jar")
         proxy-settings (jvm-proxy-opts (get-proxy-info))
@@ -754,7 +757,7 @@ public class ClojureToolsDownloader {
                      clj-jvm-opts
                      proxy-settings
                      ["-classpath" tools-cp "clojure.main"]))
-        config-dir (get-config-dir {})
+        config-dir (get-config-dir)
         java-opts (some-> (*getenv-fn* "JAVA_OPTS") (str/split #" "))]
     ;; If user config directory does not exist, create it
     (let [config-dir (io/file config-dir)]
@@ -779,7 +782,8 @@ public class ClojureToolsDownloader {
           (when-not (:repro cli-opts)
             (.getPath (io/file config-dir "deps.edn")))
           config-project deps-edn
-          config-paths (get-config-paths {:cli-opts cli-opts :deps-edn deps-edn
+          config-paths (get-config-paths {:cli-opts cli-opts
+                                          :deps-edn deps-edn
                                           :config-dir config-dir
                                           :install-dir install-dir})
           cache-dir (get-cache-dir {:deps-edn deps-edn :config-dir config-dir})

@@ -7,11 +7,10 @@
     -  [`deps-clj-version`](#borkdude.deps/deps-clj-version)
     -  [`get-cache-dir`](#borkdude.deps/get-cache-dir) - Returns cache dir (<code>.cpcache</code>) from either local dir, if <code>deps-edn</code> exists, or the user cache dir.
     -  [`get-config-dir`](#borkdude.deps/get-config-dir) - Retrieves configuration directory.
-    -  [`get-config-paths`](#borkdude.deps/get-config-paths)
-    -  [`get-env-tools-dir`](#borkdude.deps/get-env-tools-dir) - Retrieves the tools-directory from environment variable <code>DEPS_CLJ_TOOLS_DIR</code>.
+    -  [`get-config-paths`](#borkdude.deps/get-config-paths) - Returns vec of configuration paths, i.e.
+    -  [`get-install-dir`](#borkdude.deps/get-install-dir) - Retrieves the install directory where tools jar is located (after download).
     -  [`get-local-deps-edn`](#borkdude.deps/get-local-deps-edn) - Returns the path of the <code>deps.edn</code> file (as string) in the current directory or as set by <code>-Sdeps-file</code>.
     -  [`get-proxy-info`](#borkdude.deps/get-proxy-info) - Returns a map with proxy information parsed from env vars.
-    -  [`get-tools-dir`](#borkdude.deps/get-tools-dir) - Retrieves the tools directory where tools jar is located (after download).
     -  [`help-text`](#borkdude.deps/help-text)
     -  [`jvm-proxy-opts`](#borkdude.deps/jvm-proxy-opts) - Returns a vector containing the JVM args to be passed to a new process to set its proxy system properties.
     -  [`parse-cli-opts`](#borkdude.deps/parse-cli-opts) - Parses the command line options.
@@ -48,7 +47,7 @@ See [`help-text`](#borkdude.deps/help-text).
   env variable is set and a succesful attempt is made to download the
   archive by invoking a java subprocess passing the env variable value
   as command line options.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L702-L949">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L706-L953">Source</a></sub></p>
 
 ## <a name="borkdude.deps/cache-version">`cache-version`</a><a name="borkdude.deps/cache-version"></a>
 
@@ -103,7 +102,7 @@ Returns cache dir (`.cpcache`) from either local dir, if `deps-edn`
 ## <a name="borkdude.deps/get-config-dir">`get-config-dir`</a><a name="borkdude.deps/get-config-dir"></a>
 ``` clojure
 
-(get-config-dir {:keys []})
+(get-config-dir)
 ```
 
 Retrieves configuration directory.
@@ -115,16 +114,22 @@ Retrieves configuration directory.
 
 (get-config-paths {:keys [cli-opts deps-edn config-dir install-dir]})
 ```
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L672-L683">Source</a></sub></p>
 
-## <a name="borkdude.deps/get-env-tools-dir">`get-env-tools-dir`</a><a name="borkdude.deps/get-env-tools-dir"></a>
+Returns vec of configuration paths, i.e. deps.edn from:
+  - `:install-dir` as obtained thrhough [`get-install-dir`](#borkdude.deps/get-install-dir)
+  - `:config-dir` as obtained through [`get-config-dir`](#borkdude.deps/get-config-dir)
+  - `:deps-edn` as obtained through [`get-local-deps-edn`](#borkdude.deps/get-local-deps-edn)
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L672-L687">Source</a></sub></p>
+
+## <a name="borkdude.deps/get-install-dir">`get-install-dir`</a><a name="borkdude.deps/get-install-dir"></a>
 ``` clojure
 
-(get-env-tools-dir)
+(get-install-dir)
 ```
 
-Retrieves the tools-directory from environment variable `DEPS_CLJ_TOOLS_DIR`
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L623-L629">Source</a></sub></p>
+Retrieves the install directory where tools jar is located (after download).
+  Defaults to ~/.deps.clj/<version>/ClojureTools.
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L631-L640">Source</a></sub></p>
 
 ## <a name="borkdude.deps/get-local-deps-edn">`get-local-deps-edn`</a><a name="borkdude.deps/get-local-deps-edn"></a>
 ``` clojure
@@ -148,16 +153,6 @@ Returns a map with proxy information parsed from env vars. The map
    env vars are set and parsed correctly. The value for each is a map
    with :host and :port entries.
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L288-L300">Source</a></sub></p>
-
-## <a name="borkdude.deps/get-tools-dir">`get-tools-dir`</a><a name="borkdude.deps/get-tools-dir"></a>
-``` clojure
-
-(get-tools-dir {:keys []})
-```
-
-Retrieves the tools directory where tools jar is located (after download).
-  Defaults to ~/.deps.clj/<version>/ClojureTools.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L631-L640">Source</a></sub></p>
 
 ## <a name="borkdude.deps/help-text">`help-text`</a><a name="borkdude.deps/help-text"></a>
 
