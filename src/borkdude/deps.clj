@@ -622,6 +622,70 @@ public class ClojureToolsDownloader {
                         (unixify (.toAbsolutePath (as-path f)))))
       f)))
 
+(defn calculate-env-tools-dir []
+  (or
+    ;; legacy name
+    (*getenv-fn* "CLOJURE_TOOLS_DIR")
+    (*getenv-fn* "DEPS_CLJ_TOOLS_DIR")))
+
+(defn calculate-tools-dir []
+  (let [{:keys [ct-base-dir]} @clojure-tools-info*]
+    (or (calculate-env-tools-dir)
+        (.getPath (io/file (home-dir)
+                           ".deps.clj"
+                           @version
+                           ct-base-dir)))))
+
+(defn calculate-config-dir []
+  (or (*getenv-fn* "CLJ_CONFIG")
+      (when-let [xdg-config-home (*getenv-fn* "XDG_CONFIG_HOME")]
+        (.getPath (io/file xdg-config-home "clojure")))
+      (.getPath (io/file (home-dir) ".clojure"))))
+
+(defn calculate-deps-edn [opts]
+  (or (:deps-file opts)
+      (.getPath (io/file *dir* "deps.edn"))))
+
+(defn calculate-cache-dir [deps-edn config-dir]
+  ;; Determine whether to use user or project cache
+  (let [user-cache-dir
+        (or (*getenv-fn* "CLJ_CACHE")
+            (when-let [xdg-config-home (*getenv-fn* "XDG_CACHE_HOME")]
+              (.getPath (io/file xdg-config-home "clojure")))
+            (.getPath (io/file config-dir ".cpcache")))]
+    (if (.exists (io/file deps-edn))
+      (.getPath (io/file *dir* ".cpcache"))
+      user-cache-dir)))
+
+(defn calculate-config-paths [opts deps-edn config-dir install-dir]
+  (if (:repro opts)
+    (if install-dir
+      [(.getPath (io/file install-dir "deps.edn")) deps-edn]
+      [deps-edn])
+    (if install-dir
+      [(.getPath (io/file install-dir "deps.edn"))
+       (.getPath (io/file config-dir "deps.edn"))
+       deps-edn]
+      [(.getPath (io/file config-dir "deps.edn"))
+       deps-edn])))
+
+(defn- calculate-checksum [opts config-paths]
+  (let [val*
+        (str/join "|"
+                  (concat [cache-version]
+                          (:repl-aliases opts)
+                          [(:exec-aliases opts)
+                           (:main-aliases opts)
+                           (:deps-data opts)
+                           (:tool-name opts)
+                           (:tool-aliases opts)]
+                          (map (fn [config-path]
+                                 (if (.exists (io/file config-path))
+                                   config-path
+                                   "NIL"))
+                               config-paths)))]
+    (cksum val*)))
+
 (defn -main
   "See `help-text`.
 
@@ -641,18 +705,11 @@ public class ClojureToolsDownloader {
   as command line options."
   [& command-line-args]
   (let [opts (parse-args command-line-args)
-        {:keys [ct-base-dir ct-jar-name]} @clojure-tools-info*
+        {:keys [ct-jar-name]} @clojure-tools-info*
         debug (*getenv-fn* "DEPS_CLJ_DEBUG")
         java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
-        env-tools-dir (or
-                       ;; legacy name
-                       (*getenv-fn* "CLOJURE_TOOLS_DIR")
-                       (*getenv-fn* "DEPS_CLJ_TOOLS_DIR"))
-        tools-dir (or env-tools-dir
-                      (.getPath (io/file (home-dir)
-                                         ".deps.clj"
-                                         @version
-                                         ct-base-dir)))
+        env-tools-dir (calculate-env-tools-dir)
+        tools-dir (calculate-tools-dir)
         install-dir tools-dir
         libexec-dir (if env-tools-dir
                       (let [f (io/file env-tools-dir "libexec")]
@@ -678,19 +735,13 @@ public class ClojureToolsDownloader {
         tool? (= :tool mode)
         exec-cp (when (or exec? tool?)
                   (.getPath exec-jar))
-        deps-edn
-        (or (:deps-file opts)
-            (.getPath (io/file *dir* "deps.edn")))
+        deps-edn (calculate-deps-edn opts)
         clj-main-cmd
         (vec (concat java-cmd
                      clj-jvm-opts
                      proxy-settings
                      ["-classpath" tools-cp "clojure.main"]))
-        config-dir
-        (or (*getenv-fn* "CLJ_CONFIG")
-            (when-let [xdg-config-home (*getenv-fn* "XDG_CONFIG_HOME")]
-              (.getPath (io/file xdg-config-home "clojure")))
-            (.getPath (io/file (home-dir) ".clojure")))
+        config-dir (calculate-config-dir)
         java-opts (some-> (*getenv-fn* "JAVA_OPTS") (str/split #" "))]
     ;; If user config directory does not exist, create it
     (let [config-dir (io/file config-dir)]
@@ -710,50 +761,17 @@ public class ClojureToolsDownloader {
         (io/make-parents config-tools-edn)
         (io/copy install-tools-edn config-tools-edn)))
     ;; Determine user cache directory
-    (let [user-cache-dir
-          (or (*getenv-fn* "CLJ_CACHE")
-              (when-let [xdg-config-home (*getenv-fn* "XDG_CACHE_HOME")]
-                (.getPath (io/file xdg-config-home "clojure")))
-              (.getPath (io/file config-dir ".cpcache")))
-          ;; Chain deps.edn in config paths. repro=skip config dir
+    (let [;; Chain deps.edn in config paths. repro=skip config dir
           config-user
           (when-not (:repro opts)
             (.getPath (io/file config-dir "deps.edn")))
           config-project deps-edn
-          config-paths
-          (if (:repro opts)
-            (if install-dir
-              [(.getPath (io/file install-dir "deps.edn")) deps-edn]
-              [deps-edn])
-            (if install-dir
-              [(.getPath (io/file install-dir "deps.edn"))
-               (.getPath (io/file config-dir "deps.edn"))
-               deps-edn]
-              [(.getPath (io/file config-dir "deps.edn"))
-               deps-edn]))
-          ;; Determine whether to use user or project cache
-          cache-dir
-          (if (.exists (io/file deps-edn))
-            (.getPath (io/file *dir* ".cpcache"))
-            user-cache-dir)
+          config-paths (calculate-config-paths opts deps-edn config-dir install-dir)
+          cache-dir (calculate-cache-dir deps-edn config-dir)
           ;; Construct location of cached classpath file
           tool-name (:tool-name opts)
           tool-aliases (:tool-aliases opts)
-          val*
-          (str/join "|"
-                    (concat [cache-version]
-                            (:repl-aliases opts)
-                            [(:exec-aliases opts)
-                             (:main-aliases opts)
-                             (:deps-data opts)
-                             tool-name
-                             (:tool-aliases opts)]
-                            (map (fn [config-path]
-                                   (if (.exists (io/file config-path))
-                                     config-path
-                                     "NIL"))
-                                 config-paths)))
-          ck (cksum val*)
+          ck (calculate-checksum opts config-paths)
           cp-file (.getPath (io/file cache-dir (str ck ".cp")))
           jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
           main-file (.getPath (io/file cache-dir (str ck ".main")))
