@@ -32,7 +32,7 @@
   [& args]
 
   (case (or (System/getenv "DEPS_CLJ_TEST_ENV") "clojure")
-    "babashka" (let [classpath (str/join #'deps/path-separator ["src" "test" "resources"])]
+    "babashka" (let [classpath (str/join @#'deps/path-separator ["src" "test" "resources"])]
                  (apply str "bb -cp " classpath " -m borkdude.deps " args))
     "native" (apply str "./deps " args)
     "clojure" (cond->>
