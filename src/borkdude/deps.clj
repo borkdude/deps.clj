@@ -50,13 +50,6 @@
 (def ^:dynamic *dir* "Directory in which deps.clj should be executed."
   nil)
 
-(def ^:dynamic *env* "Replaces environment in calls to external processes."
-  nil)
-
-(def ^:dynamic *extra-env*
-  "Adds to environment in calls to external processes."
-  nil)
-
 (defn- as-string-map
   "Helper to coerce a Clojure map with keyword keys into something coerceable to Map<String,String>
   Stringifies keyword keys, but otherwise doesn't try to do anything clever with values"
@@ -82,16 +75,17 @@
     (.putAll (as-string-map env)))
   pb)
 
-(defn- shell-command
+(defn- internal-shell-command
   "Executes shell command.
 
   Accepts the following options:
 
   `:to-string?`: instead of writing to stdoud, write to a string and
   return it."
-  ([args] (shell-command args nil))
-  ([args {:keys [:to-string?]}]
-   (let [args (mapv str args)
+  ([args] (internal-shell-command args nil))
+  ([args {:keys [out env extra-env]}]
+   (let [to-string? (= :string out)
+         args (mapv str args)
          args (if (and windows? (not (System/getenv "DEPS_CLJ_NO_WINDOWS_FIXES")))
                 (mapv #(str/replace % "\"" "\\\"") args)
                 args)
@@ -101,9 +95,9 @@
               true (.redirectInput ProcessBuilder$Redirect/INHERIT))
          _ (when-let [dir *dir*]
              (.directory pb (io/file dir)))
-         _ (when-let [env *env*]
+         _ (when-let [env env]
              (set-env pb env))
-         _ (when-let [extra-env *extra-env*]
+         _ (when-let [extra-env extra-env]
              (add-env pb extra-env))
          proc (.start pb)
          string-out
@@ -119,21 +113,32 @@
       :exit exit-code})))
 
 (defn ^:dynamic *aux-process-fn*
-  "Invokes `java` with arguments to calculate claspath etc  May
+  "Invokes `java` with arguments to calculate classpath, etc. May be
+  replacement by rebinding this dynamic var.
+
+  Called with a map of:
+
+  - `:cmd`: a vector of strings
+  - `:out`: if set to `:string`, `:out` key in result must contains stdout
+
+  Returns a map of:
+
+  - `:exit`, the exit code of the process
+  - `:out`, the string of stdout, if the input `:out` was set to `:string`"
+  [{:keys [cmd out]}]
+  (internal-shell-command cmd {:out out}))
+
+(defn ^:dynamic *clojure-process-fn*
+  "Invokes `java` with arguments to `clojure.main` to start Clojure. May
   be replacement by rebinding this dynamic var.
 
   Called with a map of:
 
   - `:cmd`: a vector of strings
-  - `:out`: if set to `:string`, `:out` key in result contains stdout"
-  [{:keys [cmd out]}]
-  (shell-command cmd {:to-string? (= :string out)}))
 
-(defn ^:dynamic *clojure-process-fn*
-  "Invokes `java` with arguments to `clojure.main` to start Clojure. May
-  be replacement by rebinding this dynamic var."
+  Must return a map of `:exit`, the exit code of te process."
   [{:keys [cmd]}]
-  (shell-command cmd))
+  (internal-shell-command cmd))
 
 (def ^:private help-text (delay (str "Version: " @version "
 
