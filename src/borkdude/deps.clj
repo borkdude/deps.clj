@@ -11,10 +11,10 @@
   (:gen-class))
 
 (set! *warn-on-reflection* true)
-(def path-separator (System/getProperty "path.separator"))
+(def ^:private path-separator (System/getProperty "path.separator"))
 
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
-(def version
+(def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
              "1.11.1.1273")))
 
@@ -25,7 +25,7 @@
       (slurp)
       (str/trim)))
 
-(defn warn [& strs]
+(defn- warn [& strs]
   (binding [*out* *err*]
     (apply println strs)))
 
@@ -42,7 +42,7 @@
      (warn msg)
      (System/exit exit-code))))
 
-(def windows?
+(def ^:private windows?
   (-> (System/getProperty "os.name")
       (str/lower-case)
       (str/includes? "windows")))
@@ -77,7 +77,7 @@
     (.putAll (as-string-map env)))
   pb)
 
-(defn shell-command
+(defn- shell-command
   "Executes shell command.
 
   Accepts the following options:
@@ -196,10 +196,10 @@ For more info, see:
  https://clojure.org/guides/deps_and_cli
  https://clojure.org/reference/repl_and_main")))
 
-(defn describe-line [[kw val]]
+(defn- describe-line [[kw val]]
   (pr kw val))
 
-(defn describe [lines]
+(defn- describe [lines]
   (let [[first-line & lines] lines]
     (print "{") (describe-line first-line)
     (doseq [line lines
@@ -207,12 +207,12 @@ For more info, see:
       (print "\n ") (describe-line line))
     (println "}")))
 
-(defn ^:private ^:dynamic *getenv-fn*
+(defn- ^:dynamic *getenv-fn*
   "Get ENV'ironment variable."
   ^String [env]
   (java.lang.System/getenv env))
 
-(defn cksum
+(defn- cksum
   [^String s]
   (let [hashed (.digest (java.security.MessageDigest/getInstance "MD5")
                         (.getBytes s))
@@ -222,7 +222,7 @@ For more info, see:
         (print (format "%02X" byte))))
     (str sw)))
 
-(defn which [executable]
+(defn- which [executable]
   (when-let [path (*getenv-fn* "PATH")]
     (let [paths (.split path path-separator)]
       (loop [paths paths]
@@ -233,13 +233,13 @@ For more info, see:
               (.getCanonicalPath f)
               (recur (rest paths)))))))))
 
-(defn home-dir []
+(defn- home-dir []
   (if windows?
     ;; workaround for https://github.com/oracle/graal/issues/1630
     (*getenv-fn* "userprofile")
     (System/getProperty "user.home")))
 
-(def java-exe (if windows? "java.exe" "java"))
+(def ^:private java-exe (if windows? "java.exe" "java"))
 
 (defn- get-java-cmd
   "Returns path to java executable to invoke sub commands with."
@@ -260,11 +260,11 @@ For more info, see:
 (def ^:private authenticated-proxy-re #".+:.+@(.+):(\d+).*")
 (def ^:private unauthenticated-proxy-re #"(.+):(\d+).*")
 
-(defn proxy-info [m]
+(defn- proxy-info [m]
   {:host (nth m 1)
    :port (nth m 2)})
 
-(defn parse-proxy-info
+(defn- parse-proxy-info
   [s]
   (when s
     (let [p (cond
@@ -285,7 +285,7 @@ For more info, see:
         (do (warn "WARNING: Can't parse proxy info - found:" s "- proceeding without using proxy!")
             nil)))))
 
-(defn env-proxy-info
+(defn get-proxy-info
   "Returns a map with proxy information parsed from env vars. The map
    will contain :http-proxy and :https-proxy entries if the relevant
    env vars are set and parsed correctly. The value for each is a map
@@ -302,22 +302,20 @@ For more info, see:
 (defn set-proxy-system-props!
   "Sets the proxy system properties in the current JVM.
    proxy-info parameter is as returned from env-proxy-info."
-  [proxy-info]
-  (let [{:keys [http-proxy https-proxy]} proxy-info]
-    (when http-proxy
-      (System/setProperty "http.proxyHost" (:host http-proxy))
-      (System/setProperty "http.proxyPort" (:port http-proxy)))
-    (when https-proxy
-      (System/setProperty "https.proxyHost" (:host https-proxy))
-      (System/setProperty "https.proxyPort" (:port https-proxy)))))
+  [{:keys [http-proxy https-proxy]}]
+  (when http-proxy
+    (System/setProperty "http.proxyHost" (:host http-proxy))
+    (System/setProperty "http.proxyPort" (:port http-proxy)))
+  (when https-proxy
+    (System/setProperty "https.proxyHost" (:host https-proxy))
+    (System/setProperty "https.proxyPort" (:port https-proxy))))
 
-
-(defn clojure-tools-download-direct
-  "Downloads from SOURCE url to DEST file returning true on success."
-  [source dest]
+(defn clojure-tools-download-direct!
+  "Downloads from `:url` to `:dest` file returning true on success."
+  [{:keys [url dest]}]
   (try
-    (set-proxy-system-props! (env-proxy-info))
-    (let [source (URL. source)
+    (set-proxy-system-props! (get-proxy-info))
+    (let [source (URL. url)
           dest (io/file dest)
           conn ^URLConnection (.openConnection ^URL source)]
       (when (instance? HttpURLConnection conn)
@@ -356,7 +354,7 @@ For more info, see:
             :ct-url-str (format "https://download.clojure.org/install/clojure-tools-%s.zip" version)
             :ct-zip-name "tools.zip"})))
 
-(defn unzip
+(defn- unzip
   [zip-file destination-dir]
   (let [{:keys [ct-aux-files-names ct-jar-name]} @clojure-tools-info*
         zip-file (io/file zip-file)
@@ -419,12 +417,12 @@ public class ClojureToolsDownloader {
         System.exit(1); }}}"))
     dest-file))
 
-(defn- clojure-tools-download-java
-  "Downloads URL file to DEST-ZIP-FILE by invoking `java` with JVM-OPTS
-  on a `.java` program file, and returns true on success. Requires
-  Java 11+ (JEP 330)."
-  [url dest-zip-file jvm-opts]
-  (let [dest-dir (.getCanonicalPath (io/file dest-zip-file ".."))
+(defn- clojure-tools-download-java!
+  "Downloads `:url` zip file to `:dest` by invoking `java` with
+  `:jvm-opts` on a `.java` program file, and returns true on
+  success. Requires Java 11+ (JEP 330)."
+  [{:keys [url dest jvm-opts]}]
+  (let [dest-dir (.getCanonicalPath (io/file dest ".."))
         dlr-path (clojure-tools-java-downloader-spit dest-dir)
         java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
         success?* (atom true)]
@@ -435,7 +433,7 @@ public class ClojureToolsDownloader {
                                              (reset! success?* false))))]
       (shell-command (vec (concat java-cmd
                                   jvm-opts
-                                  [dlr-path url (str dest-zip-file)])))
+                                  [dlr-path url (str dest)])))
       (io/delete-file dlr-path true)
       @success?*)))
 
@@ -449,20 +447,19 @@ public class ClojureToolsDownloader {
    Should return true if the download was successful, or false if not."
   nil)
 
-
-(defn clojure-tools-jar-download
-  "Downloads clojure tools archive in OUT-DIR, if not already there,
+(defn clojure-tools-download-jar!
+  "Downloads clojure tools archive in `:out-dir`, if not already there,
   and extracts in-place the clojure tools jar file and other important
   files.
 
   The download is attempted directly from this process, unless
-  JAVA-ARGS-WITH-CLJ-JVM-OPTS is set, in which case a java subprocess
+  `:jvm-opts` is set, in which case a java subprocess
   is created to download the archive passing in its value as command
   line options.
 
   It calls `*exit-fn*` if it cannot download the archive, with
   instructions how to manually download it."
-  [out-dir java-args-with-clj-jvm-opts {:keys [debug] :as _opts}]
+  [{:keys [out-dir jvm-opts debug]}]
   (let [{:keys [ct-error-exit-code ct-url-str ct-zip-name]} @clojure-tools-info*
         dir (io/file out-dir)
         zip-file (io/file out-dir ct-zip-name)]
@@ -471,12 +468,12 @@ public class ClojureToolsDownloader {
       (.mkdirs dir)
       (or (when *custom-clojure-tool-downloader*
             (when debug (warn "Attempting download using custom download function..."))
-            (*custom-clojure-tool-downloader* ct-url-str (str zip-file) (env-proxy-info)))
-          (when java-args-with-clj-jvm-opts
+            (*custom-clojure-tool-downloader* ct-url-str (str zip-file) (get-proxy-info)))
+          (when jvm-opts
             (when debug (warn "Attempting download using java subprocess... (requires Java11+)"))
-            (clojure-tools-download-java ct-url-str (str zip-file) java-args-with-clj-jvm-opts))
+            (clojure-tools-download-java! {:url ct-url-str :dest (str zip-file) :jvm-opts jvm-opts}))
           (do (when debug (warn "Attempting direct download..."))
-              (clojure-tools-download-direct ct-url-str zip-file))
+              (clojure-tools-download-direct! {:url ct-url-str :dest zip-file}))
           (*exit-fn* ct-error-exit-code (str "Error: Cannot download Clojure tools."
                                              " Please download manually from " ct-url-str
                                              " to " (str (io/file dir ct-zip-name))))
@@ -486,26 +483,25 @@ public class ClojureToolsDownloader {
     (.delete zip-file))
   (warn "Successfully installed clojure tools!"))
 
-(defn jvm-proxy-settings
+(defn jvm-proxy-opts
   "Returns a vector containing the JVM args to be passed to a new process
    to set its proxy system properties.
    proxy-info parameter is as returned from env-proxy-info."
-  [proxy-info]
-  (let [{:keys [http-proxy https-proxy]} proxy-info]
-    (cond-> []
-      http-proxy (concat  [(str "-Dhttp.proxyHost=" (:host http-proxy))
-                           (str "-Dhttp.proxyPort=" (:port http-proxy))])
-      https-proxy (concat [(str "-Dhttps.proxyHost=" (:host https-proxy))
-                           (str "-Dhttps.proxyPort=" (:port https-proxy))]))))
+  [{:keys [http-proxy https-proxy]}]
+  (cond-> []
+    http-proxy (concat  [(str "-Dhttp.proxyHost=" (:host http-proxy))
+                         (str "-Dhttp.proxyPort=" (:port http-proxy))])
+    https-proxy (concat [(str "-Dhttps.proxyHost=" (:host https-proxy))
+                         (str "-Dhttps.proxyPort=" (:port https-proxy))])))
 
-(def parse-opts->keyword
+(def ^:private parse-opts->keyword
   {"-J" :jvm-opts
    "-R" :resolve-aliases
    "-C" :classpath-aliases
    "-A" :repl-aliases
    })
 
-(def bool-opts->keyword
+(def ^:private bool-opts->keyword
   {"-Spath" :print-classpath
    "-Sverbose" :verbose
    "-Strace" :trace
@@ -516,20 +512,22 @@ public class ClojureToolsDownloader {
    "-Spom" :pom
    "-P" :prep})
 
-(def string-opts->keyword
+(def ^:private string-opts->keyword
   {"-Sdeps" :deps-data
    "-Scp" :force-cp
    "-Sdeps-file" :deps-file
    "-Scommand" :command
    "-Sthreads" :threads})
 
-(defn non-blank [s]
+(defn ^:private non-blank [s]
   (when-not (str/blank? s)
     s))
 
-(def vconj (fnil conj []))
+(def ^:private vconj (fnil conj []))
 
-(defn parse-args [args]
+(defn parse-cli-opts
+  "Parses the command line options."
+  [args]
   (loop [args (seq args)
          acc {:mode :repl}]
     (if args
@@ -606,7 +604,7 @@ public class ClojureToolsDownloader {
   (if (instance? Path path) path
       (.toPath (io/file path))))
 
-(defn unixify
+(defn- unixify
   ^Path [f]
   (as-path (if windows?
              (-> f as-path .toUri .getPath)
@@ -622,32 +620,46 @@ public class ClojureToolsDownloader {
                         (unixify (.toAbsolutePath (as-path f)))))
       f)))
 
-(defn calculate-env-tools-dir []
+(defn get-env-tools-dir
+  "Retrieves the tools-directory from environment variable `DEPS_CLJ_TOOLS_DIR`"
+  []
   (or
     ;; legacy name
     (*getenv-fn* "CLOJURE_TOOLS_DIR")
     (*getenv-fn* "DEPS_CLJ_TOOLS_DIR")))
 
-(defn calculate-tools-dir []
+(defn get-tools-dir
+  "Retrieves the tools directory where tools jar is located (after download).
+  Defaults to ~/.deps.clj/<version>/ClojureTools."
+  [{:keys []}]
   (let [{:keys [ct-base-dir]} @clojure-tools-info*]
-    (or (calculate-env-tools-dir)
+    (or (get-env-tools-dir)
         (.getPath (io/file (home-dir)
                            ".deps.clj"
                            @version
                            ct-base-dir)))))
 
-(defn calculate-config-dir []
+(defn get-config-dir
+  "Retrieves configuration directory.
+  First tries `CLJ_CONFIG` env var, then `$XDG_CONFIG_HOME/clojure`, then ~/.clojure."
+  [{:keys []}]
   (or (*getenv-fn* "CLJ_CONFIG")
       (when-let [xdg-config-home (*getenv-fn* "XDG_CONFIG_HOME")]
         (.getPath (io/file xdg-config-home "clojure")))
       (.getPath (io/file (home-dir) ".clojure"))))
 
-(defn calculate-deps-edn [opts]
-  (or (:deps-file opts)
+(defn get-local-deps-edn
+  "Returns the path of the `deps.edn` file (as string) in the current directory or as set by `-Sdeps-file`.
+  Required options:
+  * `:cli-opts`: command line options as parsed by `parse-opts`"
+  [{:keys [cli-opts]}]
+  (or (:deps-file cli-opts)
       (.getPath (io/file *dir* "deps.edn"))))
 
-(defn calculate-cache-dir [deps-edn config-dir]
-  ;; Determine whether to use user or project cache
+(defn get-cache-dir
+  "Returns cache dir (`.cpcache`) from either local dir, if `deps-edn`
+  exists, or the user cache dir."
+  [{:keys [deps-edn config-dir]}]
   (let [user-cache-dir
         (or (*getenv-fn* "CLJ_CACHE")
             (when-let [xdg-config-home (*getenv-fn* "XDG_CACHE_HOME")]
@@ -657,8 +669,9 @@ public class ClojureToolsDownloader {
       (.getPath (io/file *dir* ".cpcache"))
       user-cache-dir)))
 
-(defn calculate-config-paths [opts deps-edn config-dir install-dir]
-  (if (:repro opts)
+(defn get-config-paths
+  [{:keys [cli-opts deps-edn config-dir install-dir]}]
+  (if (:repro cli-opts)
     (if install-dir
       [(.getPath (io/file install-dir "deps.edn")) deps-edn]
       [deps-edn])
@@ -704,12 +717,12 @@ public class ClojureToolsDownloader {
   archive by invoking a java subprocess passing the env variable value
   as command line options."
   [& command-line-args]
-  (let [opts (parse-args command-line-args)
+  (let [cli-opts (parse-cli-opts command-line-args)
         {:keys [ct-jar-name]} @clojure-tools-info*
         debug (*getenv-fn* "DEPS_CLJ_DEBUG")
         java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
-        env-tools-dir (calculate-env-tools-dir)
-        tools-dir (calculate-tools-dir)
+        env-tools-dir (get-env-tools-dir)
+        tools-dir (get-tools-dir {})
         install-dir tools-dir
         libexec-dir (if env-tools-dir
                       (let [f (io/file env-tools-dir "libexec")]
@@ -719,29 +732,29 @@ public class ClojureToolsDownloader {
                       tools-dir)
         tools-jar (io/file libexec-dir ct-jar-name)
         exec-jar (io/file libexec-dir "exec.jar")
-        proxy-settings (jvm-proxy-settings (env-proxy-info))
+        proxy-settings (jvm-proxy-opts (get-proxy-info))
         clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
         tools-cp
         (or
          (when (.exists tools-jar) (.getPath tools-jar))
          (binding [*out* *err*]
            (warn "Clojure tools not yet in expected location:" (str tools-jar))
-           (let [java-clj-jvm-opts (when clj-jvm-opts (vec (concat clj-jvm-opts
+           (let [jvm-opts (when clj-jvm-opts (vec (concat clj-jvm-opts
                                                                    proxy-settings)))]
-             (clojure-tools-jar-download libexec-dir java-clj-jvm-opts {:debug debug}))
+             (clojure-tools-download-jar! {:out-dir libexec-dir :debug debug :jvm-opts jvm-opts}))
            tools-jar))
-        mode (:mode opts)
+        mode (:mode cli-opts)
         exec? (= :exec mode)
         tool? (= :tool mode)
         exec-cp (when (or exec? tool?)
                   (.getPath exec-jar))
-        deps-edn (calculate-deps-edn opts)
+        deps-edn (get-local-deps-edn {:cli-opts cli-opts})
         clj-main-cmd
         (vec (concat java-cmd
                      clj-jvm-opts
                      proxy-settings
                      ["-classpath" tools-cp "clojure.main"]))
-        config-dir (calculate-config-dir)
+        config-dir (get-config-dir {})
         java-opts (some-> (*getenv-fn* "JAVA_OPTS") (str/split #" "))]
     ;; If user config directory does not exist, create it
     (let [config-dir (io/file config-dir)]
@@ -763,21 +776,23 @@ public class ClojureToolsDownloader {
     ;; Determine user cache directory
     (let [;; Chain deps.edn in config paths. repro=skip config dir
           config-user
-          (when-not (:repro opts)
+          (when-not (:repro cli-opts)
             (.getPath (io/file config-dir "deps.edn")))
           config-project deps-edn
-          config-paths (calculate-config-paths opts deps-edn config-dir install-dir)
-          cache-dir (calculate-cache-dir deps-edn config-dir)
+          config-paths (get-config-paths {:cli-opts cli-opts :deps-edn deps-edn
+                                          :config-dir config-dir
+                                          :install-dir install-dir})
+          cache-dir (get-cache-dir {:deps-edn deps-edn :config-dir config-dir})
           ;; Construct location of cached classpath file
-          tool-name (:tool-name opts)
-          tool-aliases (:tool-aliases opts)
-          ck (calculate-checksum opts config-paths)
+          tool-name (:tool-name cli-opts)
+          tool-aliases (:tool-aliases cli-opts)
+          ck (calculate-checksum cli-opts config-paths)
           cp-file (.getPath (io/file cache-dir (str ck ".cp")))
           jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
           main-file (.getPath (io/file cache-dir (str ck ".main")))
           basis-file (.getPath (io/file cache-dir (str ck ".basis")))
           manifest-file (.getPath (io/file cache-dir (str ck ".manifest")))
-          _ (when (:verbose opts)
+          _ (when (:verbose cli-opts)
               (println "deps.clj version =" deps-clj-version)
               (println "version          =" @version)
               (when install-dir (println "install_dir      =" install-dir))
@@ -786,14 +801,14 @@ public class ClojureToolsDownloader {
               (println "cache_dir        =" cache-dir)
               (println "cp_file          =" cp-file)
               (println))
-          tree? (:tree opts)
+          tree? (:tree cli-opts)
           ;; Check for stale classpath file
           cp-file (io/file cp-file)
           stale
-          (or (:force opts)
-              (:trace opts)
+          (or (:force cli-opts)
+              (:trace cli-opts)
               tree?
-              (:prep opts)
+              (:prep cli-opts)
               (not (.exists cp-file))
               (when tool-name
                 (let [tool-file (io/file config-dir "tools" (str tool-name ".edn"))]
@@ -821,34 +836,34 @@ public class ClojureToolsDownloader {
                           (not (.exists (io/file entry)))))
                       entries)))
           tools-args
-          (when (or stale (:pom opts))
+          (when (or stale (:pom cli-opts))
             (cond-> []
-              (not (str/blank? (:deps-data opts)))
-              (conj "--config-data" (:deps-data opts))
-              (:main-aliases opts)
-              (conj (str "-M" (:main-aliases opts)))
-              (:repl-aliases opts)
-              (conj (str "-A" (str/join "" (:repl-aliases opts))))
-              (:exec-aliases opts)
-              (conj (str "-X" (:exec-aliases opts)))
+              (not (str/blank? (:deps-data cli-opts)))
+              (conj "--config-data" (:deps-data cli-opts))
+              (:main-aliases cli-opts)
+              (conj (str "-M" (:main-aliases cli-opts)))
+              (:repl-aliases cli-opts)
+              (conj (str "-A" (str/join "" (:repl-aliases cli-opts))))
+              (:exec-aliases cli-opts)
+              (conj (str "-X" (:exec-aliases cli-opts)))
               tool?
               (conj "--tool-mode")
               tool-name
               (conj "--tool-name" tool-name)
               tool-aliases
               (conj (str "-T" tool-aliases))
-              (:force-cp opts)
+              (:force-cp cli-opts)
               (conj "--skip-cp")
-              (:threads opts)
-              (conj "--threads" (:threads opts))
-              (:trace opts)
+              (:threads cli-opts)
+              (conj "--threads" (:threads cli-opts))
+              (:trace cli-opts)
               (conj "--trace")
               tree?
               (conj "--tree")))
-          classpath-not-needed? (boolean (some #(% opts) [:describe :help :version]))]
+          classpath-not-needed? (boolean (some #(% cli-opts) [:describe :help :version]))]
       ;;  If stale, run make-classpath to refresh cached classpath
       (when (and stale (not classpath-not-needed?))
-        (when (:verbose opts)
+        (when (:verbose cli-opts)
           (warn "Refreshing classpath"))
         (let [res (shell-command (into clj-main-cmd
                                        (concat
@@ -865,23 +880,23 @@ public class ClojureToolsDownloader {
           (when tree?
             (print res) (flush))))
       (let [cp (cond (or classpath-not-needed?
-                         (:prep opts)) nil
-                     (not (str/blank? (:force-cp opts))) (:force-cp opts)
+                         (:prep cli-opts)) nil
+                     (not (str/blank? (:force-cp cli-opts))) (:force-cp cli-opts)
                      :else (slurp cp-file))]
-        (cond (:help opts) (do (println @help-text)
+        (cond (:help cli-opts) (do (println @help-text)
                                (*exit-fn* 0))
-              (:version opts) (do (println "Clojure CLI version (deps.clj)" @version)
+              (:version cli-opts) (do (println "Clojure CLI version (deps.clj)" @version)
                                   (*exit-fn* 0))
-              (:prep opts) (*exit-fn* 0)
-              (:pom opts)
+              (:prep cli-opts) (*exit-fn* 0)
+              (:pom cli-opts)
               (shell-command (into clj-main-cmd
                                    ["-m" "clojure.tools.deps.script.generate-manifest2"
                                     "--config-user" config-user
                                     "--config-project" (relativize config-project)
                                     "--gen=pom" (str/join " " tools-args)]))
-              (:print-classpath opts)
+              (:print-classpath cli-opts)
               (println cp)
-              (:describe opts)
+              (:describe cli-opts)
               (describe [[:deps-clj-version deps-clj-version]
                          [:version @version]
                          [:config-files (filterv #(.exists (io/file %)) config-paths)]
@@ -890,21 +905,21 @@ public class ClojureToolsDownloader {
                          (when install-dir [:install-dir install-dir])
                          [:config-dir config-dir]
                          [:cache-dir cache-dir]
-                         [:force (boolean (:force opts))]
-                         [:repro (boolean (:repro opts))]
-                         [:main-aliases (str (:main-aliases opts))]
-                         [:all-aliases (str (:all-aliases opts))]])
+                         [:force (boolean (:force cli-opts))]
+                         [:repro (boolean (:repro cli-opts))]
+                         [:main-aliases (str (:main-aliases cli-opts))]
+                         [:all-aliases (str (:all-aliases cli-opts))]])
               tree? (*exit-fn* 0)
-              (:trace opts)
+              (:trace cli-opts)
               (warn "Wrote trace.edn")
-              (:command opts)
-              (let [command (str/replace (:command opts) "{{classpath}}" (str cp))
+              (:command cli-opts)
+              (let [command (str/replace (:command cli-opts) "{{classpath}}" (str cp))
                     main-cache-opts (when (.exists (io/file main-file))
                                       (-> main-file slurp str/split-lines))
                     main-cache-opts (str/join " " main-cache-opts)
                     command (str/replace command "{{main-opts}}" (str main-cache-opts))
                     command (str/split command #"\s+")
-                    command (into command (:args opts))]
+                    command (into command (:args cli-opts))]
                 (*process-fn* command))
               :else
               (let [jvm-cache-opts (when (.exists (io/file jvm-file))
@@ -921,14 +936,14 @@ public class ClojureToolsDownloader {
                                       java-opts
                                       proxy-settings
                                       jvm-cache-opts
-                                      (:jvm-opts opts)
+                                      (:jvm-opts cli-opts)
                                       [(str "-Dclojure.basis=" (relativize basis-file))
                                        "-classpath" cp
                                        "clojure.main"]
                                       main-opts)
                     main-args (filterv some? main-args)
-                    main-args (into main-args (:args opts))]
+                    main-args (into main-args (:args cli-opts))]
                 (when (and (= :repl mode)
-                           (pos? (count (:args opts))))
+                           (pos? (count (:args cli-opts))))
                   (warn "WARNING: Implicit use of clojure.main with options is deprecated, use -M"))
                 (*process-fn* main-args)))))))
