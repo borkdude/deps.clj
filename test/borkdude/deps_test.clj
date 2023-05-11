@@ -205,8 +205,8 @@
   program, but throws an exception in case of error while is still in
   the `babashka.deps` scope."
   [env-vars & body]
-  (let [body-str (pr-str body)]
-    `(let [shell-command# @#'deps/shell-command
+ (let [body-str (pr-str body)]
+    `(let [shell-command# @#'deps/internal-shell-command
            ret*# (promise)
            sh-mock# (fn mock#
                       ([args#]
