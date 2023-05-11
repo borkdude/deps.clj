@@ -18,9 +18,10 @@
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
              "1.11.1.1273")))
 
-(def cache-version "4")
+(def ^:private cache-version "4")
 
 (def deps-clj-version
+  "The current version of deps.clj"
   (-> (io/resource "DEPS_CLJ_VERSION")
       (slurp)
       (str/trim)))
@@ -417,7 +418,7 @@ public class ClojureToolsDownloader {
         System.exit(1); }}}"))
     dest-file))
 
-(defn- clojure-tools-download-java!
+(defn clojure-tools-download-java!
   "Downloads `:url` zip file to `:dest` by invoking `java` with
   `:jvm-opts` on a `.java` program file, and returns true on
   success. Requires Java 11+ (JEP 330)."
@@ -447,7 +448,7 @@ public class ClojureToolsDownloader {
    Should return true if the download was successful, or false if not."
   nil)
 
-(defn clojure-tools-download-jar!
+(defn clojure-tools-download!
   "Downloads clojure tools archive in `:out-dir`, if not already there,
   and extracts in-place the clojure tools jar file and other important
   files.
@@ -744,7 +745,7 @@ public class ClojureToolsDownloader {
            (warn "Clojure tools not yet in expected location:" (str tools-jar))
            (let [jvm-opts (when clj-jvm-opts (vec (concat clj-jvm-opts
                                                                    proxy-settings)))]
-             (clojure-tools-download-jar! {:out-dir libexec-dir :debug debug :jvm-opts jvm-opts}))
+             (clojure-tools-download! {:out-dir libexec-dir :debug debug :jvm-opts jvm-opts}))
            tools-jar))
         mode (:mode cli-opts)
         exec? (= :exec mode)
