@@ -217,17 +217,17 @@
                          ret#)))]
        ;; need to override both *process-fn* and deps/shell-command.
        (binding [deps/*clojure-process-fn* (fn ~'[{:keys [cmd]}]
-                                             (prn :cmd ~'cmd)
                                              (sh-mock# ~'cmd))
+                 deps/*aux-process-fn* (fn ~'[{:keys [cmd out]}]
+                                         (sh-mock# ~'cmd {:to-string? (= :string ~'out)}))
                  deps/*exit-fn* (fn [{:keys [~'exit ~'message]}]
                                   (when ~'message
                                     (throw (ex-info "mock-shell-failed"
                                                     {:exit-code ~'exit :msg ~'message}))))
                  deps/*getenv-fn* #(or (get ~env-vars %)
                                        (System/getenv %))]
-         (with-redefs [deps/shell-command sh-mock#]
-           ~@body
-           (or (deref ret*# 500 false) (ex-info "No shell-command invoked in body." {:body ~body-str})))))))
+         ~@body
+         (or (deref ret*# 500 false) (ex-info "No shell-command invoked in body." {:body ~body-str}))))))
 
 (defn java-major-version-get
   "Returns the major version number of the java executable used to run

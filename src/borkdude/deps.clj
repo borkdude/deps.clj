@@ -115,7 +115,19 @@
          exit-code (.waitFor proc)]
      (when (not (zero? exit-code))
        (*exit-fn* {:exit exit-code}))
-     string-out)))
+     {:out string-out
+      :exit exit-code})))
+
+(defn ^:dynamic *aux-process-fn*
+  "Invokes `java` with arguments to calculate claspath etc  May
+  be replacement by rebinding this dynamic var.
+
+  Called with a map of:
+
+  - `:cmd`: a vector of strings
+  - `:out`: if set to `:string`, `:out` key in result contains stdout"
+  [{:keys [cmd out]}]
+  (shell-command cmd {:to-string? (= :string out)}))
 
 (defn ^:dynamic *clojure-process-fn*
   "Invokes `java` with arguments to `clojure.main` to start Clojure. May
@@ -450,10 +462,10 @@ public class ClojureToolsDownloader {
                           (when-not (= exit 0)
                             (warn message)
                             (reset! success?* false)))]
-      (shell-command (vec (concat java-cmd
-                                  clj-jvm-opts
-                                  (proxy-jvm-opts proxy-opts)
-                                  [dlr-path url (str dest)])))
+      (*aux-process-fn* {:cmd (vec (concat java-cmd
+                                           clj-jvm-opts
+                                           (proxy-jvm-opts proxy-opts)
+                                           [dlr-path url (str dest)]))})
       (io/delete-file dlr-path true)
       @success?*)))
 
@@ -888,20 +900,21 @@ public class ClojureToolsDownloader {
       (when (and stale (not classpath-not-needed?))
         (when (:verbose cli-opts)
           (warn "Refreshing classpath"))
-        (let [res (shell-command (into clj-main-cmd
-                                       (concat
-                                        ["-m" "clojure.tools.deps.script.make-classpath2"
-                                         "--config-user" config-user
-                                         "--config-project" (relativize config-project)
-                                         "--basis-file" (relativize basis-file)
-                                         "--cp-file" (relativize cp-file)
-                                         "--jvm-file" (relativize jvm-file)
-                                         "--main-file" (relativize main-file)
-                                         "--manifest-file" (relativize manifest-file)]
-                                        tools-args))
-                                 {:to-string? tree?})]
+        (let [{:keys [out]} (*aux-process-fn* {:cmd (into clj-main-cmd
+                                                          (concat
+                                                           ["-m" "clojure.tools.deps.script.make-classpath2"
+                                                            "--config-user" config-user
+                                                            "--config-project" (relativize config-project)
+                                                            "--basis-file" (relativize basis-file)
+                                                            "--cp-file" (relativize cp-file)
+                                                            "--jvm-file" (relativize jvm-file)
+                                                            "--main-file" (relativize main-file)
+                                                            "--manifest-file" (relativize manifest-file)]
+                                                           tools-args))
+                                               :out (when tree?
+                                                      :string)})]
           (when tree?
-            (print res) (flush))))
+            (print out) (flush))))
       (let [cp (cond (or classpath-not-needed?
                          (:prep cli-opts)) nil
                      (not (str/blank? (:force-cp cli-opts))) (:force-cp cli-opts)
@@ -912,11 +925,11 @@ public class ClojureToolsDownloader {
                                       (*exit-fn* {:exit 0}))
               (:prep cli-opts) (*exit-fn* {:exit 0})
               (:pom cli-opts)
-              (shell-command (into clj-main-cmd
-                                   ["-m" "clojure.tools.deps.script.generate-manifest2"
-                                    "--config-user" config-user
-                                    "--config-project" (relativize config-project)
-                                    "--gen=pom" (str/join " " tools-args)]))
+              (*aux-process-fn* {:cmd (into clj-main-cmd
+                                            ["-m" "clojure.tools.deps.script.generate-manifest2"
+                                             "--config-user" config-user
+                                             "--config-project" (relativize config-project)
+                                             "--gen=pom" (str/join " " tools-args)])})
               (:print-classpath cli-opts)
               (println cp)
               (:describe cli-opts)
