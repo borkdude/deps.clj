@@ -84,11 +84,10 @@
   :msg The process's error messsage (if any)."
   [& command-line-args]
   `(binding [deps/*exit-fn*
-             (fn
-               ([exit-code#] (when-not (= exit-code# 0)
-                               (throw (ex-info (str ::deps-main-throw) {:exit-code exit-code#}))))
-               ([exit-code# msg#] (throw (ex-info (str ::deps-main-throw)
-                                                  {:exit-code exit-code# :msg msg#}))))]
+             (fn [{:keys [~'exit ~'message]}]
+               (when ~'message
+                 (throw (ex-info (str ::deps-main-throw)
+                                 {:exit-code ~'exit :msg ~'message}))))]
      (deps/-main ~@command-line-args)))
 
 (deftest whitespace-test
@@ -218,11 +217,10 @@
                          ret#)))]
        ;; need to override both *process-fn* and deps/shell-command.
        (binding [deps/*process-fn* sh-mock#
-                 deps/*exit-fn* (fn
-                                  ([exit-code#] (when-not (= exit-code# 0)
-                                                  (throw (ex-info "mock-shell-failed" {:exit-code exit-code#}))))
-                                  ([exit-code# msg#] (throw (ex-info "mock-shell-failed"
-                                                                     {:exit-code exit-code# :msg msg#}))))
+                 deps/*exit-fn* (fn [{:keys [~'exit ~'message]}]
+                                  (when ~'message
+                                    (throw (ex-info "mock-shell-failed"
+                                                    {:exit-code ~'exit :msg ~'message}))))
                  deps/*getenv-fn* #(or (get ~env-vars %)
                                        (System/getenv %))]
          (with-redefs [deps/shell-command sh-mock#]
@@ -345,15 +343,17 @@
                         (fn [& _] (throw (Exception. "Direct should not be called.")))]
             (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)} %)
                                             (System/getenv %))
-                      deps/*custom-clojure-tool-downloader*
-                      (fn [_url dest-path _proxy-info]
+                      deps/*clojure-tools-download-fn*
+                      (fn [{:keys [url dest] :as opts}]
                         ; Simulate download by creating dummy file and copying to
                         ; specified destination location
+                        (is (str/starts-with? url "http"))
+                        (is (contains? opts :clj-jvm-opts))
+                        (is (contains? opts :proxy-opts))
                         (let [tools-zip-file (clojure-tools-dummy-zip-file-create (str temp-dir))
-                              dest-zip-file (fs/file dest-path)]
+                              dest-zip-file (fs/file dest)]
                           (fs/copy tools-zip-file dest-zip-file)
                           true))]
-
               (deps-main-throw "--version")
               (is (fs/exists? dest-jar-file)))))))
 
