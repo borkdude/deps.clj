@@ -117,7 +117,11 @@
        (*exit-fn* {:exit exit-code}))
      string-out)))
 
-(def ^:private ^:dynamic *process-fn* shell-command)
+(defn ^:dynamic *clojure-process-fn*
+  "Invokes `java` with arguments to `clojure.main` to start Clojure. May
+  be replacement by rebinding this dynamic var."
+  [{:keys [cmd]}]
+  (shell-command cmd))
 
 (def ^:private help-text (delay (str "Version: " @version "
 
@@ -939,7 +943,7 @@ public class ClojureToolsDownloader {
                     command (str/replace command "{{main-opts}}" (str main-cache-opts))
                     command (str/split command #"\s+")
                     command (into command (:args cli-opts))]
-                (*process-fn* command))
+                (*clojure-process-fn* {:cmd command}))
               :else
               (let [jvm-cache-opts (when (.exists (io/file jvm-file))
                                      (-> jvm-file slurp str/split-lines))
@@ -965,4 +969,4 @@ public class ClojureToolsDownloader {
                 (when (and (= :repl mode)
                            (pos? (count (:args cli-opts))))
                   (warn "WARNING: Implicit use of clojure.main with options is deprecated, use -M"))
-                (*process-fn* main-args)))))))
+                (*clojure-process-fn* {:cmd main-args})))))))

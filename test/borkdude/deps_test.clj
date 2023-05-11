@@ -216,7 +216,9 @@
                          (deliver ret*# args#)
                          ret#)))]
        ;; need to override both *process-fn* and deps/shell-command.
-       (binding [deps/*process-fn* sh-mock#
+       (binding [deps/*clojure-process-fn* (fn ~'[{:keys [cmd]}]
+                                             (prn :cmd ~'cmd)
+                                             (sh-mock# ~'cmd))
                  deps/*exit-fn* (fn [{:keys [~'exit ~'message]}]
                                   (when ~'message
                                     (throw (ex-info "mock-shell-failed"
