@@ -13,11 +13,12 @@
     -  [`get-cache-dir`](#borkdude.deps/get-cache-dir) - Returns cache dir (<code>.cpcache</code>) from either local dir, if <code>deps-edn</code> exists, or the user cache dir.
     -  [`get-config-dir`](#borkdude.deps/get-config-dir) - Retrieves configuration directory.
     -  [`get-config-paths`](#borkdude.deps/get-config-paths) - Returns vec of configuration paths, i.e.
+    -  [`get-help`](#borkdude.deps/get-help) - Returns help text as string.
     -  [`get-install-dir`](#borkdude.deps/get-install-dir) - Retrieves the install directory where tools jar is located (after download).
     -  [`get-local-deps-edn`](#borkdude.deps/get-local-deps-edn) - Returns the path of the <code>deps.edn</code> file (as string) in the current directory or as set by <code>-Sdeps-file</code>.
     -  [`get-proxy-info`](#borkdude.deps/get-proxy-info) - Returns a map with proxy information parsed from env vars.
-    -  [`help-text`](#borkdude.deps/help-text)
     -  [`parse-cli-opts`](#borkdude.deps/parse-cli-opts) - Parses the command line options.
+    -  [`print-help`](#borkdude.deps/print-help) - Print help text.
     -  [`proxy-jvm-opts`](#borkdude.deps/proxy-jvm-opts) - Returns a vector containing the JVM system property arguments to be passed to a new process to set its proxy system properties.
     -  [`set-proxy-system-props!`](#borkdude.deps/set-proxy-system-props!) - Sets the proxy system properties in the current JVM.
 
@@ -99,7 +100,7 @@ See [`help-text`](#borkdude.deps/help-text).
   env variable is set and a succesful attempt is made to download the
   archive by invoking a java subprocess passing the env variable value
   as command line options.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L712-L958">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L722-L968">Source</a></sub></p>
 
 ## <a name="borkdude.deps/clojure-tools-download!">`clojure-tools-download!`</a><a name="borkdude.deps/clojure-tools-download!"></a>
 ``` clojure
@@ -180,6 +181,15 @@ Returns vec of configuration paths, i.e. deps.edn from:
   - `:deps-edn` as obtained through [`get-local-deps-edn`](#borkdude.deps/get-local-deps-edn)
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L678-L693">Source</a></sub></p>
 
+## <a name="borkdude.deps/get-help">`get-help`</a><a name="borkdude.deps/get-help"></a>
+``` clojure
+
+(get-help)
+```
+
+Returns help text as string.
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L712-L715">Source</a></sub></p>
+
 ## <a name="borkdude.deps/get-install-dir">`get-install-dir`</a><a name="borkdude.deps/get-install-dir"></a>
 ``` clojure
 
@@ -213,12 +223,6 @@ Returns a map with proxy information parsed from env vars. The map
    with :host and :port entries.
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L293-L305">Source</a></sub></p>
 
-## <a name="borkdude.deps/help-text">`help-text`</a><a name="borkdude.deps/help-text"></a>
-
-
-
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L122-L202">Source</a></sub></p>
-
 ## <a name="borkdude.deps/parse-cli-opts">`parse-cli-opts`</a><a name="borkdude.deps/parse-cli-opts"></a>
 ``` clojure
 
@@ -227,6 +231,15 @@ Returns a map with proxy information parsed from env vars. The map
 
 Parses the command line options.
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L534-L605">Source</a></sub></p>
+
+## <a name="borkdude.deps/print-help">`print-help`</a><a name="borkdude.deps/print-help"></a>
+``` clojure
+
+(print-help)
+```
+
+Print help text
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L717-L720">Source</a></sub></p>
 
 ## <a name="borkdude.deps/proxy-jvm-opts">`proxy-jvm-opts`</a><a name="borkdude.deps/proxy-jvm-opts"></a>
 ``` clojure

@@ -119,7 +119,7 @@
 
 (def ^:private ^:dynamic *process-fn* shell-command)
 
-(def help-text (delay (str "Version: " @version "
+(def ^:private help-text (delay (str "Version: " @version "
 
 You use the Clojure tools ('clj' or 'clojure') to run Clojure programs
 on the JVM, e.g. to start a REPL or invoke a specific function with data.
@@ -709,6 +709,16 @@ public class ClojureToolsDownloader {
                                config-paths)))]
     (cksum val*)))
 
+(defn get-help
+  "Returns help text as string."
+  []
+  @help-text)
+
+(defn print-help
+  "Print help text"
+  []
+  (println @help-text))
+
 (defn -main
   "See `help-text`.
 
@@ -892,7 +902,7 @@ public class ClojureToolsDownloader {
                          (:prep cli-opts)) nil
                      (not (str/blank? (:force-cp cli-opts))) (:force-cp cli-opts)
                      :else (slurp cp-file))]
-        (cond (:help cli-opts) (do (println @help-text)
+        (cond (:help cli-opts) (do (print-help)
                                    (*exit-fn* {:exit 0}))
               (:version cli-opts) (do (println "Clojure CLI version (deps.clj)" @version)
                                       (*exit-fn* {:exit 0}))
