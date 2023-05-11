@@ -5,10 +5,9 @@
    [borkdude.deps :as deps]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
+   [clojure.set :as set]
    [clojure.string :as str]
-   [clojure.test :as t :refer [deftest is testing]]
-   [clojure.set :as set])
-
+   [clojure.test :as t :refer [deftest is testing]])
   (:import [java.util.zip ZipEntry ZipOutputStream]))
 
 ;; Print out information about the java executable that will be used
@@ -37,8 +36,8 @@
                  (apply str "bb -cp " classpath " -m borkdude.deps " args))
     "native" (apply str "./deps " args)
     "clojure" (cond->>
-                  (apply str "clojure -M -m borkdude.deps " args)
-                #'deps/windows?
+               (apply str "clojure -M -m borkdude.deps " args)
+                @#'deps/windows?
                 ;; the `exit` command is a workaround for
                 ;; https://ask.clojure.org/index.php/12290/clojuretools-commands-windows-properly-exit-code-failure
                 (format "powershell -NoProfile -Command %s; exit $LASTEXITCODE"))))
@@ -88,8 +87,8 @@
              (fn
                ([exit-code#] (when-not (= exit-code# 0)
                                (throw (ex-info (str ::deps-main-throw) {:exit-code exit-code#}))))
-               ([exit-code# msg#] (throw  (ex-info (str ::deps-main-throw)
-                                                   {:exit-code exit-code# :msg msg#}))))]
+               ([exit-code# msg#] (throw (ex-info (str ::deps-main-throw)
+                                                  {:exit-code exit-code# :msg msg#}))))]
      (deps/-main ~@command-line-args)))
 
 (deftest whitespace-test
@@ -108,7 +107,7 @@
           temp-file-path (str temp-file)
           _ (deps-main-throw "-Sdeps"
                              (format
-                              (if-not #'deps/windows?
+                              (if-not @#'deps/windows?
                                 "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\"%s\\\" (+ 1 2 3))\"]}}}"
                                 "{:aliases {:space {:main-opts [\"-e\" \"(spit \\\\\"%s\\\\\" (+ 1 2 3))\"]}}}")
                               (.toURI (fs/file temp-file-path)))
@@ -149,7 +148,7 @@
                      "-M" "-e" (format "
 (spit \"%s\" (pr-str [(System/getProperty \"foo\") (System/getProperty \"baz\")]))"
                                        (.toURI (fs/file temp-file-path))))
-    (is (= ["bar" "quux"] (edn/read-string  (slurp temp-file-path))))))
+    (is (= ["bar" "quux"] (edn/read-string (slurp temp-file-path))))))
 
 (deftest tools-dir-env-test
   (fs/delete-tree "tools-dir")
@@ -208,7 +207,7 @@
   the `babashka.deps` scope."
   [env-vars & body]
   (let [body-str (pr-str body)]
-    `(let [shell-command# deps/shell-command
+    `(let [shell-command# @#'deps/shell-command
            ret*# (promise)
            sh-mock# (fn mock#
                       ([args#]
@@ -222,8 +221,8 @@
                  deps/*exit-fn* (fn
                                   ([exit-code#] (when-not (= exit-code# 0)
                                                   (throw (ex-info "mock-shell-failed" {:exit-code exit-code#}))))
-                                  ([exit-code# msg#] (throw  (ex-info "mock-shell-failed"
-                                                                      {:exit-code exit-code# :msg msg#}))))
+                                  ([exit-code# msg#] (throw (ex-info "mock-shell-failed"
+                                                                     {:exit-code exit-code# :msg msg#}))))
                  deps/*getenv-fn* #(or (get ~env-vars %)
                                        (System/getenv %))]
          (with-redefs [deps/shell-command sh-mock#]
@@ -249,7 +248,7 @@
   (let [{:keys [ct-base-dir ct-aux-files-names ct-jar-name]} @@#'deps/clojure-tools-info*
         file (io/file out-dir "borkdude-deps-test-dummy-tools.zip")]
     (with-open [os (io/output-stream file)
-                zip  (ZipOutputStream. os)]
+                zip (ZipOutputStream. os)]
       (doseq [entry (into [ct-jar-name] ct-aux-files-names)]
         (doto zip
           (.putNextEntry (ZipEntry. (str ct-base-dir "/" entry)))
@@ -424,7 +423,7 @@
   (let [deps-map (pr-str '{:mvn/local-repo "test/mvn" :deps {medley/medley {:mvn/version "1.4.0"}
                                                              io.github.borkdude/quickblog {:git/sha "8f5898ee911101a96295f59bb5ffc7517757bc8f"}}})
         delete #(do (fs/delete-tree (fs/file "test" "mvn"))
-                    (fs/delete-tree (fs/file (or (some-> (System/getenv "GITLIBS") (fs/file ))
+                    (fs/delete-tree (fs/file (or (some-> (System/getenv "GITLIBS") (fs/file))
                                                  (fs/file (System/getProperty "user.dir" ".gitlibs")))
                                              "libs" "io.github.borkdude/quickblog" "8f5898ee911101a96295f59bb5ffc7517757bc8f")))
         test #(deps/-main "-Sdeps" deps-map "-M" "-e" "(require '[medley.core]) (require '[quickblog.api])")]
