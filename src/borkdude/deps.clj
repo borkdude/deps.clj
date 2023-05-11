@@ -36,8 +36,7 @@
             (with-out-str
               (apply println strs))))
 
-(defn ^:dynamic
-  *exit-fn*
+(defn ^:dynamic *exit-fn*
   "Function that is called on exit with `:exit` code and `:message`, an exceptional message when exit is non-zero"
   [{:keys [exit message]}]
   (when message (warn message))
