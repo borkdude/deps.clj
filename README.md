@@ -352,7 +352,8 @@ $ clj -Sdeps '{:deps {babashka/process {:mvn/version "0.5.19"}}}'
   (with-out-str (deps/-main "-Sforce" "-M" "-e" (pr-str '(System/getenv "FOO")))))
 
 ;;=>
-Calling aux process with cmd: /usr/bin/java -XX:-OmitStackTraceInFastThrow -classpath ... -e (System/getenv "FOO")
+Calling aux process with cmd: /usr/bin/java -XX:-OmitStackTraceInFastThrow -classpath ...
+Calling Clojure with command: /usr/bin/java -XX:-OmitStackTraceInFastThrow -Dclojure.basis=... clojure.main -e (System/getenv "FOO")
 "\"BAR\"\n"
 ```
 
