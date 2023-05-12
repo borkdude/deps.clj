@@ -482,7 +482,8 @@ public class ClojureToolsDownloader {
    - `:dest`: The path to the file to download it to, as a string
    - `:proxy-opts`: a map as returned by `get-proxy-info`
    - `:clj-jvm-opts`: a vector of JVM opts (as passed on the command line).
-   Should return true if the `download` was successful, or false if not."
+
+  Should return `true` if the download was successful, or false if not."
   nil)
 
 (defn clojure-tools-download!
