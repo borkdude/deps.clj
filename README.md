@@ -318,9 +318,7 @@ applications, rather than just using it from the command line directly.
 
 See [API.md](API.md) docs.
 
-Examples:
-
-Parse CLI options:
+E.g to parse CLI options:
 
 ``` clojure
 (require '[borkdude.deps :as deps])
@@ -356,6 +354,36 @@ $ clj -Sdeps '{:deps {babashka/process {:mvn/version "0.5.19"}}}'
 ;;=>
 Calling aux process with cmd: /usr/bin/java -XX:-OmitStackTraceInFastThrow -classpath ... -e (System/getenv "FOO")
 "\"BAR\"\n"
+```
+
+Note that you should handle the exit codes yourself when implementing your own
+`-process-fn`. If you don't do that, then `*exit-fn*` will be called, which
+defaults to exiting the process if the `:exit` code was non-zero. To prevent
+this, you can re-bind `*exit-fn*` to throwing an exception instead:
+
+Without re-binding `*exit-fn*`:
+
+``` clojure
+user=> (require '[borkdude.deps :as deps])
+nil
+user=> (deps/-main "-M" "-e" "(/ 1 0)")
+Execution error (ArithmeticException) at user/eval1 (REPL:1).
+Divide by zero
+
+Full report at:
+/var/folders/j9/xmjlcym958b1fr0npsp9msvh0000gn/T/clojure-8365878068735118865.edn
+```
+
+``` clojure
+user=> (binding [deps/*exit-fn* (fn [{:keys [exit message]}] (println "Exit code:" exit))] (deps/-main "-M" "-e" "(/ 1 0)"))
+Execution error (ArithmeticException) at user/eval1 (REPL:1).
+Divide by zero
+
+Full report at:
+/var/folders/j9/xmjlcym958b1fr0npsp9msvh0000gn/T/clojure-2500586512812528128.edn
+Exit code: 1
+{:out nil, :exit 1}
+user=> ;; we're still in the REPL
 ```
 
 ## Developing deps.clj
