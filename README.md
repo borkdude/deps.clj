@@ -328,8 +328,9 @@ Parse CLI options:
 ;;=> {:mode :main, :main-aliases nil, :args ("-m" "foo.bar")}
 ```
 
-Re-binding the auxilary process (which is used for calculating the classpath,
-pom etc). It's convenient to use babashka.process (> 0.5.19) for this:
+Re-binding the `*aux-process-fn*`, used for calculating the classpath, pom etc
+and `*clojure-process-fn*`, used for creating the actual Clojure process, gives
+you more control during the "shelling out" parts of `deps.clj`.
 
 ``` shell
 $ clj -Sdeps '{:deps {babashka/process {:mvn/version "0.5.19"}}}'
@@ -341,7 +342,7 @@ $ clj -Sdeps '{:deps {babashka/process {:mvn/version "0.5.19"}}}'
 (defn my-aux-process [{:keys [cmd out]}]
   (binding [*out* *err*]
     (apply println "Calling aux process with cmd:" cmd))
-  (p/shell {:cmd cmd :out :out :extra-env {"GITLIBS" "/tmp/gitlibs"}}))
+  (p/shell {:cmd cmd :out out :extra-env {"GITLIBS" "/tmp/gitlibs"}}))
 
 (defn my-clojure-process [{:keys [cmd out]}]
   (binding [*out* *err*]
