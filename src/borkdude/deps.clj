@@ -327,7 +327,7 @@ For more info, see:
 
 (defn set-proxy-system-props!
   "Sets the proxy system properties in the current JVM.
-   proxy-info parameter is as returned from env-proxy-info."
+   proxy-info parameter is as returned from `get-proxy-info.`"
   [{:keys [http-proxy https-proxy]}]
   (when http-proxy
     (System/setProperty "http.proxyHost" (:host http-proxy))
@@ -446,7 +446,7 @@ public class ClojureToolsDownloader {
 (defn proxy-jvm-opts
   "Returns a vector containing the JVM system property arguments to be passed to a new process
    to set its proxy system properties.
-   proxy-info parameter is as returned from env-proxy-info."
+   proxy-info parameter is as returned from `get-proxy-info.`"
   [{:keys [http-proxy https-proxy]}]
   (cond-> []
     http-proxy (concat [(str "-Dhttp.proxyHost=" (:host http-proxy))

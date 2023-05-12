@@ -270,7 +270,7 @@ Print help text
 
 Returns a vector containing the JVM system property arguments to be passed to a new process
    to set its proxy system properties.
-   proxy-info parameter is as returned from env-proxy-info.
+   proxy-info parameter is as returned from `get-proxy-info.`
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L446-L455">Source</a></sub></p>
 
 ## <a name="borkdude.deps/set-proxy-system-props!">`set-proxy-system-props!`</a><a name="borkdude.deps/set-proxy-system-props!"></a>
@@ -280,5 +280,5 @@ Returns a vector containing the JVM system property arguments to be passed to a 
 ```
 
 Sets the proxy system properties in the current JVM.
-   proxy-info parameter is as returned from env-proxy-info.
+   proxy-info parameter is as returned from `get-proxy-info.`
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L328-L337">Source</a></sub></p>
