@@ -313,7 +313,7 @@ The format of the proxy string supported is `http[s]://[username:password@]host:
 
 ## API
 
-Since version `1.11.1.1273-2`, deps.clj exposes an API so it can be embedded in
+Since version `1.11.1.1273-3`, deps.clj exposes an API so it can be embedded in
 applications, rather than just using it from the command line directly.
 
 See [API.md](API.md) docs.
