@@ -638,14 +638,15 @@ public class ClojureToolsDownloader {
              (str f))))
 
 (defn- relativize
-  "Returns relative path by comparing this with other. Returns absolute path unchanged."
+  "Returns relative path as string by comparing this with other. Returns
+  absolute path unchanged."
   ^Path [f]
-  (if (.isAbsolute (as-path f))
-    f
-    (if-let [dir *dir*]
-      (str (.relativize (unixify (.toAbsolutePath (as-path dir)))
-                        (unixify (.toAbsolutePath (as-path f)))))
-      f)))
+  (str (if (.isAbsolute (as-path f))
+         f
+         (if-let [dir *dir*]
+           (.relativize (unixify (.toAbsolutePath (as-path dir)))
+                        (unixify (.toAbsolutePath (as-path f))))
+           f))))
 
 (defn- get-env-tools-dir
   "Retrieves the tools-directory from environment variable `DEPS_CLJ_TOOLS_DIR`"
