@@ -311,6 +311,56 @@ This will set the JVM properties `-Dhttp[s].proxyHost` and `-Dhttp[s].proxyPort`
 
 The format of the proxy string supported is `http[s]://[username:password@]host:port`. Any username and password info is ignored as not supported by the underlying JVM properties.
 
+## API
+
+Since version `1.11.1.1273-2`, deps.clj exposes an API so it can be embedded in
+applications, rather than just calling the `-main` function.
+
+See [API.md](API.md) docs.
+
+Examples:
+
+``` clojure
+user=> (require '[borkdude.deps :as deps])
+```
+
+Parse CLI options:
+
+``` clojure
+(require '[borkdude.deps :as deps])
+(deps/parse-cli-opts ["-M" "-m" "foo.bar"])
+;;=> {:mode :main, :main-aliases nil, :args ("-m" "foo.bar")}
+```
+
+Re-binding the auxilary process (which is used for calculating the classpath,
+pom etc). It's convenient to use babashka.process (> 0.5.19) for this:
+
+``` shell
+$ clj -Sdeps '{:deps {babashka/process {:mvn/version "0.5.19"}}}'
+```
+
+``` clojure
+(require '[babashka.process :as p] '[borkdude.deps :as deps])
+
+(defn my-aux-process [{:keys [cmd out]}]
+  (binding [*out* *err*]
+    (apply println "Calling aux process with cmd:" cmd))
+  (p/shell {:cmd cmd :out :out :extra-env {"GITLIBS" "/tmp/gitlibs"}}))
+
+(defn my-clojure-process [{:keys [cmd out]}]
+  (binding [*out* *err*]
+    (apply println "Calling Clojure with command:" cmd))
+  (p/shell {:cmd cmd :out *out* :extra-env {"FOO" "BAR"}}))
+
+(binding [deps/*aux-process-fn* my-aux-process
+          deps/*clojure-process-fn* my-clojure-process]
+  (with-out-str (deps/-main "-Sforce" "-M" "-e" (pr-str '(System/getenv "FOO")))))
+
+;;=>
+Calling aux process with cmd: /usr/bin/java -XX:-OmitStackTraceInFastThrow -classpath ... -e (System/getenv "FOO")
+"\"BAR\"\n"
+```
+
 ## Developing deps.clj
 
 For running locally, you can invoke deps.clj with `clojure` (totally meta
