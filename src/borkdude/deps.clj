@@ -486,10 +486,9 @@ public class ClojureToolsDownloader {
   Should return `true` if the download was successful, or false if not."
   nil)
 
-(defn clojure-tools-download!
-  "Downloads clojure tools archive in `:out-dir`, if not already there,
-  and extracts in-place the clojure tools jar file and other important
-  files.
+(defn clojure-tools-install!
+  "Installs clojure tools archive by downloading it in `:out-dir`, if not already there,
+  and extracting in-place.
 
   If `*clojure-tools-download-fn*` is set, it will be called for
   download the tools archive. This function should return a truthy
@@ -786,7 +785,7 @@ public class ClojureToolsDownloader {
          (when (.exists tools-jar) (.getPath tools-jar))
          (binding [*out* *err*]
            (warn "Clojure tools not yet in expected location:" (str tools-jar))
-           (clojure-tools-download! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts})
+           (clojure-tools-install! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts})
            tools-jar))
         mode (:mode cli-opts)
         exec? (= :exec mode)
