@@ -491,8 +491,12 @@ public class ClojureToolsDownloader {
   and extracts in-place the clojure tools jar file and other important
   files.
 
+  If `*clojure-tools-download-fn*` is set, it will be called for
+  download the tools archive. This function should return a truthy
+  value to indicate a successful download.
+
   The download is attempted directly from this process, unless
-  `:jvm-opts` is set, in which case a java subprocess
+  `:clj-jvm-opts` is set, in which case a java subprocess
   is created to download the archive passing in its value as command
   line options.
 
