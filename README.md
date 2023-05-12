@@ -322,8 +322,8 @@ E.g to parse CLI options:
 
 ``` clojure
 (require '[borkdude.deps :as deps])
-(deps/parse-cli-opts ["-M" "-m" "foo.bar"])
-;;=> {:mode :main, :main-aliases nil, :args ("-m" "foo.bar")}
+(deps/parse-cli-opts ["-M:foo:bar" "-m" "foo.bar"])
+;;=> {:mode :main, :main-aliases ":foo:bar", :args ("-m" "foo.bar")}
 ```
 
 Re-binding the `*aux-process-fn*`, used for calculating the classpath, pom etc
