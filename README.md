@@ -320,10 +320,6 @@ See [API.md](API.md) docs.
 
 Examples:
 
-``` clojure
-user=> (require '[borkdude.deps :as deps])
-```
-
 Parse CLI options:
 
 ``` clojure
