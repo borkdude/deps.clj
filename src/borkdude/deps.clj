@@ -136,7 +136,7 @@
 
   - `:cmd`: a vector of strings
 
-  Must return a map of `:exit`, the exit code of te process."
+  Must return a map of `:exit`, the exit code of the process."
   [{:keys [cmd]}]
   (internal-shell-command cmd))
 
