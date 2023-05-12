@@ -39,4 +39,11 @@
                     (run task)
                     (println))}
 
-  upload-artifact {:task (exec 'artifact/upload)}}}
+  upload-artifact {:task (exec 'artifact/upload)}
+
+  quickdoc {:doc "Invoke quickdoc"
+            :extra-deps {io.github.borkdude/quickdoc {:git/sha "32e726cd6d785d00e49d4e614a05f7436d3831c0"}}
+            :task (exec 'quickdoc.api/quickdoc)
+            :exec-args {:git/branch "master"
+                        :github/repo "https://github.com/borkdude/deps.clj"
+                        :source-paths ["src"]}}}}
