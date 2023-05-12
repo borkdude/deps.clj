@@ -38,7 +38,7 @@ Port of https://github.com/clojure/brew-install/blob/1.11.1/src/main/resources/c
 ```
 
 Invokes `java` with arguments to calculate classpath, etc. May be
-  replacement by rebinding this dynamic var.
+  replaced by rebinding this dynamic var.
 
   Called with a map of:
 
@@ -58,7 +58,7 @@ Invokes `java` with arguments to calculate classpath, etc. May be
 ```
 
 Invokes `java` with arguments to `clojure.main` to start Clojure. May
-  be replacement by rebinding this dynamic var.
+  be replaced by rebinding this dynamic var.
 
   Called with a map of:
 

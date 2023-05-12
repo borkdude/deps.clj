@@ -114,7 +114,7 @@
 
 (defn ^:dynamic *aux-process-fn*
   "Invokes `java` with arguments to calculate classpath, etc. May be
-  replacement by rebinding this dynamic var.
+  replaced by rebinding this dynamic var.
 
   Called with a map of:
 
@@ -130,7 +130,7 @@
 
 (defn ^:dynamic *clojure-process-fn*
   "Invokes `java` with arguments to `clojure.main` to start Clojure. May
-  be replacement by rebinding this dynamic var.
+  be replaced by rebinding this dynamic var.
 
   Called with a map of:
 
