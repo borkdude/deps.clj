@@ -435,25 +435,31 @@
     (test)))
 
 (deftest get-basis-file-test
+  (binding [deps/*exit-fn* (constantly nil)]
+    (deps/-main "-Sdeps-file" "test/other-deps.edn" "-P"))
   (let [deps-edn (deps/get-local-deps-edn
-                  {:cli-opts []})
+                  {:cli-opts (deps/parse-cli-opts ["-Sdeps-file" "test/other-deps.edn"])})
         config-dir (deps/get-config-dir)
-        install-dir (deps/get-install-dir)]
+        install-dir (deps/get-install-dir)
+        basis (-> (deps/get-basis-file {:cache-dir
+                                        (deps/get-cache-dir
+                                         {:deps-edn deps-edn
+                                          :config-dir config-dir})
+                                        :checksum (deps/get-checksum
+                                                   {:cli-opts []
+                                                    :config-paths
+                                                    (deps/get-config-paths {:cli-opts []
+                                                                            :deps-edn deps-edn
+                                                                            :config-dir config-dir
+                                                                            :install-dir install-dir})})})
+                  slurp
+                  edn/read-string)]
     (is
      (set/subset?
-      (-> (deps/get-basis-file {:cache-dir
-                                (deps/get-cache-dir
-                                 {:deps-edn deps-edn
-                                  :config-dir config-dir})
-                                :checksum (deps/get-checksum
-                                           {:cli-opts []
-                                            :config-paths
-                                            (deps/get-config-paths {:cli-opts []
-                                                                    :deps-edn deps-edn
-                                                                    :config-dir config-dir
-                                                                    :install-dir install-dir})})})
-          slurp
-          edn/read-string
+      (-> basis
           keys
           set)
-      (set '(:paths :deps :aliases :mvn/repos :libs :classpath-roots :classpath :basis-config))))))
+      (set '(:paths :deps :aliases :mvn/repos :libs :classpath-roots :classpath :basis-config))))
+    #_#_(require 'clojure.pprint)
+    ((requiring-resolve 'clojure.pprint/pprint) basis)
+    (is (contains? (:libs basis) 'medley/medley))))
