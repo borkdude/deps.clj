@@ -10,7 +10,9 @@
     -  [`clojure-tools-download-java!`](#borkdude.deps/clojure-tools-download-java!) - Downloads <code>:url</code> zip file to <code>:dest</code> by invoking <code>java</code> with <code>:proxy</code> options on a <code>.java</code> program file, and returns true on success.
     -  [`clojure-tools-install!`](#borkdude.deps/clojure-tools-install!) - Installs clojure tools archive by downloading it in <code>:out-dir</code>, if not already there, and extracting in-place.
     -  [`deps-clj-version`](#borkdude.deps/deps-clj-version) - The current version of deps.clj.
+    -  [`get-basis-file`](#borkdude.deps/get-basis-file) - Returns path to basis file.
     -  [`get-cache-dir`](#borkdude.deps/get-cache-dir) - Returns cache dir (<code>.cpcache</code>) from either local dir, if <code>deps-edn</code> exists, or the user cache dir.
+    -  [`get-checksum`](#borkdude.deps/get-checksum) - Returns checksum based on cli-opts (as returned by <code>parse-cli-opts</code>) and config-paths (as returned by <code>get-config-paths</code>).
     -  [`get-config-dir`](#borkdude.deps/get-config-dir) - Retrieves configuration directory.
     -  [`get-config-paths`](#borkdude.deps/get-config-paths) - Returns vec of configuration paths, i.e.
     -  [`get-help`](#borkdude.deps/get-help) - Returns help text as string.
@@ -121,7 +123,7 @@ See [`help-text`](#borkdude.deps/help-text).
   env variable is set and a succesful attempt is made to download the
   archive by invoking a java subprocess passing the env variable value
   as command line options.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L748-L995">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L759-L1006">Source</a></sub></p>
 
 ## <a name="borkdude.deps/clojure-tools-download-direct!">`clojure-tools-download-direct!`</a><a name="borkdude.deps/clojure-tools-download-direct!"></a>
 ``` clojure
@@ -173,6 +175,18 @@ Installs clojure tools archive by downloading it in `:out-dir`, if not already t
 The current version of deps.clj
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L23-L27">Source</a></sub></p>
 
+## <a name="borkdude.deps/get-basis-file">`get-basis-file`</a><a name="borkdude.deps/get-basis-file"></a>
+``` clojure
+
+(get-basis-file {:keys [cache-dir checksum]})
+```
+
+Returns path to basis file. Required options:
+
+  * - `cache-dir` as returned by [`get-cache-dir`](#borkdude.deps/get-cache-dir)
+  * - `checksum` as returned by `get-check-sum`
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L751-L757">Source</a></sub></p>
+
 ## <a name="borkdude.deps/get-cache-dir">`get-cache-dir`</a><a name="borkdude.deps/get-cache-dir"></a>
 ``` clojure
 
@@ -182,6 +196,16 @@ The current version of deps.clj
 Returns cache dir (`.cpcache`) from either local dir, if `deps-edn`
   exists, or the user cache dir.
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L691-L702">Source</a></sub></p>
+
+## <a name="borkdude.deps/get-checksum">`get-checksum`</a><a name="borkdude.deps/get-checksum"></a>
+``` clojure
+
+(get-checksum {:keys [cli-opts config-paths]})
+```
+
+Returns checksum based on cli-opts (as returned by [`parse-cli-opts`](#borkdude.deps/parse-cli-opts))
+  and config-paths (as returned by [`get-config-paths`](#borkdude.deps/get-config-paths))
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L721-L739">Source</a></sub></p>
 
 ## <a name="borkdude.deps/get-config-dir">`get-config-dir`</a><a name="borkdude.deps/get-config-dir"></a>
 ``` clojure
@@ -212,7 +236,7 @@ Returns vec of configuration paths, i.e. deps.edn from:
 ```
 
 Returns help text as string.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L738-L741">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L741-L744">Source</a></sub></p>
 
 ## <a name="borkdude.deps/get-install-dir">`get-install-dir`</a><a name="borkdude.deps/get-install-dir"></a>
 ``` clojure
@@ -263,7 +287,7 @@ Parses the command line options.
 ```
 
 Print help text
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L743-L746">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L746-L749">Source</a></sub></p>
 
 ## <a name="borkdude.deps/proxy-jvm-opts">`proxy-jvm-opts`</a><a name="borkdude.deps/proxy-jvm-opts"></a>
 ``` clojure

@@ -718,16 +718,19 @@ public class ClojureToolsDownloader {
       [(.getPath (io/file config-dir "deps.edn"))
        deps-edn])))
 
-(defn- calculate-checksum [opts config-paths]
+(defn get-checksum
+  "Returns checksum based on cli-opts (as returned by `parse-cli-opts`)
+  and config-paths (as returned by `get-config-paths`)"
+  [{:keys [cli-opts config-paths]}]
   (let [val*
         (str/join "|"
                   (concat [cache-version]
-                          (:repl-aliases opts)
-                          [(:exec-aliases opts)
-                           (:main-aliases opts)
-                           (:deps-data opts)
-                           (:tool-name opts)
-                           (:tool-aliases opts)]
+                          (:repl-aliases cli-opts)
+                          [(:exec-aliases cli-opts)
+                           (:main-aliases cli-opts)
+                           (:deps-data cli-opts)
+                           (:tool-name cli-opts)
+                           (:tool-aliases cli-opts)]
                           (map (fn [config-path]
                                  (if (.exists (io/file config-path))
                                    config-path
@@ -744,6 +747,14 @@ public class ClojureToolsDownloader {
   "Print help text"
   []
   (println @help-text))
+
+(defn get-basis-file
+  "Returns path to basis file. Required options:
+
+  * - `cache-dir` as returned by `get-cache-dir`
+  * - `checksum` as returned by `get-check-sum`"
+  [{:keys [cache-dir checksum]}]
+  (.getPath (io/file cache-dir (str checksum ".basis"))))
 
 (defn -main
   "See `help-text`.
@@ -831,11 +842,11 @@ public class ClojureToolsDownloader {
           ;; Construct location of cached classpath file
           tool-name (:tool-name cli-opts)
           tool-aliases (:tool-aliases cli-opts)
-          ck (calculate-checksum cli-opts config-paths)
+          ck (get-checksum {:cli-opts cli-opts :config-paths config-paths})
           cp-file (.getPath (io/file cache-dir (str ck ".cp")))
           jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
           main-file (.getPath (io/file cache-dir (str ck ".main")))
-          basis-file (.getPath (io/file cache-dir (str ck ".basis")))
+          basis-file (get-basis-file {:cache-dir cache-dir :checksum ck})
           manifest-file (.getPath (io/file cache-dir (str ck ".manifest")))
           _ (when (:verbose cli-opts)
               (println "deps.clj version =" deps-clj-version)

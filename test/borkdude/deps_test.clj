@@ -205,7 +205,7 @@
   program, but throws an exception in case of error while is still in
   the `babashka.deps` scope."
   [env-vars & body]
- (let [body-str (pr-str body)]
+  (let [body-str (pr-str body)]
     `(let [shell-command# @#'deps/internal-shell-command
            ret*# (promise)
            sh-mock# (fn mock#
@@ -433,3 +433,27 @@
     (test)
     (delete)
     (test)))
+
+(deftest get-basis-file-test
+  (let [deps-edn (deps/get-local-deps-edn
+                  {:cli-opts []})
+        config-dir (deps/get-config-dir)
+        install-dir (deps/get-install-dir)]
+    (is
+     (set/subset?
+      (-> (deps/get-basis-file {:cache-dir
+                                (deps/get-cache-dir
+                                 {:deps-edn deps-edn
+                                  :config-dir config-dir})
+                                :checksum (deps/get-checksum
+                                           {:cli-opts []
+                                            :config-paths
+                                            (deps/get-config-paths {:cli-opts []
+                                                                    :deps-edn deps-edn
+                                                                    :config-dir config-dir
+                                                                    :install-dir install-dir})})})
+          slurp
+          edn/read-string
+          keys
+          set)
+      (set '(:paths :deps :aliases :mvn/repos :libs :classpath-roots :classpath :basis-config))))))

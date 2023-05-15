@@ -16,3 +16,4 @@ test/mvn
 # IntelliJ
 .idea
 deps.clj.iml
+scratch.clj
