@@ -1,6 +1,6 @@
 (defproject borkdude/deps.clj
   #=(clojure.string/trim
-x     #=(slurp "resources/DEPS_CLJ_VERSION"))
+    #=(slurp "resources/DEPS_CLJ_VERSION"))
   :description "deps.clj: a Clojure port of the clojure bash script"
   :url "https://github.com/borkdude/deps.clj"
   :scm {:name "git"
