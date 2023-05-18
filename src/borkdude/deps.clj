@@ -989,6 +989,15 @@ public class ClojureToolsDownloader {
                     cp (if (or exec? tool?)
                          (str cp path-separator exec-cp)
                          cp)
+                    ;; see https://devblogs.microsoft.com/oldnewthing/20031210-00/?p=41553
+                    ;; command line limit on Windows with process builder
+                    cp (if (and windows? (> (count cp) 32766))
+                         (let [tmp-file (.toFile (java.nio.file.Files/createTempFile
+                                                  "tmp" "cp"
+                                                  (into-array java.nio.file.attribute.FileAttribute [])))]
+                           (.deleteOnExit tmp-file)
+                           (str "@" tmp-file))
+                         cp)
                     main-args (concat java-cmd
                                       java-opts
                                       proxy-settings
