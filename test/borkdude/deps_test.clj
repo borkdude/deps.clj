@@ -16,6 +16,7 @@
       version (-> (process [java "-version"] {:err :string})
                   check
                   :err str/split-lines first)]
+  (def java-version version)
   (println :deps.clj/java :path (pr-str java) :version version))
 
 (defn invoke-deps-cmd
@@ -463,3 +464,13 @@
     #_#_(require 'clojure.pprint)
     ((requiring-resolve 'clojure.pprint/pprint) basis)
     (is (contains? (:libs basis) 'medley/medley))))
+
+(deftest long-classpath-test
+  (when-not (str/includes? java-version "1.8.0")
+    (let [prev-cp (str/trim (with-out-str (borkdude.deps/-main "-Spath")))
+          long-cp (str/join fs/path-separator (cons prev-cp (repeat 15000 "src")))
+          ret (atom nil)]
+      (binding [deps/*exit-fn* #(reset! ret %)]
+        (borkdude.deps/-main "-Scp" long-cp "-M" "-e" "nil"))
+      (is (or (nil? @ret)
+              (zero? (:exit @ret)))))))
