@@ -123,7 +123,7 @@ See [`help-text`](#borkdude.deps/help-text).
   env variable is set and a succesful attempt is made to download the
   archive by invoking a java subprocess passing the env variable value
   as command line options.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L759-L1006">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L772-L1019">Source</a></sub></p>
 
 ## <a name="borkdude.deps/clojure-tools-download-direct!">`clojure-tools-download-direct!`</a><a name="borkdude.deps/clojure-tools-download-direct!"></a>
 ``` clojure
