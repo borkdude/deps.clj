@@ -1002,14 +1002,13 @@ public class ClojureToolsDownloader {
                          cp)
                     ;; see https://devblogs.microsoft.com/oldnewthing/20031210-00/?p=41553
                     ;; command line limit on Windows with process builder
-                    cp (auto-file-arg cp)
                     main-args (concat java-cmd
                                       java-opts
                                       proxy-settings
                                       jvm-cache-opts
                                       (:jvm-opts cli-opts)
                                       [(str "-Dclojure.basis=" (relativize basis-file))
-                                       "-classpath" cp
+                                       "-classpath" (auto-file-arg cp)
                                        "clojure.main"]
                                       main-opts)
                     main-args (filterv some? main-args)
