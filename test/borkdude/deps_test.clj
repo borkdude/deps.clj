@@ -463,3 +463,12 @@
     #_#_(require 'clojure.pprint)
     ((requiring-resolve 'clojure.pprint/pprint) basis)
     (is (contains? (:libs basis) 'medley/medley))))
+
+(deftest long-classpath-test
+  (let [prev-cp (str/trim (with-out-str (borkdude.deps/-main "-Spath")))
+        long-cp (str/join fs/path-separator (cons prev-cp (repeat 15000 "src")))
+        ret (atom nil)]
+    (binding [deps/*exit-fn* #(reset! ret %)]
+      (borkdude.deps/-main "-Scp" long-cp "-M" "-e" "nil"))
+    (is (or (nil? @ret)
+            (zero? (:exit @ret))))))
