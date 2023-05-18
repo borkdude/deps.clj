@@ -466,6 +466,7 @@
     (is (contains? (:libs basis) 'medley/medley))))
 
 (deftest long-classpath-test
+  (prn :java-version java-version)
   (when-not (str/starts-with? java-version "1.8")
     (let [prev-cp (str/trim (with-out-str (borkdude.deps/-main "-Spath")))
           long-cp (str/join fs/path-separator (cons prev-cp (repeat 15000 "src")))
