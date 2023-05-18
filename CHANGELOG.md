@@ -10,6 +10,12 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 [deps.clj](https://github.com/borkdude/deps.clj): a faithful port of the clojure CLI bash script to Clojure
 
+## 1.11.1.1273-4
+
+- Expose [API.md](API.md)
+- Automatically use file argument when command line arguments exceeds supported length on Windows.
+  See [this article](https://devblogs.microsoft.com/oldnewthing/20031210-00/?p=41553) for more info.
+
 ## 1.11.1.1273
 
 - Catch up with clojure CLI of same version

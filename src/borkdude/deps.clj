@@ -757,6 +757,8 @@ public class ClojureToolsDownloader {
   (.getPath (io/file cache-dir (str checksum ".basis"))))
 
 (defn- auto-file-arg [cp]
+  ;; see https://devblogs.microsoft.com/oldnewthing/20031210-00/?p=41553
+  ;; command line limit on Windows with process builder
   (if (and windows? (> (count cp) 32766))
     (let [tmp-file (.toFile (java.nio.file.Files/createTempFile
                              "file_arg" ".txt"
@@ -1000,8 +1002,6 @@ public class ClojureToolsDownloader {
                     cp (if (or exec? tool?)
                          (str cp path-separator exec-cp)
                          cp)
-                    ;; see https://devblogs.microsoft.com/oldnewthing/20031210-00/?p=41553
-                    ;; command line limit on Windows with process builder
                     main-args (concat java-cmd
                                       java-opts
                                       proxy-settings
