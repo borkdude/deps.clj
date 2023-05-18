@@ -996,7 +996,8 @@ public class ClojureToolsDownloader {
                                                       "tmp" "cp"
                                                       (into-array java.nio.file.attribute.FileAttribute [])))]
                                (.deleteOnExit tmp-file)
-                               (spit tmp-file cp)
+                               ;; we use pr-str since whitespaces in the classpath will be treated as separate args otherwise
+                               (spit tmp-file (pr-str cp))
                                (str "@" tmp-file))
                              cp)
                     main-args (concat java-cmd
