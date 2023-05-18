@@ -756,6 +756,17 @@ public class ClojureToolsDownloader {
   [{:keys [cache-dir checksum]}]
   (.getPath (io/file cache-dir (str checksum ".basis"))))
 
+(defn- auto-file-arg [cp]
+  (if (and windows? (> (count cp) 32766))
+    (let [tmp-file (.toFile (java.nio.file.Files/createTempFile
+                             "file_arg" ".txt"
+                             (into-array java.nio.file.attribute.FileAttribute [])))]
+      (.deleteOnExit tmp-file)
+      ;; we use pr-str since whitespaces in the classpath will be treated as separate args otherwise
+      (spit tmp-file (pr-str cp))
+      (str "@" tmp-file))
+    cp))
+
 (defn -main
   "See `help-text`.
 
@@ -991,15 +1002,7 @@ public class ClojureToolsDownloader {
                          cp)
                     ;; see https://devblogs.microsoft.com/oldnewthing/20031210-00/?p=41553
                     ;; command line limit on Windows with process builder
-                    cp (if (and windows? (> (count cp) 32766))
-                             (let [tmp-file (.toFile (java.nio.file.Files/createTempFile
-                                                      "tmp" "cp"
-                                                      (into-array java.nio.file.attribute.FileAttribute [])))]
-                               (.deleteOnExit tmp-file)
-                               ;; we use pr-str since whitespaces in the classpath will be treated as separate args otherwise
-                               (spit tmp-file (pr-str cp))
-                               (str "@" tmp-file))
-                             cp)
+                    cp (auto-file-arg cp)
                     main-args (concat java-cmd
                                       java-opts
                                       proxy-settings
