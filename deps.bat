@@ -122,7 +122,7 @@
 
 (defn ^:dynamic *aux-process-fn*
   "Invokes `java` with arguments to calculate classpath, etc. May be
-  replacement by rebinding this dynamic var.
+  replaced by rebinding this dynamic var.
 
   Called with a map of:
 
@@ -138,13 +138,13 @@
 
 (defn ^:dynamic *clojure-process-fn*
   "Invokes `java` with arguments to `clojure.main` to start Clojure. May
-  be replacement by rebinding this dynamic var.
+  be replaced by rebinding this dynamic var.
 
   Called with a map of:
 
   - `:cmd`: a vector of strings
 
-  Must return a map of `:exit`, the exit code of te process."
+  Must return a map of `:exit`, the exit code of the process."
   [{:keys [cmd]}]
   (internal-shell-command cmd))
 
@@ -241,8 +241,8 @@ For more info, see:
       (print "\n ") (describe-line line))
     (println "}")))
 
-(defn- ^:dynamic *getenv-fn*
-  "Get ENV'ironment variable. Only used for testing, not part of the public API (yet)."
+(defn ^:dynamic *getenv-fn*
+  "Get ENV'ironment variable, typically used for getting `CLJ_CONFIG`, etc."
   ^String [env]
   (java.lang.System/getenv env))
 
@@ -335,7 +335,7 @@ For more info, see:
 
 (defn set-proxy-system-props!
   "Sets the proxy system properties in the current JVM.
-   proxy-info parameter is as returned from env-proxy-info."
+   proxy-info parameter is as returned from `get-proxy-info.`"
   [{:keys [http-proxy https-proxy]}]
   (when http-proxy
     (System/setProperty "http.proxyHost" (:host http-proxy))
@@ -454,7 +454,7 @@ public class ClojureToolsDownloader {
 (defn proxy-jvm-opts
   "Returns a vector containing the JVM system property arguments to be passed to a new process
    to set its proxy system properties.
-   proxy-info parameter is as returned from env-proxy-info."
+   proxy-info parameter is as returned from `get-proxy-info.`"
   [{:keys [http-proxy https-proxy]}]
   (cond-> []
     http-proxy (concat [(str "-Dhttp.proxyHost=" (:host http-proxy))
@@ -490,16 +490,20 @@ public class ClojureToolsDownloader {
    - `:dest`: The path to the file to download it to, as a string
    - `:proxy-opts`: a map as returned by `get-proxy-info`
    - `:clj-jvm-opts`: a vector of JVM opts (as passed on the command line).
-   Should return true if the `download` was successful, or false if not."
+
+  Should return `true` if the download was successful, or false if not."
   nil)
 
-(defn clojure-tools-download!
-  "Downloads clojure tools archive in `:out-dir`, if not already there,
-  and extracts in-place the clojure tools jar file and other important
-  files.
+(defn clojure-tools-install!
+  "Installs clojure tools archive by downloading it in `:out-dir`, if not already there,
+  and extracting in-place.
+
+  If `*clojure-tools-download-fn*` is set, it will be called for
+  download the tools archive. This function should return a truthy
+  value to indicate a successful download.
 
   The download is attempted directly from this process, unless
-  `:jvm-opts` is set, in which case a java subprocess
+  `:clj-jvm-opts` is set, in which case a java subprocess
   is created to download the archive passing in its value as command
   line options.
 
@@ -722,16 +726,19 @@ public class ClojureToolsDownloader {
       [(.getPath (io/file config-dir "deps.edn"))
        deps-edn])))
 
-(defn- calculate-checksum [opts config-paths]
+(defn get-checksum
+  "Returns checksum based on cli-opts (as returned by `parse-cli-opts`)
+  and config-paths (as returned by `get-config-paths`)"
+  [{:keys [cli-opts config-paths]}]
   (let [val*
         (str/join "|"
                   (concat [cache-version]
-                          (:repl-aliases opts)
-                          [(:exec-aliases opts)
-                           (:main-aliases opts)
-                           (:deps-data opts)
-                           (:tool-name opts)
-                           (:tool-aliases opts)]
+                          (:repl-aliases cli-opts)
+                          [(:exec-aliases cli-opts)
+                           (:main-aliases cli-opts)
+                           (:deps-data cli-opts)
+                           (:tool-name cli-opts)
+                           (:tool-aliases cli-opts)]
                           (map (fn [config-path]
                                  (if (.exists (io/file config-path))
                                    config-path
@@ -748,6 +755,27 @@ public class ClojureToolsDownloader {
   "Print help text"
   []
   (println @help-text))
+
+(defn get-basis-file
+  "Returns path to basis file. Required options:
+
+  * - `cache-dir` as returned by `get-cache-dir`
+  * - `checksum` as returned by `get-check-sum`"
+  [{:keys [cache-dir checksum]}]
+  (.getPath (io/file cache-dir (str checksum ".basis"))))
+
+(defn- auto-file-arg [cp]
+  ;; see https://devblogs.microsoft.com/oldnewthing/20031210-00/?p=41553
+  ;; command line limit on Windows with process builder
+  (if (and windows? (> (count cp) 32766))
+    (let [tmp-file (.toFile (java.nio.file.Files/createTempFile
+                             "file_arg" ".txt"
+                             (into-array java.nio.file.attribute.FileAttribute [])))]
+      (.deleteOnExit tmp-file)
+      ;; we use pr-str since whitespaces in the classpath will be treated as separate args otherwise
+      (spit tmp-file (pr-str cp))
+      (str "@" tmp-file))
+    cp))
 
 (defn -main
   "See `help-text`.
@@ -789,7 +817,7 @@ public class ClojureToolsDownloader {
          (when (.exists tools-jar) (.getPath tools-jar))
          (binding [*out* *err*]
            (warn "Clojure tools not yet in expected location:" (str tools-jar))
-           (clojure-tools-download! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts})
+           (clojure-tools-install! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts})
            tools-jar))
         mode (:mode cli-opts)
         exec? (= :exec mode)
@@ -835,11 +863,11 @@ public class ClojureToolsDownloader {
           ;; Construct location of cached classpath file
           tool-name (:tool-name cli-opts)
           tool-aliases (:tool-aliases cli-opts)
-          ck (calculate-checksum cli-opts config-paths)
+          ck (get-checksum {:cli-opts cli-opts :config-paths config-paths})
           cp-file (.getPath (io/file cache-dir (str ck ".cp")))
           jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
           main-file (.getPath (io/file cache-dir (str ck ".main")))
-          basis-file (.getPath (io/file cache-dir (str ck ".basis")))
+          basis-file (get-basis-file {:cache-dir cache-dir :checksum ck})
           manifest-file (.getPath (io/file cache-dir (str ck ".manifest")))
           _ (when (:verbose cli-opts)
               (println "deps.clj version =" deps-clj-version)
@@ -988,7 +1016,7 @@ public class ClojureToolsDownloader {
                                       jvm-cache-opts
                                       (:jvm-opts cli-opts)
                                       [(str "-Dclojure.basis=" (relativize basis-file))
-                                       "-classpath" cp
+                                       "-classpath" (auto-file-arg cp)
                                        "clojure.main"]
                                       main-opts)
                     main-args (filterv some? main-args)
