@@ -5,6 +5,7 @@
     -  [`*clojure-tools-download-fn*`](#borkdude.deps/*clojure-tools-download-fn*) - Can be dynamically rebound to customise the download of the Clojure tools.
     -  [`*dir*`](#borkdude.deps/*dir*) - Directory in which deps.clj should be executed.
     -  [`*exit-fn*`](#borkdude.deps/*exit-fn*) - Function that is called on exit with <code>:exit</code> code and <code>:message</code>, an exceptional message when exit is non-zero.
+    -  [`*getenv-fn*`](#borkdude.deps/*getenv-fn*) - Get ENV'ironment variable, typically used for getting <code>CLJ_CONFIG</code>, etc.
     -  [`-main`](#borkdude.deps/-main) - See <code>help-text</code>.
     -  [`clojure-tools-download-direct!`](#borkdude.deps/clojure-tools-download-direct!) - Downloads from <code>:url</code> to <code>:dest</code> file returning true on success.
     -  [`clojure-tools-download-java!`](#borkdude.deps/clojure-tools-download-java!) - Downloads <code>:url</code> zip file to <code>:dest</code> by invoking <code>java</code> with <code>:proxy</code> options on a <code>.java</code> program file, and returns true on success.
@@ -100,6 +101,15 @@ Directory in which deps.clj should be executed.
 
 Function that is called on exit with `:exit` code and `:message`, an exceptional message when exit is non-zero
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L39-L43">Source</a></sub></p>
+
+## <a name="borkdude.deps/*getenv-fn*">`*getenv-fn*`</a><a name="borkdude.deps/*getenv-fn*"></a>
+``` clojure
+
+(*getenv-fn* env)
+```
+
+Get ENV'ironment variable, typically used for getting `CLJ_CONFIG`, etc.
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L236-L239">Source</a></sub></p>
 
 ## <a name="borkdude.deps/-main">`-main`</a><a name="borkdude.deps/-main"></a>
 ``` clojure
