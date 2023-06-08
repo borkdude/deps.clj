@@ -652,7 +652,7 @@ public class ClojureToolsDownloader {
                         (unixify (.toAbsolutePath (as-path f))))
            f))))
 
-(defn- resolve-dir
+(defn- resolve-in-dir
   "Resolves against directory (when provided). Absolute paths are unchanged.
   Returns string."
   [dir path]
@@ -910,7 +910,7 @@ public class ClojureToolsDownloader {
                     entries (vec (.split ^String cp java.io.File/pathSeparator))]
                 (some (fn [entry]
                         (when (str/ends-with? entry ".jar")
-                          (not (.exists (io/file (resolve-dir *dir* entry))))))
+                          (not (.exists (io/file (resolve-in-dir *dir* entry))))))
                       entries)))
           tools-args
           (when (or stale (:pom cli-opts))

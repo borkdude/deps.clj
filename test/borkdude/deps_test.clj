@@ -474,3 +474,9 @@
         (borkdude.deps/-main "-Scp" long-cp "-M" "-e" "nil"))
       (is (or (nil? @ret)
               (zero? (:exit @ret)))))))
+
+(deftest resolve-in-dir-test
+  (let [tmp-dir (System/getProperty "java.io.tmpdir")
+        home-dir (System/getProperty "user.home")]
+    (is (str/starts-with? (#'borkdude.deps/resolve-in-dir tmp-dir "dude") tmp-dir))
+    (is (= home-dir (#'borkdude.deps/resolve-in-dir tmp-dir home-dir)))))
