@@ -24,7 +24,7 @@
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.11.1.1273")))
+             "1.11.1.1347")))
 
 (def ^:private cache-version "4")
 
@@ -660,6 +660,14 @@ public class ClojureToolsDownloader {
                         (unixify (.toAbsolutePath (as-path f))))
            f))))
 
+(defn- resolve-in-dir
+  "Resolves against directory (when provided). Absolute paths are unchanged.
+  Returns string."
+  [dir path]
+  (if dir
+    (str (.resolve (as-path dir) (str path)))
+    (str path)))
+
 (defn- get-env-tools-dir
   "Retrieves the tools-directory from environment variable `DEPS_CLJ_TOOLS_DIR`"
   []
@@ -910,7 +918,7 @@ public class ClojureToolsDownloader {
                     entries (vec (.split ^String cp java.io.File/pathSeparator))]
                 (some (fn [entry]
                         (when (str/ends-with? entry ".jar")
-                          (not (.exists (io/file entry)))))
+                          (not (.exists (io/file (resolve-in-dir *dir* entry))))))
                       entries)))
           tools-args
           (when (or stale (:pom cli-opts))
