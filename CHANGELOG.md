@@ -10,6 +10,12 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 [deps.clj](https://github.com/borkdude/deps.clj): a faithful port of the clojure CLI bash script to Clojure
 
+## 1.11.1.1347
+
+- Fix stale check for `.jar` files when `*dir*` is set
+- Expose `*getenv-fn*` for programmatic API usage
+- Catch up with CLI `1.11.1.1347`
+
 ## 1.11.1.1273-4
 
 - Expose [API.md](API.md)
