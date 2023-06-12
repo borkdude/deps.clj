@@ -380,6 +380,12 @@ For more info, see:
             :ct-url-str (format "https://download.clojure.org/install/clojure-tools-%s.zip" version)
             :ct-zip-name "tools.zip"})))
 
+(def zip-invalid-msg
+  (str/join \n
+            ["The tools zip file may have not been succesfully downloaded."
+             "Please report this problem and keep a backup of the tools zip file as a repro."
+             "You can try again by removing the $HOME/.deps.clj folder."]))
+
 (defn- unzip
   [zip-file destination-dir]
   (let [{:keys [ct-aux-files-names ct-jar-name]} @clojure-tools-info*
@@ -392,7 +398,7 @@ For more info, see:
     (with-open
      [fis (Files/newInputStream zip-file (into-array java.nio.file.OpenOption []))
       zis (ZipInputStream. fis)]
-      (loop [unzipped 0]
+      (loop [to-unzip files]
         (if-let [entry (.getNextEntry zis)]
           (let [entry-name (.getName entry)
                 cis (java.util.zip.CheckedInputStream. zis (java.util.zip.CRC32.))
@@ -407,14 +413,15 @@ For more info, see:
                 (when-not (= (.getCrc entry) (-> cis (.getChecksum) (.getValue)))
                   (let [msg (str "CRC check failed when unzipping zip-file " zip-file ", entry: " entry-name)]
                     (warn msg)
-                    (warn (str/join \n
-                                    ["The tools zip file may have not been succesfully downloaded."
-                                     "Please report this problem and keep a backup of the tools zip file as a repro."
-                                     "You can try again by removing the $HOME/.deps.clj folder."]))
+                    (warn zip-invalid-msg)
                     (*exit-fn* {:exit 1 :message msg})))
-                (recur (inc unzipped)))
-              (recur unzipped)))
-          (assert (= unzipped (count files)) (str zip-file " did not contain all of the expected files.")))))))
+                (recur (disj to-unzip file-name)))
+              (recur to-unzip)))
+          (when-not (empty? to-unzip)
+            (let [msg (str zip-file " did not contain all of the expected files, missing: " (str/join " " to-unzip))]
+              (warn msg)
+              (warn zip-invalid-msg)
+              (*exit-fn* {:exit 1 :message msg}))))))))
 
 (defn- clojure-tools-java-downloader-spit
   "Spits out and returns the path to `ClojureToolsDownloader.java` file
