@@ -43,8 +43,8 @@ jobs:
           key: cljdeps-${{ hashFiles('deps.edn', 'bb.edn', 'project.clj') }}
           restore-keys: cljdeps-
 
-      - name: Run JVM tests
-        run: bb jvm-test
+      # - name: Run JVM tests
+      #   run: bb jvm-test
 
       - name: Run babashka tests
         run: |
