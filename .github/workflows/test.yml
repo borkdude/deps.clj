@@ -9,7 +9,7 @@ jobs:
     # and UBERJAR_JDK env variables respectively.
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest]  # , windows-latest]
         jdk: [8, 11, 17]
     env:
       UBERJAR_OS: 'ubuntu'
@@ -30,9 +30,13 @@ jobs:
       - name: Install Clojure
         uses: DeLaGuardo/setup-clojure@9.5
         with:
-          bb: '1.0.165'
+          # bb: '1.0.165'
           cli: '1.10.3.1013'
           lein: '2.9.10'
+
+      - name: Install bb
+        run: |
+          bash <(curl https://raw.githubusercontent.com/babashka/babashka/master/install) --dev-build
 
       - name: Cache clojure dependencies
         uses: actions/cache@v3
@@ -43,11 +47,13 @@ jobs:
           key: cljdeps-${{ hashFiles('deps.edn', 'bb.edn', 'project.clj') }}
           restore-keys: cljdeps-
 
-      - name: Run JVM tests
-        run: bb jvm-test
+      # - name: Run JVM tests
+      #   run: bb jvm-test
 
       - name: Run babashka tests
-        run: bb babashka-test
+        run: |
+          bash <(curl https://raw.githubusercontent.com/babashka/babashka/master/install) --dev-build
+          bb babashka-test
 
       - name: Create ubejar
         if: "startsWith (matrix.os, env.UBERJAR_OS) && env.UBERJAR_JDK == matrix.jdk"

@@ -392,18 +392,29 @@ For more info, see:
     (with-open
      [fis (Files/newInputStream zip-file (into-array java.nio.file.OpenOption []))
       zis (ZipInputStream. fis)]
-      (loop []
-        (when-let [entry (.getNextEntry zis)]
+      (loop [unzipped 0]
+        (if-let [entry (.getNextEntry zis)]
           (let [entry-name (.getName entry)
+                cis (java.util.zip.CheckedInputStream. zis (java.util.zip.CRC32.))
                 file-name (.getName (io/file entry-name))]
-            (when (contains? files file-name)
+            (if (contains? files file-name)
               (let [new-path (.resolve destination-dir file-name)]
-                (Files/copy ^java.io.InputStream zis
+                (Files/copy ^java.io.InputStream cis
                             new-path
                             ^"[Ljava.nio.file.CopyOption;"
                             (into-array CopyOption
-                                        [java.nio.file.StandardCopyOption/REPLACE_EXISTING]))))
-            (recur)))))))
+                                        [java.nio.file.StandardCopyOption/REPLACE_EXISTING]))
+                (when-not (= (.getCrc entry) (-> cis (.getChecksum) (.getValue)))
+                  (let [msg (str "CRC check failed when unzipping zip-file " zip-file ", entry: " entry-name)]
+                    (warn msg)
+                    (warn (str/join \n
+                                    ["The tools zip file may have not been succesfully downloaded."
+                                     "Please report this problem and keep a backup of the tools zip file as a repro."
+                                     "You can try again by removing the $HOME/.deps.clj folder."]))
+                    (*exit-fn* {:exit 1 :message msg})))
+                (recur (inc unzipped)))
+              (recur unzipped)))
+          (assert (= unzipped (count files)) (str zip-file " did not contain all of the expected files.")))))))
 
 (defn- clojure-tools-java-downloader-spit
   "Spits out and returns the path to `ClojureToolsDownloader.java` file
@@ -437,6 +448,8 @@ public class ClojureToolsDownloader {
         FileOutputStream fileOutputStream = new FileOutputStream(args[1]);
         FileChannel fileChannel = fileOutputStream.getChannel();
         fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
+        fileOutputStream.close();
+        fileChannel.close();
         System.exit(0);
     } catch (IOException e) {
         e.printStackTrace();
