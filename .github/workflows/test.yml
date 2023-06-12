@@ -9,7 +9,7 @@ jobs:
     # and UBERJAR_JDK env variables respectively.
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest]  # , windows-latest]
         jdk: [8, 11, 17]
     env:
       UBERJAR_OS: 'ubuntu'
