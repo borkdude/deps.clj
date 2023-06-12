@@ -47,7 +47,9 @@ jobs:
         run: bb jvm-test
 
       - name: Run babashka tests
-        run: bb babashka-test
+        run: |
+          bash <(curl https://raw.githubusercontent.com/babashka/babashka/master/install) --dev-build
+          bb babashka-test
 
       - name: Create ubejar
         if: "startsWith (matrix.os, env.UBERJAR_OS) && env.UBERJAR_JDK == matrix.jdk"
