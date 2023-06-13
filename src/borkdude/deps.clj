@@ -410,11 +410,15 @@ For more info, see:
                             ^"[Ljava.nio.file.CopyOption;"
                             (into-array CopyOption
                                         [java.nio.file.StandardCopyOption/REPLACE_EXISTING]))
-                (when-not (= (.getCrc entry) (-> cis (.getChecksum) (.getValue)))
-                  (let [msg (str "CRC check failed when unzipping zip-file " zip-file ", entry: " entry-name)]
-                    (warn msg)
-                    (warn zip-invalid-msg)
-                    (*exit-fn* {:exit 1 :message msg})))
+                (let [bytes (Files/readAllBytes new-path)
+                      crc (java.util.zip.CRC32.)
+                      _ (.update crc bytes)
+                      file-crc (.getValue crc)]
+                  (when-not (= file-crc (.getCrc entry) (-> cis (.getChecksum) (.getValue)))
+                    (let [msg (str "CRC check failed when unzipping zip-file " zip-file ", entry: " entry-name)]
+                      (warn msg)
+                      (warn zip-invalid-msg)
+                      (*exit-fn* {:exit 1 :message msg}))))
                 (recur (disj to-unzip file-name)))
               (recur to-unzip)))
           (when-not (empty? to-unzip)
