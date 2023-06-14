@@ -10,6 +10,10 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 [deps.clj](https://github.com/borkdude/deps.clj): a faithful port of the clojure CLI bash script to Clojure
 
+## Unreleased
+
+- [#104](https://github.com/borkdude/deps.clj/issues/104): print repl-aliases in -Sdescribe
+
 ## 1.11.1.1347
 
 - Fix stale check for `.jar` files when `*dir*` is set

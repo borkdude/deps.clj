@@ -944,7 +944,7 @@ public class ClojureToolsDownloader {
               (:main-aliases cli-opts)
               (conj (str "-M" (:main-aliases cli-opts)))
               (:repl-aliases cli-opts)
-              (conj (str "-A" (str/join "" (:repl-aliases cli-opts))))
+              (conj (str "-A" (str/join (:repl-aliases cli-opts))))
               (:exec-aliases cli-opts)
               (conj (str "-X" (:exec-aliases cli-opts)))
               tool?
@@ -1010,7 +1010,7 @@ public class ClojureToolsDownloader {
                          [:force (boolean (:force cli-opts))]
                          [:repro (boolean (:repro cli-opts))]
                          [:main-aliases (str (:main-aliases cli-opts))]
-                         [:all-aliases (str (:all-aliases cli-opts))]])
+                         [:repl-aliases (str/join (:repl-aliases cli-opts))]])
               tree? (*exit-fn* {:exit 0})
               (:trace cli-opts)
               (warn "Wrote trace.edn")
