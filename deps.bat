@@ -388,6 +388,12 @@ For more info, see:
             :ct-url-str (format "https://download.clojure.org/install/clojure-tools-%s.zip" version)
             :ct-zip-name "tools.zip"})))
 
+(def zip-invalid-msg
+  (str/join \n
+            ["The tools zip file may have not been succesfully downloaded."
+             "Please report this problem and keep a backup of the tools zip file as a repro."
+             "You can try again by removing the $HOME/.deps.clj folder."]))
+
 (defn- unzip
   [zip-file destination-dir]
   (let [{:keys [ct-aux-files-names ct-jar-name]} @clojure-tools-info*
@@ -400,18 +406,34 @@ For more info, see:
     (with-open
      [fis (Files/newInputStream zip-file (into-array java.nio.file.OpenOption []))
       zis (ZipInputStream. fis)]
-      (loop []
-        (when-let [entry (.getNextEntry zis)]
+      (loop [to-unzip files]
+        (if-let [entry (.getNextEntry zis)]
           (let [entry-name (.getName entry)
+                cis (java.util.zip.CheckedInputStream. zis (java.util.zip.CRC32.))
                 file-name (.getName (io/file entry-name))]
-            (when (contains? files file-name)
+            (if (contains? files file-name)
               (let [new-path (.resolve destination-dir file-name)]
-                (Files/copy ^java.io.InputStream zis
+                (Files/copy ^java.io.InputStream cis
                             new-path
                             ^"[Ljava.nio.file.CopyOption;"
                             (into-array CopyOption
-                                        [java.nio.file.StandardCopyOption/REPLACE_EXISTING]))))
-            (recur)))))))
+                                        [java.nio.file.StandardCopyOption/REPLACE_EXISTING]))
+                (let [bytes (Files/readAllBytes new-path)
+                      crc (java.util.zip.CRC32.)
+                      _ (.update crc bytes)
+                      file-crc (.getValue crc)]
+                  (when-not (= file-crc (.getCrc entry) (-> cis (.getChecksum) (.getValue)))
+                    (let [msg (str "CRC check failed when unzipping zip-file " zip-file ", entry: " entry-name)]
+                      (warn msg)
+                      (warn zip-invalid-msg)
+                      (*exit-fn* {:exit 1 :message msg}))))
+                (recur (disj to-unzip file-name)))
+              (recur to-unzip)))
+          (when-not (empty? to-unzip)
+            (let [msg (str zip-file " did not contain all of the expected files, missing: " (str/join " " to-unzip))]
+              (warn msg)
+              (warn zip-invalid-msg)
+              (*exit-fn* {:exit 1 :message msg}))))))))
 
 (defn- clojure-tools-java-downloader-spit
   "Spits out and returns the path to `ClojureToolsDownloader.java` file
@@ -445,6 +467,8 @@ public class ClojureToolsDownloader {
         FileOutputStream fileOutputStream = new FileOutputStream(args[1]);
         FileChannel fileChannel = fileOutputStream.getChannel();
         fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
+        fileOutputStream.close();
+        fileChannel.close();
         System.exit(0);
     } catch (IOException e) {
         e.printStackTrace();
@@ -928,7 +952,7 @@ public class ClojureToolsDownloader {
               (:main-aliases cli-opts)
               (conj (str "-M" (:main-aliases cli-opts)))
               (:repl-aliases cli-opts)
-              (conj (str "-A" (str/join "" (:repl-aliases cli-opts))))
+              (conj (str "-A" (str/join (:repl-aliases cli-opts))))
               (:exec-aliases cli-opts)
               (conj (str "-X" (:exec-aliases cli-opts)))
               tool?
@@ -994,7 +1018,7 @@ public class ClojureToolsDownloader {
                          [:force (boolean (:force cli-opts))]
                          [:repro (boolean (:repro cli-opts))]
                          [:main-aliases (str (:main-aliases cli-opts))]
-                         [:all-aliases (str (:all-aliases cli-opts))]])
+                         [:repl-aliases (str/join (:repl-aliases cli-opts))]])
               tree? (*exit-fn* {:exit 0})
               (:trace cli-opts)
               (warn "Wrote trace.edn")
