@@ -8,7 +8,8 @@
    [clojure.set :as set]
    [clojure.string :as str]
    [clojure.test :as t :refer [deftest is testing]])
-  (:import [java.util.zip ZipEntry ZipOutputStream]))
+  (:import (java.util.jar Attributes$Name JarEntry JarOutputStream Manifest)
+           [java.util.zip ZipEntry ZipOutputStream]))
 
 ;; Print out information about the java executable that will be used
 ;; by deps.clj, useful for user validation.
@@ -480,3 +481,38 @@
         home-dir (System/getProperty "user.home")]
     (is (str/starts-with? (#'borkdude.deps/resolve-in-dir tmp-dir "dude") tmp-dir))
     (is (= home-dir (#'borkdude.deps/resolve-in-dir tmp-dir home-dir)))))
+
+
+(defn- is-make-classpath? [args]
+  (and (some #(= "clojure.main" %) args)
+       (some (fn [[a b]]
+               (and (= a "-m")
+                    (= b "clojure.tools.deps.script.make-classpath2")))
+             (partition 2 1 args))))
+
+
+(deftest issue-101
+  (let [temp-dir (fs/create-temp-dir)
+        temp-jar (fs/create-file (fs/path temp-dir "temp.jar"))
+        deps-file (fs/create-file (fs/path temp-dir "deps.edn"))
+        manifest (Manifest.)
+        attributes (.getMainAttributes manifest)]
+    (.mkdirs (fs/file temp-dir))
+    (.put attributes Attributes$Name/MANIFEST_VERSION "1.0")
+    (with-open [stream (JarOutputStream. (io/output-stream (fs/file temp-jar)) manifest)]
+      (.putNextEntry stream (JarEntry. "test.txt"))
+      (try
+        (.write stream (.getBytes "Hello World\n"))
+        (finally
+          (.closeEntry stream))))
+    (spit (fs/file deps-file) (pr-str '{:paths ["temp.jar"]}))
+    (let [classpath-created-count (atom 0)]
+      (binding [deps/*exit-fn* (constantly nil)
+                deps/*dir* (str temp-dir)
+                deps/*aux-process-fn* (fn [{:keys [cmd out]}]
+                                        (when (is-make-classpath? cmd)
+                                          (swap! classpath-created-count inc))
+                                        (#'deps/internal-shell-command cmd {:out out}))]
+        (deps/-main "-Spath")
+        (deps/-main "-Spath")                               ; Should not recalculate classpath the second time
+        (is (= @classpath-created-count 1))))))
