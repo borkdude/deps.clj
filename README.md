@@ -449,6 +449,10 @@ To run executable tests:
 $ bb exe-test
 ```
 
+## Projects using deps.clj
+
+- [Cursive](https://groups.google.com/g/cursive/c/9dTn12AkHzA/m/R_dj2fzRBAAJ)
+
 ## License
 
 Copyright © 2019-2020 Michiel Borkent
