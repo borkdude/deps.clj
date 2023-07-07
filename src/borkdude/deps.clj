@@ -557,6 +557,7 @@ public class ClojureToolsDownloader {
             example-deps-edn (io/file out-dir "example-deps.edn")]
         (when (and (not (.exists config-deps-edn))
                    (.exists example-deps-edn))
+          (io/make-parents config-deps-edn)
           (io/copy example-deps-edn config-deps-edn)))
       (let [config-tools-edn (io/file config-dir "tools" "tools.edn")
             install-tools-edn (io/file out-dir "tools.edn")]
