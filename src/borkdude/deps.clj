@@ -527,7 +527,7 @@ public class ClojureToolsDownloader {
 
   It calls `*exit-fn*` if it cannot download the archive, with
   instructions how to manually download it."
-  [{:keys [out-dir debug proxy-opts clj-jvm-opts]}]
+  [{:keys [out-dir debug proxy-opts clj-jvm-opts config-dir]}]
   (let [{:keys [ct-error-exit-code ct-url-str ct-zip-name]} @clojure-tools-info*
         dir (io/file out-dir)
         zip-file (io/file out-dir ct-zip-name)
@@ -552,6 +552,19 @@ public class ClojureToolsDownloader {
     (warn "Unzipping" (str zip-file) "...")
     (unzip zip-file (.getPath dir))
     (.delete zip-file)
+    (when config-dir
+      (let [config-deps-edn (io/file config-dir "deps.edn")
+            example-deps-edn (io/file out-dir "example-deps.edn")]
+        (when (and (not (.exists config-deps-edn))
+                   (.exists example-deps-edn))
+          (io/make-parents config-deps-edn)
+          (io/copy example-deps-edn config-deps-edn)))
+      (let [config-tools-edn (io/file config-dir "tools" "tools.edn")
+            install-tools-edn (io/file out-dir "tools.edn")]
+        (when (and (not (.exists config-tools-edn))
+                   (.exists install-tools-edn))
+          (io/make-parents config-tools-edn)
+          (io/copy install-tools-edn config-tools-edn))))
     ;; Successful transaction
     (.delete transaction-start))
   (warn "Successfully installed clojure tools!"))
@@ -842,6 +855,7 @@ public class ClojureToolsDownloader {
         proxy-opts (get-proxy-info)
         proxy-settings (proxy-jvm-opts proxy-opts)
         clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
+        config-dir (get-config-dir)
         tools-cp
         (or
          (when (and (.exists tools-jar)
@@ -850,7 +864,7 @@ public class ClojureToolsDownloader {
            (.getPath tools-jar))
          (binding [*out* *err*]
            (warn "Clojure tools not yet in expected location:" (str tools-jar))
-           (clojure-tools-install! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts})
+           (clojure-tools-install! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts :config-dir config-dir})
            tools-jar))
         mode (:mode cli-opts)
         exec? (= :exec mode)
@@ -863,7 +877,6 @@ public class ClojureToolsDownloader {
                      clj-jvm-opts
                      proxy-settings
                      ["-classpath" tools-cp "clojure.main"]))
-        config-dir (get-config-dir)
         java-opts (some-> (*getenv-fn* "JAVA_OPTS") (str/split #" "))]
     ;; If user config directory does not exist, create it
     (let [config-dir (io/file config-dir)]
