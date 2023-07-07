@@ -388,13 +388,15 @@ For more info, see:
 
 (defn- unzip
   [zip-file destination-dir]
-  (let [{:keys [ct-aux-files-names ct-jar-name]} @clojure-tools-info*
+  (let [transaction-file (io/file destination-dir "TRANSACTION_START")
+        {:keys [ct-aux-files-names ct-jar-name]} @clojure-tools-info*
         zip-file (io/file zip-file)
         destination-dir (io/file destination-dir)
         _ (.mkdirs destination-dir)
         destination-dir (.toPath destination-dir)
         zip-file (.toPath zip-file)
         files (into #{ct-jar-name} ct-aux-files-names)]
+    (spit transaction-file "")
     (with-open
      [fis (Files/newInputStream zip-file (into-array java.nio.file.OpenOption []))
       zis (ZipInputStream. fis)]
@@ -528,10 +530,12 @@ public class ClojureToolsDownloader {
   [{:keys [out-dir debug proxy-opts clj-jvm-opts]}]
   (let [{:keys [ct-error-exit-code ct-url-str ct-zip-name]} @clojure-tools-info*
         dir (io/file out-dir)
-        zip-file (io/file out-dir ct-zip-name)]
+        zip-file (io/file out-dir ct-zip-name)
+        transaction-start (io/file out-dir "TRANSACTION_START")]
+    (io/make-parents transaction-start)
+    (spit transaction-start "")
     (when-not (.exists zip-file)
       (warn "Downloading" ct-url-str "to" (str zip-file))
-      (.mkdirs dir)
       (or (when *clojure-tools-download-fn*
             (when debug (warn "Attempting download using custom download function..."))
             (*clojure-tools-download-fn* {:url ct-url-str :dest (str zip-file) :proxy-opts proxy-opts :clj-jvm-opts clj-jvm-opts}))
@@ -547,7 +551,9 @@ public class ClojureToolsDownloader {
           {:url ct-url-str :out-dir (str dir)}))
     (warn "Unzipping" (str zip-file) "...")
     (unzip zip-file (.getPath dir))
-    (.delete zip-file))
+    (.delete zip-file)
+    ;; Successful transaction
+    (.delete transaction-start))
   (warn "Successfully installed clojure tools!"))
 
 (def ^:private parse-opts->keyword
@@ -838,7 +844,10 @@ public class ClojureToolsDownloader {
         clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
         tools-cp
         (or
-         (when (.exists tools-jar) (.getPath tools-jar))
+         (when (and (.exists tools-jar)
+                    ;; aborted transaction
+                    (not (.exists (io/file libexec-dir "TRANSACTION_START"))))
+           (.getPath tools-jar))
          (binding [*out* *err*]
            (warn "Clojure tools not yet in expected location:" (str tools-jar))
            (clojure-tools-install! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts})
