@@ -97,6 +97,10 @@ a programmatic API under `babashka.deps`.
 
 Used to provide a getting started REPL.
 
+### [Cursive](https://cursive-ide.com/)
+
+The deps integration uses deps.clj since version 1.13.0.
+
 ## Status
 
 Deps.clj tries to follow the official Clojure CLI as faithfully as possible and
@@ -448,10 +452,6 @@ To run executable tests:
 ```
 $ bb exe-test
 ```
-
-## Projects using deps.clj
-
-- [Cursive](https://groups.google.com/g/cursive/c/9dTn12AkHzA/m/R_dj2fzRBAAJ)
 
 ## License
 
