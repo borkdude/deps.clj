@@ -348,7 +348,7 @@ For more info, see:
           dest (io/file dest)
           conn ^URLConnection (.openConnection ^URL source)]
       (when (instance? HttpURLConnection conn)
-        (.setInstanceFollowRedirects #^java.net.HttpURLConnection conn true))
+        (.setInstanceFollowRedirects ^java.net.HttpURLConnection conn true))
       (.connect conn)
       (with-open [is (.getInputStream conn)]
         (io/copy is dest))
@@ -377,12 +377,18 @@ For more info, see:
   :ct-url-str The url to download the archive from.
 
   :ct-zip-name The file name to store the archive as."
-  (delay (let [version @version]
+  (delay (let [version @version
+               commit (-> (str/split version #"\.")
+                          last
+                          (Long/parseLong))
+               github-release? (>= commit 1386)]
            {:ct-base-dir "ClojureTools"
             :ct-error-exit-code 99
             :ct-aux-files-names ["exec.jar" "example-deps.edn" "tools.edn"]
             :ct-jar-name (format "clojure-tools-%s.jar" version)
-            :ct-url-str (format "https://github.com/clojure/brew-install/releases/download/%s/clojure-tools.zip" version)
+            :ct-url-str (if github-release?
+                          (format "https://github.com/clojure/brew-install/releases/download/%s/clojure-tools.zip" version)
+                          (format "https://download.clojure.org/install/clojure-tools-%s.zip" version))
             :ct-zip-name "clojure-tools.zip"})))
 
 (def zip-invalid-msg
