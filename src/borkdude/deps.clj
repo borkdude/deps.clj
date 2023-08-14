@@ -580,7 +580,7 @@ public class ClojureToolsDownloader {
     (when (.exists sha256-file)
       (let [sha (str/trim (slurp sha256-file))
             bytes (Files/readAllBytes (.toPath zip-file))
-            hash (-> (java.security.MessageDigest/getInstance "SHA256")
+            hash (-> (java.security.MessageDigest/getInstance "SHA-256")
                      (.digest bytes))
             hash (-> (new BigInteger 1 hash)
                      (.toString 16))]
