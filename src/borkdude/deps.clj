@@ -380,7 +380,7 @@ For more info, see:
             :ct-aux-files-names ["exec.jar" "example-deps.edn" "tools.edn"]
             :ct-jar-name (format "clojure-tools-%s.jar" version)
             :ct-url-str (format "https://github.com/clojure/brew-install/releases/download/%s/clojure-tools.zip" version)
-            :ct-zip-name "tools.zip"})))
+            :ct-zip-name "clojure-tools.zip"})))
 
 (def zip-invalid-msg
   (str/join \n
