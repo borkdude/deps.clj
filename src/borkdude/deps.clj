@@ -16,7 +16,7 @@
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.11.1.1347")))
+             "1.11.1.1386")))
 
 (def ^:private cache-version "4")
 
@@ -354,6 +354,8 @@ For more info, see:
       (warn ::direct-download (.getMessage e))
       false)))
 
+;; https://github.com/clojure/brew-install/releases/download/1.11.1.1386/clojure-tools.zip
+
 (def ^:private clojure-tools-info*
   "A delay'd map with information about the clojure tools archive, where
   to download it from, which files to extract and where to.
@@ -377,7 +379,7 @@ For more info, see:
             :ct-error-exit-code 99
             :ct-aux-files-names ["exec.jar" "example-deps.edn" "tools.edn"]
             :ct-jar-name (format "clojure-tools-%s.jar" version)
-            :ct-url-str (format "https://download.clojure.org/install/clojure-tools-%s.zip" version)
+            :ct-url-str (format "https://github.com/clojure/brew-install/releases/download/%s/clojure-tools.zip" version)
             :ct-zip-name "tools.zip"})))
 
 (def zip-invalid-msg
