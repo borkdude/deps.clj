@@ -16,7 +16,7 @@
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.11.1.1386")))
+             "1.11.1.1403")))
 
 (def ^:private cache-version "4")
 
@@ -378,15 +378,19 @@ For more info, see:
                commit (-> (str/split version #"\.")
                           last
                           (Long/parseLong))
-               github-release? (>= commit 1386)]
+               github-release? (>= commit 1386)
+               verify-sha256 (>= commit 1403)
+               url (if github-release?
+                     (format "https://github.com/clojure/brew-install/releases/download/%s/clojure-tools.zip" version)
+                     (format "https://download.clojure.org/install/clojure-tools-%s.zip" version))]
            {:ct-base-dir "ClojureTools"
             :ct-error-exit-code 99
             :ct-aux-files-names ["exec.jar" "example-deps.edn" "tools.edn"]
             :ct-jar-name (format "clojure-tools-%s.jar" version)
-            :ct-url-str (if github-release?
-                          (format "https://github.com/clojure/brew-install/releases/download/%s/clojure-tools.zip" version)
-                          (format "https://download.clojure.org/install/clojure-tools-%s.zip" version))
-            :ct-zip-name "clojure-tools.zip"})))
+            :ct-url-str url
+            :ct-zip-name "clojure-tools.zip"
+            :sha256-url-str (when verify-sha256
+                              (str url ".sha256"))})))
 
 (def zip-invalid-msg
   (str/join \n
@@ -492,7 +496,7 @@ public class ClojureToolsDownloader {
   "Downloads `:url` zip file to `:dest` by invoking `java` with
   `:proxy` options on a `.java` program file, and returns true on
   success. Requires Java 11+ (JEP 330)."
-  [{:keys [url dest proxy-opts clj-jvm-opts]}]
+  [{:keys [url dest proxy-opts clj-jvm-opts sha256-url]}]
   (let [dest-dir (.getCanonicalPath (io/file dest ".."))
         dlr-path (clojure-tools-java-downloader-spit dest-dir)
         java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
@@ -505,6 +509,13 @@ public class ClojureToolsDownloader {
                                            clj-jvm-opts
                                            (proxy-jvm-opts proxy-opts)
                                            [dlr-path url (str dest)]))})
+      (when sha256-url
+        (prn :downloading)
+        (*aux-process-fn* {:cmd (vec (concat java-cmd
+                                             clj-jvm-opts
+                                             (proxy-jvm-opts proxy-opts)
+                                             [dlr-path sha256-url (str dest ".sha256")]))}))
+      (prn :downloaded)
       (io/delete-file dlr-path true)
       @success?*)))
 
@@ -536,9 +547,10 @@ public class ClojureToolsDownloader {
   It calls `*exit-fn*` if it cannot download the archive, with
   instructions how to manually download it."
   [{:keys [out-dir debug proxy-opts clj-jvm-opts config-dir]}]
-  (let [{:keys [ct-error-exit-code ct-url-str ct-zip-name]} @clojure-tools-info*
+  (let [{:keys [ct-error-exit-code ct-url-str ct-zip-name sha256-url]} @clojure-tools-info*
         dir (io/file out-dir)
         zip-file (io/file out-dir ct-zip-name)
+        sha256-file (io/file (str zip-file ".sha256"))
         transaction-start (io/file out-dir "TRANSACTION_START")]
     (io/make-parents transaction-start)
     (spit transaction-start "")
@@ -546,18 +558,24 @@ public class ClojureToolsDownloader {
       (warn "Downloading" ct-url-str "to" (str zip-file))
       (or (when *clojure-tools-download-fn*
             (when debug (warn "Attempting download using custom download function..."))
-            (*clojure-tools-download-fn* {:url ct-url-str :dest (str zip-file) :proxy-opts proxy-opts :clj-jvm-opts clj-jvm-opts}))
+            (*clojure-tools-download-fn* {:url ct-url-str :dest (str zip-file) :proxy-opts proxy-opts :clj-jvm-opts clj-jvm-opts :sha256-url sha256-url}))
           (when (seq clj-jvm-opts)
             (when debug (warn "Attempting download using java subprocess... (requires Java11+)"))
-            (clojure-tools-download-java! {:url ct-url-str :dest (str zip-file) :proxy-opts proxy-opts :clj-jvm-opts clj-jvm-opts}))
+            (clojure-tools-download-java! {:url ct-url-str :dest (str zip-file) :proxy-opts proxy-opts :clj-jvm-opts clj-jvm-opts :sha256-url sha256-url}))
           (do (when debug (warn "Attempting direct download..."))
-              (clojure-tools-download-direct! {:url ct-url-str :dest zip-file}))
+              (let [res (clojure-tools-download-direct! {:url ct-url-str :dest zip-file})]
+                (when sha256-url
+                  (clojure-tools-download-direct! {:url sha256-url :dest (str zip-file ".sha256")}))
+                res))
           (*exit-fn* {:exit ct-error-exit-code
                       :message (str "Error: Cannot download Clojure tools."
                                     " Please download manually from " ct-url-str
                                     " to " (str (io/file dir ct-zip-name)))})
-          {:url ct-url-str :out-dir (str dir)}))
+          {:url ct-url-str :out-dir (str dir) :sha256-url sha256-url}))
     (warn "Unzipping" (str zip-file) "...")
+    (when (.exists sha256-file)
+      (let [sha (str/trim (slurp sha256-file))]
+        (prn :sha sha)))
     (unzip zip-file (.getPath dir))
     (.delete zip-file)
     (when config-dir
