@@ -510,12 +510,10 @@ public class ClojureToolsDownloader {
                                            (proxy-jvm-opts proxy-opts)
                                            [dlr-path url (str dest)]))})
       (when sha256-url
-        (prn :downloading)
         (*aux-process-fn* {:cmd (vec (concat java-cmd
                                              clj-jvm-opts
                                              (proxy-jvm-opts proxy-opts)
                                              [dlr-path sha256-url (str dest ".sha256")]))}))
-      (prn :downloaded)
       (io/delete-file dlr-path true)
       @success?*)))
 
@@ -584,12 +582,13 @@ public class ClojureToolsDownloader {
                      (.digest bytes))
             hash (-> (new BigInteger 1 hash)
                      (.toString 16))]
-        (when-not (= sha hash)
+        (if-not (= sha hash)
           (*exit-fn* {:exit ct-error-exit-code
                       :message (str "Error: sha256 of zip and expected sha256 do not match: "
                                     hash " vs. " sha "\n"
                                     " Please download manually from " ct-url-str
-                                    " to " (str (io/file dir ct-zip-name)))}))))
+                                    " to " (str (io/file dir ct-zip-name)))})
+          (.delete sha256-file))))
     (warn "Unzipping" (str zip-file) "...")
     (unzip zip-file (.getPath dir))
     (.delete zip-file)
