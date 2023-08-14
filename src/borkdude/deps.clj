@@ -547,7 +547,7 @@ public class ClojureToolsDownloader {
   It calls `*exit-fn*` if it cannot download the archive, with
   instructions how to manually download it."
   [{:keys [out-dir debug proxy-opts clj-jvm-opts config-dir]}]
-  (let [{:keys [ct-error-exit-code ct-url-str ct-zip-name sha256-url]} @clojure-tools-info*
+  (let [{:keys [ct-error-exit-code ct-url-str ct-zip-name sha256-url-str]} @clojure-tools-info*
         dir (io/file out-dir)
         zip-file (io/file out-dir ct-zip-name)
         sha256-file (io/file (str zip-file ".sha256"))
@@ -556,26 +556,41 @@ public class ClojureToolsDownloader {
     (spit transaction-start "")
     (when-not (.exists zip-file)
       (warn "Downloading" ct-url-str "to" (str zip-file))
-      (or (when *clojure-tools-download-fn*
-            (when debug (warn "Attempting download using custom download function..."))
-            (*clojure-tools-download-fn* {:url ct-url-str :dest (str zip-file) :proxy-opts proxy-opts :clj-jvm-opts clj-jvm-opts :sha256-url sha256-url}))
-          (when (seq clj-jvm-opts)
-            (when debug (warn "Attempting download using java subprocess... (requires Java11+)"))
-            (clojure-tools-download-java! {:url ct-url-str :dest (str zip-file) :proxy-opts proxy-opts :clj-jvm-opts clj-jvm-opts :sha256-url sha256-url}))
-          (do (when debug (warn "Attempting direct download..."))
-              (let [res (clojure-tools-download-direct! {:url ct-url-str :dest zip-file})]
-                (when sha256-url
-                  (clojure-tools-download-direct! {:url sha256-url :dest (str zip-file ".sha256")}))
-                res))
+      (let [res (or (when *clojure-tools-download-fn*
+                      (when debug (warn "Attempting download using custom download function..."))
+                      (*clojure-tools-download-fn* {:url ct-url-str :dest (str zip-file) :proxy-opts proxy-opts :clj-jvm-opts clj-jvm-opts :sha256-url sha256-url-str}))
+                    (when (seq clj-jvm-opts)
+                      (prn :via-java)
+                      (when debug (warn "Attempting download using java subprocess... (requires Java11+)"))
+                      (clojure-tools-download-java! {:url ct-url-str :dest (str zip-file) :proxy-opts proxy-opts :clj-jvm-opts clj-jvm-opts :sha256-url sha256-url-str}))
+                    (do (when debug (warn "Attempting direct download..."))
+                        (prn :via-tools-download-direct)
+                        (let [res (clojure-tools-download-direct! {:url ct-url-str :dest zip-file})]
+                          (when sha256-url-str
+                            (clojure-tools-download-direct! {:url sha256-url-str :dest (str zip-file ".sha256")}))
+                          res))
+                    (*exit-fn* {:exit ct-error-exit-code
+                                :message (str "Error: Cannot download Clojure tools."
+                                              " Please download manually from " ct-url-str
+                                              " to " (str (io/file dir ct-zip-name)))})
+                    ::passthrough)]
+        (when (and sha256-url-str (not *clojure-tools-download-fn*) (not (.exists sha256-file)) (not= ::passthrough res))
           (*exit-fn* {:exit ct-error-exit-code
-                      :message (str "Error: Cannot download Clojure tools."
-                                    " Please download manually from " ct-url-str
-                                    " to " (str (io/file dir ct-zip-name)))})
-          {:url ct-url-str :out-dir (str dir) :sha256-url sha256-url}))
-    (warn "Unzipping" (str zip-file) "...")
+                      :message (str "Expected sha256 file to be downloaded to: " sha256-file)}))))
     (when (.exists sha256-file)
-      (let [sha (str/trim (slurp sha256-file))]
-        (prn :sha sha)))
+      (let [sha (str/trim (slurp sha256-file))
+            bytes (Files/readAllBytes (.toPath zip-file))
+            hash (-> (java.security.MessageDigest/getInstance "SHA256")
+                     (.digest bytes))
+            hash (-> (new BigInteger 1 hash)
+                     (.toString 16))]
+        (when-not (= sha hash)
+          (*exit-fn* {:exit ct-error-exit-code
+                      :message (str "Error: sha256 of zip and expected sha256 do not match: "
+                                    hash " vs. " sha "\n"
+                                    " Please download manually from " ct-url-str
+                                    " to " (str (io/file dir ct-zip-name)))}))))
+    (warn "Unzipping" (str zip-file) "...")
     (unzip zip-file (.getPath dir))
     (.delete zip-file)
     (when config-dir
