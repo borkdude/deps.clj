@@ -19,7 +19,7 @@
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.11.1.1347")))
+             "1.11.1.1386")))
 
 (def ^:private cache-version "4")
 
@@ -348,7 +348,7 @@ For more info, see:
           dest (io/file dest)
           conn ^URLConnection (.openConnection ^URL source)]
       (when (instance? HttpURLConnection conn)
-        (.setInstanceFollowRedirects #^java.net.HttpURLConnection conn true))
+        (.setInstanceFollowRedirects ^java.net.HttpURLConnection conn true))
       (.connect conn)
       (with-open [is (.getInputStream conn)]
         (io/copy is dest))
@@ -356,6 +356,8 @@ For more info, see:
     (catch Exception e
       (warn ::direct-download (.getMessage e))
       false)))
+
+;; https://github.com/clojure/brew-install/releases/download/1.11.1.1386/clojure-tools.zip
 
 (def ^:private clojure-tools-info*
   "A delay'd map with information about the clojure tools archive, where
@@ -375,13 +377,19 @@ For more info, see:
   :ct-url-str The url to download the archive from.
 
   :ct-zip-name The file name to store the archive as."
-  (delay (let [version @version]
+  (delay (let [version @version
+               commit (-> (str/split version #"\.")
+                          last
+                          (Long/parseLong))
+               github-release? (>= commit 1386)]
            {:ct-base-dir "ClojureTools"
             :ct-error-exit-code 99
             :ct-aux-files-names ["exec.jar" "example-deps.edn" "tools.edn"]
             :ct-jar-name (format "clojure-tools-%s.jar" version)
-            :ct-url-str (format "https://download.clojure.org/install/clojure-tools-%s.zip" version)
-            :ct-zip-name "tools.zip"})))
+            :ct-url-str (if github-release?
+                          (format "https://github.com/clojure/brew-install/releases/download/%s/clojure-tools.zip" version)
+                          (format "https://download.clojure.org/install/clojure-tools-%s.zip" version))
+            :ct-zip-name "clojure-tools.zip"})))
 
 (def zip-invalid-msg
   (str/join \n
@@ -391,13 +399,15 @@ For more info, see:
 
 (defn- unzip
   [zip-file destination-dir]
-  (let [{:keys [ct-aux-files-names ct-jar-name]} @clojure-tools-info*
+  (let [transaction-file (io/file destination-dir "TRANSACTION_START")
+        {:keys [ct-aux-files-names ct-jar-name]} @clojure-tools-info*
         zip-file (io/file zip-file)
         destination-dir (io/file destination-dir)
         _ (.mkdirs destination-dir)
         destination-dir (.toPath destination-dir)
         zip-file (.toPath zip-file)
         files (into #{ct-jar-name} ct-aux-files-names)]
+    (spit transaction-file "")
     (with-open
      [fis (Files/newInputStream zip-file (into-array java.nio.file.OpenOption []))
       zis (ZipInputStream. fis)]
@@ -528,13 +538,15 @@ public class ClojureToolsDownloader {
 
   It calls `*exit-fn*` if it cannot download the archive, with
   instructions how to manually download it."
-  [{:keys [out-dir debug proxy-opts clj-jvm-opts]}]
+  [{:keys [out-dir debug proxy-opts clj-jvm-opts config-dir]}]
   (let [{:keys [ct-error-exit-code ct-url-str ct-zip-name]} @clojure-tools-info*
         dir (io/file out-dir)
-        zip-file (io/file out-dir ct-zip-name)]
+        zip-file (io/file out-dir ct-zip-name)
+        transaction-start (io/file out-dir "TRANSACTION_START")]
+    (io/make-parents transaction-start)
+    (spit transaction-start "")
     (when-not (.exists zip-file)
       (warn "Downloading" ct-url-str "to" (str zip-file))
-      (.mkdirs dir)
       (or (when *clojure-tools-download-fn*
             (when debug (warn "Attempting download using custom download function..."))
             (*clojure-tools-download-fn* {:url ct-url-str :dest (str zip-file) :proxy-opts proxy-opts :clj-jvm-opts clj-jvm-opts}))
@@ -550,7 +562,22 @@ public class ClojureToolsDownloader {
           {:url ct-url-str :out-dir (str dir)}))
     (warn "Unzipping" (str zip-file) "...")
     (unzip zip-file (.getPath dir))
-    (.delete zip-file))
+    (.delete zip-file)
+    (when config-dir
+      (let [config-deps-edn (io/file config-dir "deps.edn")
+            example-deps-edn (io/file out-dir "example-deps.edn")]
+        (when (and (not (.exists config-deps-edn))
+                   (.exists example-deps-edn))
+          (io/make-parents config-deps-edn)
+          (io/copy example-deps-edn config-deps-edn)))
+      (let [config-tools-edn (io/file config-dir "tools" "tools.edn")
+            install-tools-edn (io/file out-dir "tools.edn")]
+        (when (and (not (.exists config-tools-edn))
+                   (.exists install-tools-edn))
+          (io/make-parents config-tools-edn)
+          (io/copy install-tools-edn config-tools-edn))))
+    ;; Successful transaction
+    (.delete transaction-start))
   (warn "Successfully installed clojure tools!"))
 
 (def ^:private parse-opts->keyword
@@ -839,12 +866,16 @@ public class ClojureToolsDownloader {
         proxy-opts (get-proxy-info)
         proxy-settings (proxy-jvm-opts proxy-opts)
         clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
+        config-dir (get-config-dir)
         tools-cp
         (or
-         (when (.exists tools-jar) (.getPath tools-jar))
+         (when (and (.exists tools-jar)
+                    ;; aborted transaction
+                    (not (.exists (io/file libexec-dir "TRANSACTION_START"))))
+           (.getPath tools-jar))
          (binding [*out* *err*]
            (warn "Clojure tools not yet in expected location:" (str tools-jar))
-           (clojure-tools-install! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts})
+           (clojure-tools-install! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts :config-dir config-dir})
            tools-jar))
         mode (:mode cli-opts)
         exec? (= :exec mode)
@@ -857,7 +888,6 @@ public class ClojureToolsDownloader {
                      clj-jvm-opts
                      proxy-settings
                      ["-classpath" tools-cp "clojure.main"]))
-        config-dir (get-config-dir)
         java-opts (some-> (*getenv-fn* "JAVA_OPTS") (str/split #" "))]
     ;; If user config directory does not exist, create it
     (let [config-dir (io/file config-dir)]

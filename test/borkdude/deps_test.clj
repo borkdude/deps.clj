@@ -152,24 +152,25 @@
     (is (= ["bar" "quux"] (edn/read-string (slurp temp-file-path))))))
 
 (deftest tools-dir-env-test
-  (fs/delete-tree "tools-dir")
-  (try
-    (let [[out err]
-          (-> (process (invoke-deps-cmd "-Sdescribe")
-                       {:out :string
-                        :err :string
-                        :extra-env {"DEPS_CLJ_TOOLS_VERSION" "1.10.3.899"
-                                    "DEPS_CLJ_TOOLS_DIR" "tools-dir"}})
-              check
-              ((juxt :out :err)))]
-      (println err)
-      (is (= "1.10.3.899" (:version (edn/read-string out))))
-      (is (str/includes? err "Clojure tools not yet in expected location:"))
-      (is (fs/exists? (fs/file "tools-dir" "clojure-tools-1.10.3.899.jar")))
-      (is (fs/exists? (fs/file "tools-dir" "example-deps.edn")))
-      (is (fs/exists? (fs/file "tools-dir" "exec.jar")))
-      (is (fs/exists? (fs/file "tools-dir" "tools.edn"))))
-    (finally (fs/delete-tree "tools-dir"))))
+  (doseq [version ["1.10.3.899" "1.11.1.1386"]]
+    (fs/delete-tree "tools-dir")
+    (try
+      (let [[out err]
+            (-> (process (invoke-deps-cmd "-Sdescribe")
+                         {:out :string
+                          :err :string
+                          :extra-env {"DEPS_CLJ_TOOLS_VERSION" version
+                                      "DEPS_CLJ_TOOLS_DIR" "tools-dir"}})
+                check
+                ((juxt :out :err)))]
+        (println err)
+        (is (= version (:version (edn/read-string out))))
+        (is (str/includes? err "Clojure tools not yet in expected location:"))
+        (is (fs/exists? (fs/file "tools-dir" (format "clojure-tools-%s.jar" version))))
+        (is (fs/exists? (fs/file "tools-dir" "example-deps.edn")))
+        (is (fs/exists? (fs/file "tools-dir" "exec.jar")))
+        (is (fs/exists? (fs/file "tools-dir" "tools.edn"))))
+      (finally (fs/delete-tree "tools-dir")))))
 
 (deftest without-cp-file-tests
   (doseq [[option output-contains]
