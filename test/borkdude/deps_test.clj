@@ -464,7 +464,7 @@
           set)
       (set '(:paths :deps :aliases :mvn/repos :libs :classpath-roots :classpath :basis-config))))
     #_#_(require 'clojure.pprint)
-    ((requiring-resolve 'clojure.pprint/pprint) basis)
+      ((requiring-resolve 'clojure.pprint/pprint) basis)
     (is (contains? (:libs basis) 'medley/medley))))
 
 (deftest long-classpath-test
@@ -515,5 +515,5 @@
                                           (swap! classpath-created-count inc))
                                         (#'deps/internal-shell-command cmd {:out out}))]
         (deps/-main "-Spath")
-        (deps/-main "-Spath")                               ; Should not recalculate classpath the second time
+        (deps/-main "-Spath") ; Should not recalculate classpath the second time
         (is (= @classpath-created-count 1))))))
