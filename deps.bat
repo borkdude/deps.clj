@@ -566,11 +566,9 @@ public class ClojureToolsDownloader {
                       (when debug (warn "Attempting download using custom download function..."))
                       (*clojure-tools-download-fn* {:url ct-url-str :dest (str zip-file) :proxy-opts proxy-opts :clj-jvm-opts clj-jvm-opts :sha256-url sha256-url-str}))
                     (when (seq clj-jvm-opts)
-                      (prn :via-java)
                       (when debug (warn "Attempting download using java subprocess... (requires Java11+)"))
                       (clojure-tools-download-java! {:url ct-url-str :dest (str zip-file) :proxy-opts proxy-opts :clj-jvm-opts clj-jvm-opts :sha256-url sha256-url-str}))
                     (do (when debug (warn "Attempting direct download..."))
-                        (prn :via-tools-download-direct)
                         (let [res (clojure-tools-download-direct! {:url ct-url-str :dest zip-file})]
                           (when sha256-url-str
                             (clojure-tools-download-direct! {:url sha256-url-str :dest (str zip-file ".sha256")}))
