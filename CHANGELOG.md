@@ -10,6 +10,11 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 [deps.clj](https://github.com/borkdude/deps.clj): a faithful port of the clojure CLI bash script to Clojure
 
+## 1.11.1.1411
+
+- Catch up with CLI `1.11.1.1411`
+- [#113](https://github.com/borkdude/deps.clj/issues/113): Fix bug in SHA comparison of downloaded tools jar with leading zeroes
+
 ## 1.11.1.1403
 
 - Verify downloaded zip file with .sha256 file

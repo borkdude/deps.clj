@@ -19,7 +19,7 @@
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.11.1.1403")))
+             "1.11.1.1413")))
 
 (def ^:private cache-version "4")
 
@@ -532,6 +532,9 @@ public class ClojureToolsDownloader {
   Should return `true` if the download was successful, or false if not."
   nil)
 
+(defn- left-pad-zeroes [s n]
+  (str (str/join (repeat (- n (count s)) 0)) s))
+
 (defn clojure-tools-install!
   "Installs clojure tools archive by downloading it in `:out-dir`, if not already there,
   and extracting in-place.
@@ -577,12 +580,15 @@ public class ClojureToolsDownloader {
           (*exit-fn* {:exit ct-error-exit-code
                       :message (str "Expected sha256 file to be downloaded to: " sha256-file)}))))
     (when (.exists sha256-file)
-      (let [sha (str/trim (slurp sha256-file))
+      (let [sha (-> (slurp sha256-file)
+                    str/trim
+                    (left-pad-zeroes 64))
             bytes (Files/readAllBytes (.toPath zip-file))
             hash (-> (java.security.MessageDigest/getInstance "SHA-256")
                      (.digest bytes))
             hash (-> (new BigInteger 1 hash)
-                     (.toString 16))]
+                     (.toString 16))
+            hash (left-pad-zeroes hash 64)]
         (if-not (= sha hash)
           (*exit-fn* {:exit ct-error-exit-code
                       :message (str "Error: sha256 of zip and expected sha256 do not match: "
