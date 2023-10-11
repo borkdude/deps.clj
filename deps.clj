@@ -264,9 +264,9 @@ For more info, see:
 
 (defn- home-dir []
   (if windows?
-    ;; workaround for https://github.com/oracle/graal/issues/1630
-    (*getenv-fn* "userprofile")
-    (System/getProperty "user.home")))
+    (or (*getenv-fn* "HOME")
+        (*getenv-fn* "USERPROFILE"))
+    (*getenv-fn* "HOME")))
 
 (def ^:private java-exe (if windows? "java.exe" "java"))
 
