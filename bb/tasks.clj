@@ -36,6 +36,7 @@
                "--enable-all-security-services"
                "--no-fallback"
                "--verbose"
-               "--no-server"))
+               "--no-server"
+               "-J-Xmx3g"))
     (p/shell lein "clean")
     (p/shell "./deps" "-Spath" "-Sdeps" "{:deps {borkdude/deps.clj {:mvn/version \"0.0.1\"}}}")))
