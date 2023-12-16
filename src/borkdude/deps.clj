@@ -16,9 +16,9 @@
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.11.1.1413")))
+             "1.11.1.1429")))
 
-(def ^:private cache-version "4")
+(def ^:private cache-version "5")
 
 (def deps-clj-version
   "The current version of deps.clj"
@@ -783,9 +783,11 @@ public class ClojureToolsDownloader {
   (or (:deps-file cli-opts)
       (.getPath (io/file *dir* "deps.edn"))))
 
-(defn get-cache-dir
-  "Returns cache dir (`.cpcache`) from either local dir, if `deps-edn`
-  exists, or the user cache dir."
+(defn get-cache-dir*
+  "Returns `:cache-dir` (`.cpcache`) and `:cache-dir-key` from either
+  local dir, if `deps-edn` exists, or the user cache dir. The
+  `:cache-dir-key` is used in case the working directory isn't
+  writable and the cache must be stored in the user-cache-dir."
   [{:keys [deps-edn config-dir]}]
   (let [user-cache-dir
         (or (*getenv-fn* "CLJ_CACHE")
@@ -793,8 +795,20 @@ public class ClojureToolsDownloader {
               (.getPath (io/file xdg-config-home "clojure")))
             (.getPath (io/file config-dir ".cpcache")))]
     (if (.exists (io/file deps-edn))
-      (.getPath (io/file *dir* ".cpcache"))
-      user-cache-dir)))
+      (if (.canWrite (io/file *dir*))
+        {:cache-dir (.getPath (io/file *dir* ".cpcache"))
+         :cache-dir-key *dir*}
+        ;; can't write to *dir*/.cpcache
+        {:cache-dir user-cache-dir})
+      {:cache-dir user-cache-dir})))
+
+(defn get-cache-dir
+  "Returns cache dir (`.cpcache`) from either local dir, if `deps-edn`
+  exists, or the user cache dir.
+  DEPRECATED: use `get-cache-dir*` instead."
+  {:deprecated "use get-cache-dir* instead"}
+  [m]
+  (:cache-dir (get-cache-dir* m)))
 
 (defn get-config-paths
   "Returns vec of configuration paths, i.e. deps.edn from:
@@ -816,10 +830,11 @@ public class ClojureToolsDownloader {
 (defn get-checksum
   "Returns checksum based on cli-opts (as returned by `parse-cli-opts`)
   and config-paths (as returned by `get-config-paths`)"
-  [{:keys [cli-opts config-paths]}]
+  [{:keys [cli-opts config-paths cache-dir-key]}]
   (let [val*
         (str/join "|"
-                  (concat [cache-version]
+                  (concat (cond-> [cache-version]
+                            cache-dir-key (conj cache-dir-key))
                           (:repl-aliases cli-opts)
                           [(:exec-aliases cli-opts)
                            (:main-aliases cli-opts)
@@ -949,11 +964,13 @@ public class ClojureToolsDownloader {
                                           :deps-edn deps-edn
                                           :config-dir config-dir
                                           :install-dir install-dir})
-          cache-dir (get-cache-dir {:deps-edn deps-edn :config-dir config-dir})
+          {:keys [cache-dir cache-dir-key]}
+          (get-cache-dir* {:deps-edn deps-edn :config-dir config-dir})
           ;; Construct location of cached classpath file
           tool-name (:tool-name cli-opts)
           tool-aliases (:tool-aliases cli-opts)
-          ck (get-checksum {:cli-opts cli-opts :config-paths config-paths})
+          ck (get-checksum {:cli-opts cli-opts :config-paths config-paths
+                            :cache-dir-key cache-dir-key})
           cp-file (.getPath (io/file cache-dir (str ck ".cp")))
           jvm-file (.getPath (io/file cache-dir (str ck ".jvm")))
           main-file (.getPath (io/file cache-dir (str ck ".main")))
