@@ -14,6 +14,10 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 - [#114](https://github.com/borkdude/deps.clj/issues/114): Align with original scripts on how to determine home directory
 
+## 1.11.1.1429
+
+- Catch up with CLI `1.11.1.1429`
+
 ## 1.11.1.1413
 
 - Catch up with CLI `1.11.1.1413`
