@@ -34,8 +34,6 @@ build_script:
     call java -jar "target/deps.clj-%DEPS_CLJ_VERSION%-standalone.jar" "-Sverbose" "-Spath"
 
 - cmd: >-
-    call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
-
     powershell -Command "if (Test-Path('graalvm')) { return } else { (New-Object Net.WebClient).DownloadFile('https://download.oracle.com/graalvm/21/archive/graalvm-jdk-21.0.1_windows-x64_bin.zip', 'graalvm.zip') }"
 
     powershell -Command "if (Test-Path('graalvm')) { return } else { Expand-Archive graalvm.zip graalvm }
