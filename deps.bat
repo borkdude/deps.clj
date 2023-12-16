@@ -803,7 +803,7 @@ public class ClojureToolsDownloader {
               (.getPath (io/file xdg-config-home "clojure")))
             (.getPath (io/file config-dir ".cpcache")))]
     (if (.exists (io/file deps-edn))
-      (if (.canWrite (io/file *dir*))
+      (if (-> (io/file (or *dir* ".")) (.canWrite))
         {:cache-dir (.getPath (io/file *dir* ".cpcache"))
          :cache-dir-key *dir*}
         ;; can't write to *dir*/.cpcache
