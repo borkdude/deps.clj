@@ -37,6 +37,8 @@
                "--no-fallback"
                "--verbose"
                "--no-server"
-               "-J-Xmx3g"))
+               "-J-Xmx3g"
+               "-march=compatibility"
+               "-O1"))
     (p/shell lein "clean")
     (p/shell "./deps" "-Spath" "-Sdeps" "{:deps {borkdude/deps.clj {:mvn/version \"0.0.1\"}}}")))
