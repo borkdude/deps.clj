@@ -83,7 +83,7 @@ jobs:
     working_directory: ~/repo
     environment:
       LEIN_ROOT: "true"
-      GRAALVM_HOME: /home/circleci/graalvm-ce-java11-22.3.0
+      GRAALVM_HOME: /home/circleci/graalvm-21.0.1
       DEPS_CLJ_PLATFORM: linux # used in release script
       # BABASHKA_TEST_ENV: native
     steps:
@@ -114,13 +114,7 @@ jobs:
             sudo apt-get -y install gcc g++ zlib1g-dev
       - run:
           name: Download GraalVM
-          command: |
-            cd ~
-            if ! [ -d graalvm-ce-java11-22.3.0 ]; then
-              curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.3.0/graalvm-ce-java11-linux-amd64-22.3.0.tar.gz
-              tar xzf graalvm-ce-java11-linux-amd64-22.3.0.tar.gz
-            fi
-            "$GRAALVM_HOME/bin/gu" install native-image || true
+          command: script/install-graalvm
       - run:
           name: Build binary
           command: |
@@ -137,7 +131,7 @@ jobs:
       - save_cache:
           paths:
             - ~/.m2
-            - ~/graalvm-ce-java11-22.3.0
+            - ~/graalvm
           key: linux-{{ checksum "project.clj" }}-{{ checksum ".circleci/config.yml" }}
       - store_artifacts:
           path: /tmp/release
@@ -146,7 +140,7 @@ jobs:
     macos:
       xcode: "14.0.0"
     environment:
-      GRAALVM_HOME: /Users/distiller/graalvm-ce-java11-22.3.0/Contents/Home
+      GRAALVM_HOME: /Users/distiller/graalvm-21.0.1/Contents/Home
       DEPS_CLJ_PLATFORM: macos # used in release script
     steps:
       - checkout
@@ -168,14 +162,7 @@ jobs:
             .circleci/script/install-leiningen
       - run:
           name: Download GraalVM
-          command: |
-            cd ~
-            ls -la
-            if ! [ -d graalvm-ce-java11-22.3.0 ]; then
-              curl -O -sL https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.3.0/graalvm-ce-java11-darwin-amd64-22.3.0.tar.gz
-              tar xzf graalvm-ce-java11-darwin-amd64-22.3.0.tar.gz
-            fi
-            "$GRAALVM_HOME/bin/gu" install native-image || true
+          command: script/install-graalvm
       - run:
           name: Build binary
           command: |
@@ -192,7 +179,7 @@ jobs:
       - save_cache:
           paths:
             - ~/.m2
-            - ~/graalvm-ce-java11-22.3.0
+            - ~/graalvm
           key: mac-{{ checksum "project.clj" }}-{{ checksum ".circleci/config.yml" }}
       - store_artifacts:
           path: /tmp/release
