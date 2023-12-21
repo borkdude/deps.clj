@@ -13,6 +13,7 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 ## Unreleased
 
 - Support older CPUs for native-image builds
+- [#120](https://github.com/borkdude/deps.clj/issues/120): Use `java.nio` for writeable check rather than `java.io.File/canWrite`
 
 ## 1.11.1.1429
 
