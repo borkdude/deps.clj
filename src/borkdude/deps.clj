@@ -16,7 +16,7 @@
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.11.1.1429")))
+             "1.11.1.1435")))
 
 (def ^:private cache-version "5")
 
