@@ -24,7 +24,7 @@
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.11.1.1429")))
+             "1.11.1.1435")))
 
 (def ^:private cache-version "5")
 
@@ -803,7 +803,7 @@ public class ClojureToolsDownloader {
               (.getPath (io/file xdg-config-home "clojure")))
             (.getPath (io/file config-dir ".cpcache")))]
     (if (.exists (io/file deps-edn))
-      (if (-> (io/file (or *dir* ".")) (.canWrite))
+      (if (-> (io/file (or *dir* ".")) (.toPath) (java.nio.file.Files/isWritable))
         {:cache-dir (.getPath (io/file *dir* ".cpcache"))
          :cache-dir-key *dir*}
         ;; can't write to *dir*/.cpcache
