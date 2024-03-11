@@ -40,12 +40,7 @@ jobs:
       - run:
           name: Create uberjar
           command: |
-            mkdir -p /tmp/release
-            lein do clean, uberjar
-            VERSION=$(cat resources/DEPS_CLJ_VERSION)
-            artifact="target/deps.clj-$VERSION-standalone.jar"
-            cp "$artifact" /tmp/release
-            bb upload-artifact :file "$artifact"
+            .circleci/script/upload
       - store_artifacts:
           path: /tmp/release
           destination: release
