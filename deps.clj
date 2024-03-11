@@ -3,7 +3,7 @@
 ;; Generated with script/gen_script.clj. Do not edit directly.
 
 (ns borkdude.deps
-  "Port of https://github.com/clojure/brew-install/blob/1.11.1/src/main/resources/clojure/install/clojure in Clojure"
+  "Port of https://github.com/clojure/brew-install/blob/1.11.2/src/main/resources/clojure/install/clojure in Clojure"
   (:require
    [clojure.java.io :as io]
    [clojure.string :as str])
@@ -19,7 +19,7 @@
 ;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.11.1.1435")))
+             "1.11.2.1446")))
 
 (def ^:private cache-version "5")
 
