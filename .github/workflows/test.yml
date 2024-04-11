@@ -49,7 +49,6 @@ jobs:
 
       - name: Run babashka tests
         run: |
-          bash <(curl https://raw.githubusercontent.com/babashka/babashka/master/install) --dev-build
           bb babashka-test
 
       - name: Create ubejar
