@@ -33,10 +33,7 @@ jobs:
           # bb: '1.0.165'
           cli: '1.10.3.1013'
           lein: '2.9.10'
-
-      - name: Install bb
-        run: |
-          bash <(curl https://raw.githubusercontent.com/babashka/babashka/master/install) --dev-build
+          bb: latest
 
       - name: Cache clojure dependencies
         uses: actions/cache@v3
