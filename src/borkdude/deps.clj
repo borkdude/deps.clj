@@ -735,8 +735,12 @@ public class ClojureToolsDownloader {
   (str (if (.isAbsolute (as-path f))
          f
          (if-let [dir *dir*]
-           (.relativize (unixify (.toAbsolutePath (as-path dir)))
-                        (unixify (.toAbsolutePath (as-path f))))
+           (if-not (.getParent (io/file (str f)))
+             ;; workaround for https://github.com/babashka/bbin/issues/80
+             ;; when f is a single segment file but the current working directory is on a different disk than *dir*
+             (as-path f)
+             (.relativize (unixify (.toAbsolutePath (as-path dir)))
+                          (unixify (.toAbsolutePath (as-path f)))))
            f))))
 
 (defn- resolve-in-dir
