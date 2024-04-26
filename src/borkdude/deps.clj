@@ -735,8 +735,17 @@ public class ClojureToolsDownloader {
   (str (if (.isAbsolute (as-path f))
          f
          (if-let [dir *dir*]
-           (.relativize (unixify (.toAbsolutePath (as-path dir)))
-                        (unixify (.toAbsolutePath (as-path f))))
+           (try
+             (.relativize (unixify (.toAbsolutePath (as-path dir)))
+                          (unixify (.toAbsolutePath (as-path f))))
+             (catch Exception _
+               (binding [*out* *err*]
+                 (println "Relativize error")
+                 (println dir)
+                 (println (unixify (.toAbsolutePath (as-path dir))))
+                 (println f)
+                 (println (unixify (.toAbsolutePath (as-path f)))))
+               f))
            f))))
 
 (defn- resolve-in-dir
