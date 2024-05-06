@@ -210,11 +210,12 @@ main-opt:
  -h, -?, --help      Print this help message and exit
 
 Programs provided by :deps alias:
- -X:deps mvn-pom Generate (or update) pom.xml with deps and paths
+ -X:deps aliases           List available aliases and their source
  -X:deps list              List full transitive deps set and licenses
  -X:deps tree              Print deps tree
  -X:deps find-versions     Find available versions of a library
  -X:deps prep              Prepare all unprepped libs in the dep tree
+ -X:deps mvn-pom           Generate (or update) pom.xml with deps and paths
  -X:deps mvn-install       Install a maven jar to the local repository cache
  -X:deps git-resolve-tags  Resolve git coord tags to shas and update deps.edn
 
