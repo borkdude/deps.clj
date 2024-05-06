@@ -213,11 +213,12 @@ main-opt:
  -h, -?, --help      Print this help message and exit
 
 Programs provided by :deps alias:
- -X:deps mvn-pom Generate (or update) pom.xml with deps and paths
+ -X:deps aliases           List available aliases and their source
  -X:deps list              List full transitive deps set and licenses
  -X:deps tree              Print deps tree
  -X:deps find-versions     Find available versions of a library
  -X:deps prep              Prepare all unprepped libs in the dep tree
+ -X:deps mvn-pom           Generate (or update) pom.xml with deps and paths
  -X:deps mvn-install       Install a maven jar to the local repository cache
  -X:deps git-resolve-tags  Resolve git coord tags to shas and update deps.edn
 
@@ -738,8 +739,12 @@ public class ClojureToolsDownloader {
   (str (if (.isAbsolute (as-path f))
          f
          (if-let [dir *dir*]
-           (.relativize (unixify (.toAbsolutePath (as-path dir)))
-                        (unixify (.toAbsolutePath (as-path f))))
+           (if-not (.getParent (io/file (str f)))
+             ;; workaround for https://github.com/babashka/bbin/issues/80
+             ;; when f is a single segment file but the current working directory is on a different disk than *dir*
+             (as-path f)
+             (.relativize (unixify (.toAbsolutePath (as-path dir)))
+                          (unixify (.toAbsolutePath (as-path f)))))
            f))))
 
 (defn- resolve-in-dir
