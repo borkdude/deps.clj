@@ -10,6 +10,10 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 [deps.clj](https://github.com/borkdude/deps.clj): a faithful port of the clojure CLI bash script to Clojure
 
+## 1.11.4.1474
+
+- Catch up with Clojure CLI 1.11.4.1474
+
 ## 1.11.3.1463
 
 - Catch up with Clojure CLI 1.11.3.1463
