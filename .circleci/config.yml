@@ -143,6 +143,10 @@ jobs:
           keys:
             - mac-{{ checksum "project.clj" }}-{{ checksum ".circleci/config.yml" }}
       - run:
+          name: Install Rosetta
+          command: |
+            sudo /usr/sbin/softwareupdate --install-rosetta --agree-to-license
+      - run:
           name: Install Clojure
           command: |
             .circleci/script/install-clojure /usr/local
