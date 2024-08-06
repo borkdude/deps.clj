@@ -101,6 +101,10 @@ Used to provide a getting started REPL.
 
 The deps integration uses deps.clj since version 1.13.0.
 
+### [clj-msi](https://github.com/casselc/clj-msi)
+
+The official installer for Clojure on plain Windows (see [docs](https://clojure.org/guides/install_clojure#_windows_instructions)).
+
 ## Status
 
 Deps.clj tries to follow the official Clojure CLI as faithfully as possible and
