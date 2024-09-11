@@ -21,10 +21,11 @@
 (set! *warn-on-reflection* true)
 (def ^:private path-separator (System/getProperty "path.separator"))
 
-;; see https://github.com/clojure/brew-install/blob/1.11.1/CHANGELOG.md
+;; see https://github.com/clojure/brew-install/blob/1.12.0/CHANGELOG.md
+;; see https://github.com/clojure/brew-install/blob/1.12.0/src/main/resources/clojure/install/clojure
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.11.4.1474")))
+             "1.12.0.1479")))
 
 (def ^:private cache-version "5")
 
