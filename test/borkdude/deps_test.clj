@@ -122,6 +122,7 @@
   (is (= {:host "aHost" :port "1234"} (#'deps/parse-proxy-info "https://aHost:1234")))
   (is (= {:host "aHost" :port "1234"} (#'deps/parse-proxy-info "https://user:pw@aHost:1234")))
   (is (nil? (#'deps/parse-proxy-info "http://aHost:abc")))
+  (is (= ["host1" "host2"] (#'deps/parse-noproxy-list "host1,host2")))
   (is (= {:http-proxy {:host "aHost" :port "1234"}}
          (binding [deps/*getenv-fn* {"http_proxy" "http://aHost:1234"}]
            (deps/get-proxy-info))))
@@ -139,6 +140,12 @@
            (deps/get-proxy-info))))
   (is (= {}
          (binding [deps/*getenv-fn* {"http_proxy" "http://aHost:abc"}]
+           (deps/get-proxy-info))))
+  (is (= {:no-proxy ["host1" "host2"]}
+         (binding [deps/*getenv-fn* {"no_proxy" "host1,host2"}]
+           (deps/get-proxy-info))))
+  (is (= {:no-proxy ["host1" "host2"]}
+         (binding [deps/*getenv-fn* {"NO_PROXY" "host1,host2"}]
            (deps/get-proxy-info)))))
 
 (deftest jvm-opts-test
