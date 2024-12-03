@@ -321,6 +321,11 @@ For more info, see:
         (do (warn "WARNING: Can't parse proxy info - found:" s "- proceeding without using proxy!")
             nil)))))
 
+(defn- parse-noproxy-list
+  [s]
+  (when s
+    (str/split s #",")))
+
 (defn get-proxy-info
   "Returns a map with proxy information parsed from env vars. The map
    will contain :http-proxy and :https-proxy entries if the relevant
@@ -330,21 +335,27 @@ For more info, see:
   (let [http-proxy (parse-proxy-info (or (*getenv-fn* "http_proxy")
                                          (*getenv-fn* "HTTP_PROXY")))
         https-proxy (parse-proxy-info (or (*getenv-fn* "https_proxy")
-                                          (*getenv-fn* "HTTPS_PROXY")))]
+                                          (*getenv-fn* "HTTPS_PROXY")))
+        no-proxy (parse-noproxy-list (or (*getenv-fn* "no_proxy")
+                                         (*getenv-fn* "NO_PROXY")))]
     (cond-> {}
       http-proxy (assoc :http-proxy http-proxy)
-      https-proxy (assoc :https-proxy https-proxy))))
+      https-proxy (assoc :https-proxy https-proxy)
+      no-proxy (assoc :no-proxy no-proxy))))
 
 (defn set-proxy-system-props!
   "Sets the proxy system properties in the current JVM.
    proxy-info parameter is as returned from `get-proxy-info.`"
-  [{:keys [http-proxy https-proxy]}]
+  [{:keys [http-proxy https-proxy no-proxy]}]
   (when http-proxy
     (System/setProperty "http.proxyHost" (:host http-proxy))
     (System/setProperty "http.proxyPort" (:port http-proxy)))
   (when https-proxy
     (System/setProperty "https.proxyHost" (:host https-proxy))
-    (System/setProperty "https.proxyPort" (:port https-proxy))))
+    (System/setProperty "https.proxyPort" (:port https-proxy)))
+  (when no-proxy
+    (System/setProperty "http.nonProxyHosts" (str/join "|" no-proxy))
+    (System/setProperty "https.nonProxyHosts" (str/join "|" no-proxy))))
 
 (defn clojure-tools-download-direct!
   "Downloads from `:url` to `:dest` file returning true on success."
@@ -495,12 +506,14 @@ public class ClojureToolsDownloader {
   "Returns a vector containing the JVM system property arguments to be passed to a new process
    to set its proxy system properties.
    proxy-info parameter is as returned from `get-proxy-info.`"
-  [{:keys [http-proxy https-proxy]}]
+  [{:keys [http-proxy https-proxy no-proxy]}]
   (cond-> []
     http-proxy (concat [(str "-Dhttp.proxyHost=" (:host http-proxy))
                         (str "-Dhttp.proxyPort=" (:port http-proxy))])
     https-proxy (concat [(str "-Dhttps.proxyHost=" (:host https-proxy))
-                         (str "-Dhttps.proxyPort=" (:port https-proxy))])))
+                         (str "-Dhttps.proxyPort=" (:port https-proxy))])
+    no-proxy (concat [(str "-Dhttp.nonProxyHosts=" (str/join "|" no-proxy))
+                      (str "-Dhttps.nonProxyHosts=" (str/join "|" no-proxy))])))
 
 (defn clojure-tools-download-java!
   "Downloads `:url` zip file to `:dest` by invoking `java` with

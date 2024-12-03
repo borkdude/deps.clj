@@ -313,9 +313,10 @@ The  `-Sdeps-file` option may be used to load a different project file than `dep
 
 deps.clj supports setting a proxy server via the "standard" environment variables (the lowercase versions are tried first):
 - `http_proxy` or `HTTP_PROXY` for http traffic
-- `https_proxy` or `HTTPs_PROXY` for https traffic
+- `https_proxy` or `HTTPS_PROXY` for https traffic
+- `no_proxy` or `NO_PROXY` a list of hosts that should be reached directly, bypassing the proxy
 
-This will set the JVM properties `-Dhttp[s].proxyHost` and `-Dhttp[s].proxyPort`.
+This will set the JVM properties `-Dhttp[s].proxyHost`, `-Dhttp[s].proxyPort` and `-Dhttp[s].nonProxyHosts`.
 
 The format of the proxy string supported is `http[s]://[username:password@]host:port`. Any username and password info is ignored as not supported by the underlying JVM properties.
 
