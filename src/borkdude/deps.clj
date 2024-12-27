@@ -258,7 +258,7 @@ For more info, see:
           (let [f (io/file p executable)]
             (if (and (.isFile f)
                      (.canExecute f))
-              (.getCanonicalPath f)
+              (.getPath f)
               (recur (rest paths)))))))))
 
 (defn- home-dir []
@@ -280,7 +280,7 @@ For more info, see:
               (let [f (io/file java-home "bin" java-exe)]
                 (if (and (.exists f)
                          (.canExecute f))
-                  (.getCanonicalPath f)
+                  (.getPath f)
                   (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
               (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
           java-cmd))))
@@ -517,7 +517,7 @@ public class ClojureToolsDownloader {
         java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
         success?* (atom true)]
     (binding [*exit-fn* (fn [{:keys [exit message]}]
-                          (when-not (= exit 0)
+                          (when-not (= 0 exit)
                             (warn message)
                             (reset! success?* false)))]
       (*aux-process-fn* {:cmd (vec (concat java-cmd
@@ -586,7 +586,7 @@ public class ClojureToolsDownloader {
                     (*exit-fn* {:exit ct-error-exit-code
                                 :message (str "Error: Cannot download Clojure tools."
                                               " Please download manually from " ct-url-str
-                                              " to " (str (io/file dir ct-zip-name)))})
+                                              " to " (io/file dir ct-zip-name))})
                     ::passthrough)]
         (when (and sha256-url-str (not *clojure-tools-download-fn*) (not (.exists sha256-file)) (not= ::passthrough res))
           (*exit-fn* {:exit ct-error-exit-code
@@ -606,7 +606,7 @@ public class ClojureToolsDownloader {
                       :message (str "Error: sha256 of zip and expected sha256 do not match: "
                                     hash " vs. " sha "\n"
                                     " Please download manually from " ct-url-str
-                                    " to " (str (io/file dir ct-zip-name)))})
+                                    " to " (io/file dir ct-zip-name))})
           (.delete sha256-file))))
     (warn "Unzipping" (str zip-file) "...")
     (unzip zip-file (.getPath dir))
@@ -1121,7 +1121,7 @@ public class ClojureToolsDownloader {
                     main-cache-opts (when (.exists (io/file main-file))
                                       (-> main-file slurp str/split-lines))
                     main-cache-opts (str/join " " main-cache-opts)
-                    command (str/replace command "{{main-opts}}" (str main-cache-opts))
+                    command (str/replace command "{{main-opts}}" main-cache-opts)
                     command (str/split command #"\s+")
                     command (into command (:args cli-opts))]
                 (*clojure-process-fn* {:cmd command}))
