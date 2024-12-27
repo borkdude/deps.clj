@@ -1149,5 +1149,5 @@ public class ClojureToolsDownloader {
                     main-args (into main-args (:args cli-opts))]
                 (when (and (= :repl mode)
                            (pos? (count (:args cli-opts))))
-                  (warn "WARNING: Implicit use of clojure.main with options is deprecated, use -M"))
+                  (apply warn "WARNING: Implicit use of clojure.main with options is deprecated, use -M" (:args cli-opts)))
                 (*clojure-process-fn* {:cmd main-args})))))))
