@@ -20,9 +20,9 @@
 ;; see https://github.com/clojure/brew-install/blob/1.12.0/src/main/resources/clojure/install/clojure
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.12.0.1488")))
+             "1.12.0.1495")))
 
-(def ^:private cache-version "5")
+(def ^:private cache-version "6")
 
 (def deps-clj-version
   "The current version of deps.clj"
@@ -1152,7 +1152,7 @@ public class ClojureToolsDownloader {
                     main-args (into main-args (:args cli-opts))]
                 (when (and (= :repl mode)
                            (pos? (count (:args cli-opts))))
-                  (warn "WARNING: Implicit use of clojure.main with options is deprecated, use -M"))
+                  (apply warn "WARNING: Implicit use of clojure.main with options is deprecated, use -M" (:args cli-opts)))
                 (*clojure-process-fn* {:cmd main-args})))))))
 
 (apply -main *command-line-args*)
