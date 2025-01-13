@@ -10,7 +10,7 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 [deps.clj](https://github.com/borkdude/deps.clj): a faithful port of the clojure CLI bash script to Clojure
 
-## Unreleased
+## 1.12.0.1495
 
 - Fix [#129](https://github.com/borkdude/deps.clj/issues/129): don't resolve symlink for java executable
 - Follow commit `2ddadc972be51917afb1cea57d1c8c40478bd307` from brew-install: print args when `-M` is omitted but expected
