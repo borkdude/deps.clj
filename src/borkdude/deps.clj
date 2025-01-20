@@ -624,7 +624,9 @@ public class ClojureToolsDownloader {
                    (or (not (.exists config-tools-edn))
                        (> (.lastModified install-tools-edn)
                           (.lastModified config-tools-edn))))
+          (println "---")
           (println (slurp install-tools-edn))
+          (println "---")
           (io/make-parents config-tools-edn)
           (io/copy install-tools-edn config-tools-edn))))
     ;; Successful transaction
