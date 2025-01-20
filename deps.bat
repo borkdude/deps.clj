@@ -628,8 +628,10 @@ public class ClojureToolsDownloader {
           (io/copy example-deps-edn config-deps-edn)))
       (let [config-tools-edn (io/file config-dir "tools" "tools.edn")
             install-tools-edn (io/file out-dir "tools.edn")]
-        (when (and (not (.exists config-tools-edn))
-                   (.exists install-tools-edn))
+        (when (and (.exists install-tools-edn)
+                   (or (not (.exists config-tools-edn))
+                       (> (.lastModified install-tools-edn)
+                          (.lastModified config-tools-edn))))
           (io/make-parents config-tools-edn)
           (io/copy install-tools-edn config-tools-edn))))
     ;; Successful transaction

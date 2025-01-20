@@ -10,6 +10,10 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 [deps.clj](https://github.com/borkdude/deps.clj): a faithful port of the clojure CLI bash script to Clojure
 
+## 1.12.0.1495-2
+
+- Fix #132: copy install tools.edn to config dir when install version is newer, similar to clojure CLI bash script
+
 ## 1.12.0.1495
 
 - Fix [#129](https://github.com/borkdude/deps.clj/issues/129): don't resolve symlink for java executable
