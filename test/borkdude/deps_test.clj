@@ -262,7 +262,7 @@
       (doseq [entry (into [ct-jar-name] ct-aux-files-names)]
         (doto zip
           (.putNextEntry (ZipEntry. (str ct-base-dir "/" entry)))
-          (.write (.getBytes (str "dummy-" entry)))
+          (.write (.getBytes "{}"))
           (.closeEntry)))
       file)))
 
