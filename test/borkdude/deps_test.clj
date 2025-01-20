@@ -262,7 +262,9 @@
       (doseq [entry (into [ct-jar-name] ct-aux-files-names)]
         (doto zip
           (.putNextEntry (ZipEntry. (str ct-base-dir "/" entry)))
-          (.write (.getBytes (str "dummy-" entry)))
+          (.write (.getBytes "{:lib io.github.clojure/tools.tools
+ :coord {:git/tag \"v0.3.4\"
+         :git/sha \"0e9e6c8b409ac916ad6f2ec5bc075bbcb09545c0\"}}"))
           (.closeEntry)))
       file)))
 
