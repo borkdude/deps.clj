@@ -12,7 +12,7 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 ## 1.12.0.1495-2
 
-- Fix #132: copy install tools.edn to config dir when install version is newer, similar to clojure CLI bash script
+- Fix [#132](https://github.com/borkdude/deps.clj/issues/132): copy install tools.edn to config dir when install version is newer, similar to clojure CLI bash script
 
 ## 1.12.0.1495
 
