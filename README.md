@@ -212,7 +212,7 @@ user=>
 
 #### DEPS_CLJ_TOOLS_DIR
 
-This project will look in `$HOME/.deps.clj/<clojure-version>/ClojureTools` for
+This project will look in `$XDG_DATA_HOME/deps.clj/<clojure-version>/ClojureTools` or `$HOME/.deps.clj/<clojure-version>/ClojureTools` for
 `clojure-tools-<clojure-version>.jar`, `exec.jar` and `example-deps.edn`. If it
 cannot it find those files there, it will try to download them from
 [this](https://download.clojure.org/install/clojure-tools-1.10.1.697.zip)
