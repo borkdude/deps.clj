@@ -777,12 +777,20 @@ public class ClojureToolsDownloader {
     (str path)))
 
 (defn- get-env-tools-dir
-  "Retrieves the tools-directory from environment variable `DEPS_CLJ_TOOLS_DIR`"
+  "Retrieves the tools-directory from environment variable.
+  If `XDG_DATA_HOME` is defined then it is $XDG_DATA_HOME/deps.clj/<version>/ClojureTools.
+  Otherwise, use `DEPS_CLJ_TOOLS_DIR`"
   []
   (or
     ;; legacy name
    (*getenv-fn* "CLOJURE_TOOLS_DIR")
-   (*getenv-fn* "DEPS_CLJ_TOOLS_DIR")))
+   (*getenv-fn* "DEPS_CLJ_TOOLS_DIR")
+   (when-let [xdg-data-home (*getenv-fn* "XDG_DATA_HOME")]
+     (let [{:keys [ct-base-dir]} @clojure-tools-info*]
+       (.getPath (io/file xdg-data-home
+                          "deps.clj"
+                          @version
+                          ct-base-dir))))))
 
 (defn get-install-dir
   "Retrieves the install directory where tools jar is located (after download).
