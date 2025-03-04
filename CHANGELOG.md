@@ -12,7 +12,7 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 ## Unreleased
 
-- Adds support for XDG_DATA_HOME environment variable according to [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/latest/) 
+- Adds support for `XDG_DATA_HOME` environment variable according to [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/latest/)
 
 ## 1.12.0.1517
 
