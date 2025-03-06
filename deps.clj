@@ -182,7 +182,7 @@ exec-opts:
 
 clj-opts:
  -Jopt          Pass opt through in java_opts, ex: -J-Xmx512m
- -Sdeps EDN     Deps data to use as the last deps file to be merged
+ -Sdeps EDN     Deps data or file to use as the last deps file to be merged
  -Spath         Compute classpath and echo to stdout only
  -Stree         Print dependency tree
  -Scp CP        Do NOT compute or cache classpath, use this one instead
@@ -1020,6 +1020,7 @@ public class ClojureToolsDownloader {
           tree? (:tree cli-opts)
           ;; Check for stale classpath file
           cp-file (io/file cp-file)
+          deps-data (:deps-data cli-opts)
           stale
           (or (:force cli-opts)
               (:trace cli-opts)
@@ -1044,6 +1045,12 @@ public class ClojureToolsDownloader {
                             (or (not (.exists f))
                                 (> (.lastModified f)
                                    (.lastModified cp-file))))) manifests)))
+              ;; If -Sdeps is a file, and it exists, is it stale?
+              (and deps-data
+                   (not (str/starts-with? deps-data "{"))
+                   (.exists (io/file deps-data))
+                   (> (.lastModified (io/file deps-data))
+                      (.lastModified cp-file)))
               ;; Are .jar files in classpath missing?
               (let [cp (slurp cp-file)
                     entries (vec (.split ^String cp java.io.File/pathSeparator))]
@@ -1054,7 +1061,7 @@ public class ClojureToolsDownloader {
           tools-args
           (when (or stale (:pom cli-opts))
             (cond-> []
-              (not (str/blank? (:deps-data cli-opts)))
+              (not (str/blank? deps-data))
               (conj "--config-data" (:deps-data cli-opts))
               (:main-aliases cli-opts)
               (conj (str "-M" (:main-aliases cli-opts)))
