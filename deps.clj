@@ -1020,7 +1020,8 @@ public class ClojureToolsDownloader {
           tree? (:tree cli-opts)
           ;; Check for stale classpath file
           cp-file (io/file cp-file)
-          deps-data (:deps-data cli-opts)
+          deps-data (some-> (:deps-data cli-opts)
+                            str/trim)
           stale
           (or (:force cli-opts)
               (:trace cli-opts)
