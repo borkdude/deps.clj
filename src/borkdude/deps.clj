@@ -1043,7 +1043,8 @@ public class ClojureToolsDownloader {
                                 (> (.lastModified f)
                                    (.lastModified cp-file))))) manifests)))
               ;; If -Sdeps is a file, and it exists, is it stale?
-              (and (not (str/starts-with? deps-data "{"))
+              (and deps-data
+                   (not (str/starts-with? deps-data "{"))
                    (.exists (io/file deps-data))
                    (> (.lastModified (io/file deps-data))
                       (.lastModified cp-file)))
