@@ -17,7 +17,7 @@
 ;; see https://github.com/clojure/brew-install/blob/1.12.0/src/main/resources/clojure/install/clojure
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.12.1.1543")))
+             "1.12.1.1550")))
 
 (def ^:private cache-version "6")
 
@@ -186,7 +186,6 @@ clj-opts:
  -Srepro        Ignore the ~/.clojure/deps.edn config file
  -Sforce        Force recomputation of the classpath (don't use the cache)
  -Sverbose      Print important path info to console
- -Sdescribe     Print environment and command parsing info as data
  -Sthreads      Set specific number of download threads
  -Strace        Write a trace.edn file that traces deps expansion
  --             Stop parsing dep options and pass remaining arguments to clojure.main
@@ -1011,6 +1010,9 @@ public class ClojureToolsDownloader {
               (when install-dir (println "install_dir      =" install-dir))
               (println "config_dir       =" config-dir)
               (println "config_paths     =" (str/join " " config-paths))
+              (println "root_deps        =" tools-cp)
+              (println "user_deps        =" config-user)
+              (println "project_deps     =" config-project)
               (println "cache_dir        =" cache-dir)
               (println "cp_file          =" cp-file)
               (println))
