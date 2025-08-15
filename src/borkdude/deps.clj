@@ -17,7 +17,7 @@
 ;; see https://github.com/clojure/brew-install/blob/1.12.0/src/main/resources/clojure/install/clojure
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.12.1.1550")))
+             "1.12.1.1561")))
 
 (def ^:private cache-version "6")
 
@@ -213,6 +213,7 @@ Programs provided by :deps alias:
  -X:deps aliases           List available aliases and their source
  -X:deps list              List full transitive deps set and licenses
  -X:deps tree              Print deps tree
+ -X:deps basis             Print runtime basis
  -X:deps find-versions     Find available versions of a library
  -X:deps prep              Prepare all unprepped libs in the dep tree
  -X:deps mvn-pom           Generate (or update) pom.xml with deps and paths
