@@ -8,7 +8,7 @@
 ;; Generated with script/gen_script.clj. Do not edit directly.
 
 (ns borkdude.deps
-  "Port of https://github.com/clojure/brew-install/blob/1.11.2/src/main/resources/clojure/install/clojure in Clojure"
+  "Port of https://github.com/clojure/brew-install/blob/1.12.2/src/main/resources/clojure/install/clojure in Clojure"
   (:require
    [clojure.java.io :as io]
    [clojure.string :as str])
@@ -21,11 +21,11 @@
 (set! *warn-on-reflection* true)
 (def ^:private path-separator (System/getProperty "path.separator"))
 
-;; see https://github.com/clojure/brew-install/blob/1.12.0/CHANGELOG.md
-;; see https://github.com/clojure/brew-install/blob/1.12.0/src/main/resources/clojure/install/clojure
+;; see https://github.com/clojure/brew-install/blob/1.12.2/CHANGELOG.md
+;; see https://github.com/clojure/brew-install/blob/1.12.2/src/main/resources/clojure/install/clojure
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.12.1.1561")))
+             "1.12.2.1565")))
 
 (def ^:private cache-version "6")
 
