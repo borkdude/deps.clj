@@ -44,14 +44,14 @@ jobs:
           key: cljdeps-${{ hashFiles('deps.edn', 'bb.edn', 'project.clj') }}
           restore-keys: cljdeps-
 
-      # - name: Run JVM tests
-      #   run: bb jvm-test
+      - name: Run JVM tests
+        run: bb jvm-test
 
       - name: Run babashka tests
         run: |
           bb babashka-test
 
-      - name: Create ubejar
+      - name: Create uberjar
         if: "startsWith (matrix.os, env.UBERJAR_OS) && env.UBERJAR_JDK == matrix.jdk"
         run: |
           mkdir -p /tmp/release
