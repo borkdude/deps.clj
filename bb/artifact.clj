@@ -25,6 +25,7 @@
                                     :repo "deps.clj"
                                     :tag (str "v" current-version)
                                     :file "README.md"
-                                    :sha256 true}
+                                    :sha256 true
+                                    :overwrite (str/ends-with? current-version "-SNAPSHOT")}
                                    opts))
       (println "Skipping release artifact (no GITHUB_TOKEN or not on main branch)"))))
