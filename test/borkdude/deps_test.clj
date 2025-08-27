@@ -280,7 +280,8 @@
     (testing "java downloader"
       (fs/with-temp-dir
         [temp-dir {}]
-        (let [tools-zip (clojure-tools-dummy-zip-file-create (str temp-dir))
+        (let [;; temp-dir "/tmp"
+              tools-zip (clojure-tools-dummy-zip-file-create (str temp-dir))
               url (io/as-url tools-zip)
               dest-zip-file (fs/file temp-dir ct-zip-name)]
           (if (< java-version 11)
