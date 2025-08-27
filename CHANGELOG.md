@@ -10,6 +10,11 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 [deps.clj](https://github.com/borkdude/deps.clj): a faithful port of the clojure CLI bash script to Clojure
 
+## Unreleased
+
+- Fix java downloader program that respects `CLJ_JVM_OPTS`
+- Move Windows build to Github rather than Appveyor
+
 ## 1.12.2.1565
 
 - Catch up with Clojure CLI 1.12.2.1565

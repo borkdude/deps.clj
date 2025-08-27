@@ -63,6 +63,8 @@ jobs:
               powershell -Command "(New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein.bat', 'lein.bat')"
               call lein self-install
 
+              set /P DEPS_CLJ_VERSION=< resources\DEPS_CLJ_VERSION
+
               set GRAALVM_HOME=%JAVA_HOME%
               call lein do clean, uberjar
 
