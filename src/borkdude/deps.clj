@@ -196,6 +196,7 @@ The following non-standard options are available only in deps.clj:
 
  -Sdeps-file    Use this file instead of deps.edn
  -Scommand      A custom command that will be invoked. Substitutions: {{classpath}}, {{main-opts}}.
+ -Srebel        Use rebel-readline for improved REPL experience.
 
 init-opt:
  -i, --init path     Load a file or resource
@@ -531,6 +532,128 @@ public class ClojureToolsDownloader {
       (io/delete-file dlr-path true)
       @success?*)))
 
+(def ^:private rebel-readline-info*
+  "Information for rebel-readline integration."
+  (delay {:rebel-version "0.1.5"
+          :rebel-deps '{com.bhauman/rebel-readline {:mvn/version "0.1.5"}}}))
+
+(defn- get-rebel-installation-file
+  "Returns the path to the rebel-readline installation tracking file."
+  [install-dir]
+  (.getPath (io/file install-dir "rebel-readline-install.edn")))
+
+(defn- rebel-readline-installed?
+  "Check if rebel-readline is already installed by looking for the tracking file."
+  [install-dir]
+  (.exists (io/file (get-rebel-installation-file install-dir))))
+
+(defn- read-rebel-installation
+  "Read rebel-readline installation info from tracking file.
+   Returns map with :jar-paths vector or nil if file doesn't exist or is invalid."
+  [install-dir]
+  (try
+    (when-let [file (io/file (get-rebel-installation-file install-dir))]
+      (when (.exists file)
+        (read-string (slurp file))))
+    (catch Exception e
+      (warn "Error reading rebel installation file:" (.getMessage e))
+      nil)))
+
+(defn- get-rebel-classpath-via-cli
+  "Get the complete classpath for rebel-readline and dependencies by running clojure CLI.
+   Returns vector of JAR file paths."
+  [rebel-deps-edn clj-jvm-opts proxy-opts]
+  (try
+    (let [env (cond-> {}
+                (seq clj-jvm-opts) (assoc "CLJ_JVM_OPTS" (str/join " " clj-jvm-opts))
+                (seq (proxy-jvm-opts proxy-opts)) (assoc "JAVA_OPTS" (str/join " " (proxy-jvm-opts proxy-opts))))
+          result (internal-shell-command ["clojure"
+                                          "-Sdeps" rebel-deps-edn
+                                          "-Spath"]
+                                         {:extra-env env :out :string})]
+      (when (= 0 (:exit result))
+        (let [classpath (:out result)
+              classpath (str/trim classpath)
+              entries (str/split classpath (re-pattern java.io.File/pathSeparator))]
+          ;; Filter for JAR files and return as vector
+          (->> entries
+               (filter #(str/ends-with? % ".jar"))
+               (filter #(.exists (io/file %)))
+               vec))))
+    (catch Exception e
+      (warn "Error getting rebel classpath via CLI:" (.getMessage e))
+      [])))
+
+(defn- save-rebel-installation
+  "Save rebel-readline installation info to tracking file."
+  [install-dir jar-paths]
+  (try
+    (let [{:keys [rebel-version]} @rebel-readline-info*
+          install-file (get-rebel-installation-file install-dir)
+          install-info {:rebel-version rebel-version
+                        :jar-paths jar-paths
+                        :installed-at (System/currentTimeMillis)}]
+      (io/make-parents install-file)
+      (spit install-file (pr-str install-info))
+      true)
+    (catch Exception e
+      (warn "Error saving rebel installation file:" (.getMessage e))
+      false)))
+
+(defn rebel-readline-install!
+  "Downloads rebel-readline and its dependencies using clojure CLI.
+   Saves the JAR paths to a tracking file for future use."
+  [{:keys [install-dir debug proxy-opts clj-jvm-opts]}]
+  (when-not (rebel-readline-installed? install-dir)
+    (let [{:keys [rebel-deps]} @rebel-readline-info*
+          rebel-deps-edn (pr-str {:deps rebel-deps})]
+      (warn "Downloading rebel-readline for enhanced REPL experience...")
+      (when debug (warn "Installing rebel-readline using clojure CLI..."))
+      (try
+        ;; Use clojure CLI to download rebel-readline + dependencies to ~/.m2
+        (let [env (cond-> {}
+                    (seq clj-jvm-opts) (assoc "CLJ_JVM_OPTS" (str/join " " clj-jvm-opts))
+                    (seq (proxy-jvm-opts proxy-opts)) (assoc "JAVA_OPTS" (str/join " " (proxy-jvm-opts proxy-opts))))
+              result (internal-shell-command ["clojure"
+                                              "-Sdeps" rebel-deps-edn
+                                              "-P"]
+                                             {:extra-env env})]
+          (if (= 0 (:exit result))
+            ;; Success - proceed with classpath resolution
+            (do
+              (warn "Resolving rebel-readline dependencies...")
+              ;; Get the complete classpath including all transitive dependencies
+              (let [jar-paths (get-rebel-classpath-via-cli rebel-deps-edn clj-jvm-opts proxy-opts)]
+                (if (seq jar-paths)
+                  (do
+                    (when debug (warn "Found rebel-readline JARs:" (str/join ", " jar-paths)))
+                    (save-rebel-installation install-dir jar-paths)
+                    (warn "Successfully installed rebel-readline with" (count jar-paths) "dependencies"))
+                  (do
+                    (warn "Warning: No rebel-readline JARs found after installation")
+                    (warn "Falling back to standard clojure.main REPL")))))
+            ;; Failure - handle non-zero exit code
+            (do
+              (warn "Failed to download rebel-readline (exit code:" (:exit result) ")")
+              (warn "This could be due to network issues, proxy settings, or Maven repository problems")
+              (warn "Falling back to standard clojure.main REPL")
+              (when debug
+                (warn "You can try manually installing rebel-readline with:")
+                (warn "  clojure -Sdeps '{:deps {com.bhauman/rebel-readline {:mvn/version \"0.1.5\"}}}' -P")))))
+        (catch Exception e
+          (warn "Failed to install rebel-readline:" (.getMessage e))
+          (warn "Falling back to standard clojure.main REPL"))))))
+
+(defn- should-use-rebel-readline?
+  "Determine if we should use rebel-readline for this invocation.
+   Uses rebel-readline for REPL mode when:
+   - In REPL mode
+   - No specific main class specified
+   - rebel-readline is installed"
+  [mode main-opts install-dir]
+  (and (= :repl mode)
+       (or (nil? main-opts) (empty? main-opts))
+       (rebel-readline-installed? install-dir)))
 
 (def ^:dynamic *clojure-tools-download-fn*
   "Can be dynamically rebound to customise the download of the Clojure tools.
@@ -644,6 +767,7 @@ public class ClojureToolsDownloader {
    "-Srepro" :repro
    "-Stree" :tree
    "-Spom" :pom
+   "-Srebel" :rebel
    "-P" :prep})
 
 (def ^:private string-opts->keyword
@@ -907,6 +1031,25 @@ public class ClojureToolsDownloader {
       (str "@" tmp-file))
     cp))
 
+(defn- create-rebel-readline-cmd
+  "Create command args to launch rebel-readline instead of clojure.main.
+   Uses JAR paths from the installation tracking file."
+  [base-java-cmd cp basis-file install-dir]
+  (if-let [install-info (read-rebel-installation install-dir)]
+    (let [{:keys [jar-paths]} install-info
+          rebel-cp (str/join java.io.File/pathSeparator jar-paths)
+          combined-cp (str cp java.io.File/pathSeparator rebel-cp)]
+      (concat base-java-cmd
+              [(str "-Dclojure.basis=" basis-file)
+               "-classpath" (auto-file-arg combined-cp)
+               "clojure.main"
+               "-m" "rebel-readline.main"]))
+    ;; Fallback to standard clojure.main if installation info is missing
+    (concat base-java-cmd
+            [(str "-Dclojure.basis=" basis-file)
+             "-classpath" (auto-file-arg cp)
+             "clojure.main"])))
+
 (defn -main
   "See `help-text`.
 
@@ -1156,18 +1299,38 @@ public class ClojureToolsDownloader {
                     cp (if (or exec? tool?)
                          (str cp path-separator exec-cp)
                          cp)
-                    main-args (concat java-cmd
-                                      java-opts
-                                      proxy-settings
-                                      jvm-cache-opts
-                                      (:jvm-opts cli-opts)
-                                      [(str "-Dclojure.basis=" (relativize basis-file))
-                                       "-classpath" (auto-file-arg cp)
-                                       "clojure.main"]
-                                      main-opts)
+                    ;; Check if we should use rebel-readline for enhanced REPL
+                    ;; Install rebel-readline if needed when -Srebel is specified
+                    _ (when (and (:rebel cli-opts)
+                                 (= :repl mode)
+                                 (or (nil? main-opts) (empty? main-opts)))
+                        (rebel-readline-install! {:install-dir libexec-dir
+                                                  :debug debug
+                                                  :proxy-opts proxy-opts
+                                                  :clj-jvm-opts clj-jvm-opts}))
+                    use-rebel? (and (:rebel cli-opts) (should-use-rebel-readline? mode main-opts libexec-dir))
+                    base-java-cmd (concat java-cmd
+                                          java-opts
+                                          proxy-settings
+                                          jvm-cache-opts
+                                          (:jvm-opts cli-opts))
+                    main-args (if use-rebel?
+                                ;; Use rebel-readline for enhanced REPL experience
+                                (create-rebel-readline-cmd base-java-cmd cp (relativize basis-file) libexec-dir)
+                                ;; Standard clojure.main invocation
+                                (concat base-java-cmd
+                                        [(str "-Dclojure.basis=" (relativize basis-file))
+                                         "-classpath" (auto-file-arg cp)
+                                         "clojure.main"]
+                                        main-opts))
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args cli-opts))]
                 (when (and (= :repl mode)
                            (pos? (count (:args cli-opts))))
                   (apply warn "WARNING: Implicit use of clojure.main with options is deprecated, use -M" (:args cli-opts)))
+                (when use-rebel?
+                  (warn "Starting REPL with rebel-readline enhancements")
+                  (when (:verbose cli-opts)
+                    (warn "Rebel readline provides syntax highlighting, completion, and editing")))
+
                 (*clojure-process-fn* {:cmd main-args})))))))
