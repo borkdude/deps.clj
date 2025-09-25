@@ -15,6 +15,10 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 - Fix java downloader program that respects `CLJ_JVM_OPTS`
 - Move Windows build to Github rather than Appveyor
 
+## 1.12.3.1577
+
+- Catch up with Clojure CLI 1.12.3.1577
+
 ## 1.12.2.1571
 
 - Catch up with Clojure CLI 1.12.2.1571
