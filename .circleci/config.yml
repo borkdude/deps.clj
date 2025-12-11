@@ -133,7 +133,8 @@ jobs:
           destination: release
   mac:
     macos:
-      xcode: "14.0.0"
+      xcode: "14.3.1"
+      resource_class: m4pro.medium
     environment:
       GRAALVM_HOME: /Users/distiller/graalvm-21.0.1/Contents/Home
       DEPS_CLJ_PLATFORM: macos # used in release script
