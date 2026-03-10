@@ -56,9 +56,14 @@ if [[ "$version" == "" ]]; then
 fi
 
 case "$(uname -s)" in
-    Linux*)     platform=linux;;
-    Darwin*)    platform=macos;;
-    MINGW64*)   platform=windows;;
+    Linux*)  platform=linux;;
+    # for this script, twe treat FreeBSD the same as linux
+    FreeBSD*) platform=linux;;
+    Darwin*) platform=macos;;
+    # Misc. Windows bash-likes, e.g. on Github Actions, Git Bash, etc.
+    MINGW64*) platform=windows;;
+    MSYS_NT*) platform=windows;;
+    CYGWIN*) platform=windows;;
 esac
 
 download_url="https://github.com/borkdude/deps.clj/releases/download/v$version/deps.clj-$version-$platform-amd64.zip"
