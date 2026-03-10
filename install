@@ -58,6 +58,7 @@ fi
 case "$(uname -s)" in
     Linux*)     platform=linux;;
     Darwin*)    platform=macos;;
+    MINGW64*)   platform=windows;;
 esac
 
 download_url="https://github.com/borkdude/deps.clj/releases/download/v$version/deps.clj-$version-$platform-amd64.zip"
