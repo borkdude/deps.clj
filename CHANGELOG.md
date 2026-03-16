@@ -10,9 +10,10 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 [deps.clj](https://github.com/borkdude/deps.clj): a faithful port of the clojure CLI bash script to Clojure
 
-## Unreleased
+## 1.12.4.1618
 
 - [#144](https://github.com/borkdude/deps.clj/issues/144): Add support for installing in FreeBSD and Windows bash enviroments including MINGW64, MSYS_NT and Cygwin.
+- Catch up with Clojure CLI 1.12.4.1618
 
 ## 1.12.4.1597
 
