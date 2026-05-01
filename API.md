@@ -130,7 +130,7 @@ See [`help-text`](#borkdude.deps/help-text).
   archive is not found, an attempt is made to download the archive
   from the official site and extract its contents locally. The archive
   is downloaded from this process directly, unless the `CLJ_JVM_OPTS`
-  env variable is set and a succesful attempt is made to download the
+  env variable is set and a successful attempt is made to download the
   archive by invoking a java subprocess passing the env variable value
   as command line options.
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L772-L1019">Source</a></sub></p>
