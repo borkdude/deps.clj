@@ -1,65 +1,76 @@
 #!/usr/bin/env bb
 
 (ns bump-version
-  (:require [clojure.java.io :as io]
+  (:require [babashka.process :as p]
+            [clojure.java.io :as io]
             [clojure.string :as str]))
-
-(import '[java.lang ProcessBuilder$Redirect])
-
-(defn shell-command
-  "Executes shell command. Exits script when the shell-command has a non-zero exit code, propagating it.
-  Accepts the following options:
-  `:input`: instead of reading from stdin, read from this string.
-  `:to-string?`: instead of writing to stdoud, write to a string and
-  return it."
-  ([args] (shell-command args nil))
-  ([args {:keys [:input :to-string?]}]
-   (let [args (mapv str args)
-         pb (cond-> (-> (ProcessBuilder. ^java.util.List args)
-                        (.redirectError ProcessBuilder$Redirect/INHERIT))
-              (not to-string?) (.redirectOutput ProcessBuilder$Redirect/INHERIT)
-              (not input) (.redirectInput ProcessBuilder$Redirect/INHERIT))
-         proc (.start pb)]
-     (when input
-       (with-open [w (io/writer (.getOutputStream proc))]
-         (binding [*out* w]
-           (print input)
-           (flush))))
-     (let [string-out
-           (when to-string?
-             (let [sw (java.io.StringWriter.)]
-               (with-open [w (io/reader (.getInputStream proc))]
-                 (io/copy w sw))
-               (str sw)))
-           exit-code (.waitFor proc)]
-       (when-not (zero? exit-code)
-         (System/exit exit-code))
-       string-out))))
 
 (def version-file (io/file "resources" "DEPS_CLJ_VERSION"))
 (def released-version-file (io/file "resources" "DEPS_CLJ_RELEASED_VERSION"))
+(def src-file (io/file "src" "borkdude" "deps.clj"))
+(def changelog-file (io/file "CHANGELOG.md"))
 
-(case (first *command-line-args*)
-  "release" (let [version-string (str/trim (slurp version-file))
-                  numbers (str/split version-string #"\.")
-                  patch (last numbers)
-                  patch (str/replace patch "-SNAPSHOT" "")
-                  new-version (str/join "." (concat (butlast numbers) [patch]))]
-              (spit version-file new-version)
-              (shell-command ["script/gen_script.clj"])
-              (shell-command ["git" "commit" "-a" "-m" (str "v" new-version)])
-              (shell-command ["git" "diff" "HEAD^" "HEAD"]))
-  "post-release" (do
-                   (io/copy version-file released-version-file)
-                   (let [version-string (str/trim (slurp version-file))
-                         numbers (str/split version-string #"\.")
-                         patch (last numbers)
-                         patch (str/replace patch "-SNAPSHOT" "")
-                         patch (Integer. patch)
-                         patch (str (inc patch) "-SNAPSHOT")
-                         new-version (str/join "." (concat (butlast numbers) [patch]))]
-                     (spit version-file new-version)
-                     (shell-command ["script/gen_script.clj"])
-                     (shell-command ["git" "commit" "-a" "-m" "Version bump"])
-                     (shell-command ["git" "diff" "HEAD^" "HEAD"])))
-  (println "Expected: release | post-release."))
+(def tag-re #"refs/tags/(\d+\.\d+\.\d+\.\d+)$")
+
+(defn latest-brew-install-version []
+  (let [{:keys [out]} (p/shell {:out :string}
+                               "git" "ls-remote" "--tags" "--sort=-v:refname"
+                               "https://github.com/clojure/brew-install")]
+    (or (some (fn [line]
+                (when-let [[_ v] (re-find tag-re line)]
+                  v))
+              (str/split-lines out))
+        (throw (ex-info "No brew-install version tag found" {})))))
+
+(defn update-src-version! [new-version]
+  (let [src (slurp src-file)
+        updated (str/replace
+                 src
+                 #"(\(System/getenv \"DEPS_CLJ_TOOLS_VERSION\"\)\s+\")\d+\.\d+\.\d+\.\d+(\")"
+                 (str "$1" new-version "$2"))]
+    (when (= src updated)
+      (throw (ex-info "Failed to update version literal in src" {:file (str src-file)})))
+    (spit src-file updated)))
+
+(defn prepend-changelog! [new-version]
+  (let [content (slurp changelog-file)
+        marker "[deps.clj](https://github.com/borkdude/deps.clj): a faithful port of the clojure CLI bash script to Clojure\n"
+        idx (str/index-of content marker)]
+    (when-not idx
+      (throw (ex-info "Could not find changelog marker in CHANGELOG.md" {})))
+    (let [insert-at (+ idx (count marker))
+          head (subs content 0 insert-at)
+          tail (subs content insert-at)
+          entry (format "\n## %s\n\n- Catch up with Clojure CLI %s\n"
+                        new-version new-version)]
+      (spit changelog-file (str head entry tail)))))
+
+(defn release []
+  (let [new-version (latest-brew-install-version)]
+    (println "Latest brew-install version:" new-version)
+    (spit version-file new-version)
+    (update-src-version! new-version)
+    (p/shell "script/gen_script.clj")
+    (prepend-changelog! new-version)
+    (p/shell "git" "commit" "-a" "-m" new-version)
+    (p/shell "git" "diff" "HEAD^" "HEAD")))
+
+(defn post-release []
+  (io/copy version-file released-version-file)
+  (let [version-string (str/trim (slurp version-file))
+        numbers (str/split version-string #"\.")
+        patch (last numbers)
+        patch (str/replace patch "-SNAPSHOT" "")
+        patch (Integer. patch)
+        patch (str (inc patch) "-SNAPSHOT")
+        new-version (str/join "." (concat (butlast numbers) [patch]))]
+    (spit version-file new-version)
+    (p/shell "script/gen_script.clj")
+    (p/shell "git" "commit" "-a" "-m" "Version bump")
+    (p/shell "git" "diff" "HEAD^" "HEAD")))
+
+(when (= *file* (System/getProperty "babashka.file"))
+  (case (first *command-line-args*)
+    "release" (release)
+    "post-release" (post-release)
+    (println "Expected: release | post-release.")))
