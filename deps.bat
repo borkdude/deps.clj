@@ -93,6 +93,8 @@
   return it."
   ([args] (internal-shell-command args nil))
   ([args {:keys [out env extra-env]}]
+   (when (nil? (first args))
+     (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME.")))
    (let [to-string? (= :string out)
          args (mapv str args)
          args (if (and windows? (not (System/getenv "DEPS_CLJ_NO_WINDOWS_FIXES")))
@@ -127,7 +129,8 @@
 
   Called with a map of:
 
-  - `:cmd`: a vector of strings
+  - `:cmd`: a vector of strings, the java executable first. The first
+    element is nil when no java was found.
   - `:out`: if set to `:string`, `:out` key in result must contains stdout
 
   Returns a map of:
@@ -143,7 +146,8 @@
 
   Called with a map of:
 
-  - `:cmd`: a vector of strings
+  - `:cmd`: a vector of strings, the java executable first. The first
+    element is nil when no java was found.
 
   Must return a map of `:exit`, the exit code of the process."
   [{:keys [cmd]}]
@@ -278,19 +282,18 @@ For more info, see:
 (def ^:private java-exe (if windows? "java.exe" "java"))
 
 (defn- get-java-cmd
-  "Returns path to java executable to invoke sub commands with."
+  "Returns path to java executable to invoke sub commands with, or nil
+  when none is found."
   []
   (or (*getenv-fn* "JAVA_CMD")
       (let [java-cmd (which java-exe)]
         (if (str/blank? java-cmd)
           (let [java-home (*getenv-fn* "JAVA_HOME")]
-            (if-not (str/blank? java-home)
+            (when-not (str/blank? java-home)
               (let [f (io/file java-home "bin" java-exe)]
-                (if (and (.exists f)
-                         (.canExecute f))
-                  (.getPath f)
-                  (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-              (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+                (when (and (.exists f)
+                           (.canExecute f))
+                  (.getPath f)))))
           java-cmd))))
 
 (def ^:private authenticated-proxy-re #".+:.+@(.+):(\d+).*")

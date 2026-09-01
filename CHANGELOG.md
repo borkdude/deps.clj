@@ -10,6 +10,10 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 [deps.clj](https://github.com/borkdude/deps.clj): a faithful port of the clojure CLI bash script to Clojure
 
+## Unreleased
+
+- Look up `java` when a process starts, not at startup. `--version`, `--help`, `-Sdescribe` and a cached `-Spath` work without it. A rebound `*aux-process-fn*` or `*clojure-process-fn*` gets `nil` as the first `:cmd` element when java is missing.
+
 ## 1.12.5.1664
 
 - Catch up with Clojure CLI 1.12.5.1664
