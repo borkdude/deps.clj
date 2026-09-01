@@ -151,8 +151,8 @@
 
   Called with a map of:
 
-  - `:cmd`: a vector of strings, the java executable first. The first
-    element is nil when no java was found.
+  - `:cmd`: a vector of strings, the java executable first. deps.clj
+    checks that java was found before calling this.
 
   Must return a map of `:exit`, the exit code of the process."
   [{:keys [cmd]}]
@@ -1183,6 +1183,7 @@ public class ClojureToolsDownloader {
                                        "-classpath" (auto-file-arg cp)
                                        "clojure.main"]
                                       main-opts)
+                    _ (check-java-cmd! main-args)
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args cli-opts))]
                 (when (and (= :repl mode)
