@@ -76,6 +76,12 @@
     (.putAll (as-string-map env)))
   pb)
 
+(defn check-java-cmd!
+  "Throws when the first element of cmd, the java executable, is nil."
+  [cmd]
+  (when (nil? (first cmd))
+    (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+
 (defn- internal-shell-command
   "Executes shell command.
 
@@ -85,8 +91,7 @@
   return it."
   ([args] (internal-shell-command args nil))
   ([args {:keys [out env extra-env]}]
-   (when (nil? (first args))
-     (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME.")))
+   (check-java-cmd! args)
    (let [to-string? (= :string out)
          args (mapv str args)
          args (if (and windows? (not (System/getenv "DEPS_CLJ_NO_WINDOWS_FIXES")))
