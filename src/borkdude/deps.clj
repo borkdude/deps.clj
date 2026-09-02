@@ -129,12 +129,17 @@
   - `:cmd`: a vector of strings, the java executable first. The first
     element is nil when no java was found.
   - `:out`: if set to `:string`, `:out` key in result must contains stdout
+  - `:ensure-tools-fn`: a function of no arguments that installs the
+    Clojure tools jar named in `:cmd` when it is missing. Call it before
+    starting the process. A replacement that does not start a process can
+    leave it alone.
 
   Returns a map of:
 
   - `:exit`, the exit code of the process
   - `:out`, the string of stdout, if the input `:out` was set to `:string`"
-  [{:keys [cmd out]}]
+  [{:keys [cmd out ensure-tools-fn]}]
+  (when ensure-tools-fn (ensure-tools-fn))
   (internal-shell-command cmd {:out out}))
 
 (defn ^:dynamic *clojure-process-fn*
@@ -145,9 +150,13 @@
 
   - `:cmd`: a vector of strings, the java executable first. deps.clj
     checks that java was found before calling this.
+  - `:ensure-tools-fn`: a function of no arguments that installs the
+    Clojure tools jar named in `:cmd` when it is missing. Call it before
+    starting the process.
 
   Must return a map of `:exit`, the exit code of the process."
-  [{:keys [cmd]}]
+  [{:keys [cmd ensure-tools-fn]}]
+  (when ensure-tools-fn (ensure-tools-fn))
   (internal-shell-command cmd))
 
 (def ^:private help-text (delay (str "Version: " @version "
@@ -953,16 +962,18 @@ public class ClojureToolsDownloader {
         proxy-settings (proxy-jvm-opts proxy-opts)
         clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
         config-dir (get-config-dir)
-        tools-cp
-        (or
-         (when (and (.exists tools-jar)
-                    ;; aborted transaction
-                    (not (.exists (io/file libexec-dir "TRANSACTION_START"))))
-           (.getPath tools-jar))
-         (binding [*out* *err*]
-           (warn "Clojure tools not yet in expected location:" (str tools-jar))
-           (clojure-tools-install! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts :config-dir config-dir})
-           tools-jar))
+        tools-cp (.getPath tools-jar)
+        ;; Installs the tools when a process is about to need them. The
+        ;; process fns get it as :ensure-tools-fn, so a replacement that
+        ;; never starts java never downloads them either.
+        ensure-tools!
+        (fn []
+          (when-not (and (.exists tools-jar)
+                         ;; aborted transaction
+                         (not (.exists (io/file libexec-dir "TRANSACTION_START"))))
+            (binding [*out* *err*]
+              (warn "Clojure tools not yet in expected location:" (str tools-jar))
+              (clojure-tools-install! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts :config-dir config-dir}))))
         mode (:mode cli-opts)
         exec? (= :exec mode)
         tool? (= :tool mode)
@@ -1110,7 +1121,8 @@ public class ClojureToolsDownloader {
                                                             "--manifest-file" (relativize manifest-file)]
                                                            tools-args))
                                                :out (when tree?
-                                                      :string)})]
+                                                      :string)
+                                               :ensure-tools-fn ensure-tools!})]
           (when tree?
             (print out) (flush))))
       (let [cp (cond (or classpath-not-needed?
@@ -1127,7 +1139,8 @@ public class ClojureToolsDownloader {
                                             ["-m" "clojure.tools.deps.script.generate-manifest2"
                                              "--config-user" config-user
                                              "--config-project" (relativize config-project)
-                                             "--gen=pom" (str/join " " tools-args)])})
+                                             "--gen=pom" (str/join " " tools-args)])
+                                 :ensure-tools-fn ensure-tools!})
               (:print-classpath cli-opts)
               (println cp)
               (:describe cli-opts)
@@ -1154,7 +1167,7 @@ public class ClojureToolsDownloader {
                     command (str/replace command "{{main-opts}}" main-cache-opts)
                     command (str/split command #"\s+")
                     command (into command (:args cli-opts))]
-                (*clojure-process-fn* {:cmd command}))
+                (*clojure-process-fn* {:cmd command :ensure-tools-fn ensure-tools!}))
               :else
               (let [jvm-cache-opts (when (.exists (io/file jvm-file))
                                      (-> jvm-file slurp str/split-lines))
@@ -1181,4 +1194,4 @@ public class ClojureToolsDownloader {
                 (when (and (= :repl mode)
                            (pos? (count (:args cli-opts))))
                   (apply warn "WARNING: Implicit use of clojure.main with options is deprecated, use -M" (:args cli-opts)))
-                (*clojure-process-fn* {:cmd main-args})))))))
+                (*clojure-process-fn* {:cmd main-args :ensure-tools-fn ensure-tools!})))))))

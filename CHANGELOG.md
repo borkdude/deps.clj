@@ -12,6 +12,7 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 ## Unreleased
 
+- Install the Clojure tools when a process is about to need them, not at startup. `--version`, `--help` and `-Sdescribe` no longer download them. The process fns get an `:ensure-tools-fn` to call before starting java.
 - Look up `java` when a process starts, not at startup. `--version`, `--help`, `-Sdescribe` and a cached `-Spath` work without it. A rebound `*aux-process-fn*` gets `nil` as the first `:cmd` element when java is missing, `check-java-cmd!` raises the usual error for it.
 
 ## 1.12.5.1664
