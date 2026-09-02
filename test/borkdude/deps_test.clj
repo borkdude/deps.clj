@@ -92,13 +92,6 @@
                                  {:exit-code ~'exit :msg ~'message}))))]
      (deps/-main ~@command-line-args)))
 
-(defn- tools-aux-stub
-  "An aux process fn that installs the tools like the real one would and
-  starts nothing. The tools jar in the download tests is a dummy."
-  [{:keys [ensure-tools-fn]}]
-  (when ensure-tools-fn (ensure-tools-fn))
-  {:exit 0})
-
 (deftest whitespace-test
   (testing "jvm opts"
     (let [temp-dir (fs/create-temp-dir)
@@ -169,19 +162,14 @@
   (doseq [version ["1.10.3.899" "1.11.1.1386"]]
     (fs/delete-tree "tools-dir")
     (try
-      (let [env {"DEPS_CLJ_TOOLS_VERSION" version
-                 "DEPS_CLJ_TOOLS_DIR" "tools-dir"}
-            run (fn [args]
-                  (-> @(process (invoke-deps-cmd args)
-                                {:out :string :err :string :extra-env env})
-                      ((juxt :out :err :exit))))
-            ;; -Sdescribe starts no process, so it installs nothing
-            [out _ exit] (run "-Sdescribe")
-            _ (is (zero? exit))
-            ;; a classpath refresh installs first. Whether these old tools
-            ;; then understand today's make-classpath arguments is not
-            ;; what this test is about.
-            [_ err] (run "-Sforce -Spath")]
+      (let [[out err]
+            (-> (process (invoke-deps-cmd "-Sdescribe")
+                         {:out :string
+                          :err :string
+                          :extra-env {"DEPS_CLJ_TOOLS_VERSION" version
+                                      "DEPS_CLJ_TOOLS_DIR" "tools-dir"}})
+                check
+                ((juxt :out :err)))]
         (println err)
         (is (= version (:version (edn/read-string out))))
         (is (str/includes? err "Clojure tools not yet in expected location:"))
@@ -237,17 +225,11 @@
                        (let [ret# (shell-command# args# opts#)]
                          (deliver ret*# args#)
                          ret#)))]
-       ;; need to override both *process-fn* and deps/shell-command. The
-       ;; Clojure tools jar in these tests is a dummy, so a command that
-       ;; runs clojure.main is captured and not started.
-       (binding [deps/*clojure-process-fn* (fn ~'[{:keys [cmd ensure-tools-fn]}]
-                                             (when ~'ensure-tools-fn (~'ensure-tools-fn))
+       ;; need to override both *process-fn* and deps/shell-command.
+       (binding [deps/*clojure-process-fn* (fn ~'[{:keys [cmd]}]
                                              (sh-mock# ~'cmd))
-                 deps/*aux-process-fn* (fn ~'[{:keys [cmd out ensure-tools-fn]}]
-                                         (when ~'ensure-tools-fn (~'ensure-tools-fn))
-                                         (if (some #{"clojure.main"} ~'cmd)
-                                           (do (deliver ret*# ~'cmd) {:exit 0})
-                                           (sh-mock# ~'cmd {:to-string? (= :string ~'out)})))
+                 deps/*aux-process-fn* (fn ~'[{:keys [cmd out]}]
+                                         (sh-mock# ~'cmd {:to-string? (= :string ~'out)}))
                  deps/*exit-fn* (fn [{:keys [~'exit ~'message]}]
                                   (when ~'message
                                     (throw (ex-info "mock-shell-failed"
@@ -322,7 +304,7 @@
                     sh-args (get-shell-command-args
                              {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)
                               "CLJ_JVM_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
-                             (deps/-main "-Spom"))]
+                             (deps/-main "--version"))]
                 (is (some #{xx-pclf} sh-args))
                 ;; second and third args
                 (is (set/subset? #{xx-pclf xx-gc-threads} (->> (rest sh-args) set))))
@@ -346,8 +328,7 @@
                                                   "CLJ_JVM_OPTS" nil} %)
                                             (System/getenv %))]
 
-              (binding [deps/*aux-process-fn* tools-aux-stub]
-                (deps-main-throw "-Spom"))
+              (deps-main-throw "--version")
               (is (fs/exists? dest-jar-file)))))))
 
     (testing "manual user installation"
@@ -364,8 +345,7 @@
             (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)} %)
                                             (System/getenv %))]
 
-              (binding [deps/*aux-process-fn* tools-aux-stub]
-                (deps-main-throw "-Spom"))
+              (deps-main-throw "--version")
               (is (fs/exists? dest-jar-file)))))))
 
     (testing "custom user function"
@@ -389,8 +369,7 @@
                               dest-zip-file (fs/file dest)]
                           (fs/copy tools-zip-file dest-zip-file)
                           true))]
-              (binding [deps/*aux-process-fn* tools-aux-stub]
-                (deps-main-throw "-Spom"))
+              (deps-main-throw "--version")
               (is (fs/exists? dest-jar-file)))))))
 
     (testing "prompt for manual user install"
@@ -403,12 +382,8 @@
           (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)} %)
                                           (System/getenv %))]
 
-            (testing "no process, no install"
-              (deps-main-throw "--version")
-              (is (not (fs/exists? (fs/file temp-dir ct-jar-name)))))
             (let [exit-data* (atom {})]
-              (try (binding [deps/*aux-process-fn* tools-aux-stub]
-                     (deps-main-throw "-Spom"))
+              (try (deps-main-throw "--version")
                    (catch Exception e
                      (reset! exit-data* (ex-data e))))
               (let [exit-data @exit-data*]
