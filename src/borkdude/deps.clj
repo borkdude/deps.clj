@@ -150,6 +150,26 @@
   [{:keys [cmd]}]
   (internal-shell-command cmd))
 
+;; <--- D: the new var. A seam for the one thing bb replaces: computing the classpath.
+(defn ^:dynamic *make-classpath-fn*
+  "Refreshes the classpath cache. May be replaced by rebinding this
+  dynamic var, for instance to compute the classpath in-process.
+
+  Called with a map of:
+
+  - `:cmd`: the java command that runs `clojure.tools.deps.script.make-classpath2`,
+    a vector of strings, the java executable first.
+  - `:args`: the arguments to make-classpath2, a vector of strings.
+  - `:out`: as for `*aux-process-fn*`.
+  - `:install-tools-fn`: a function of no arguments that installs the
+    Clojure tools named in `:cmd` when they are missing. A replacement that
+    starts no process can skip it.
+
+  Must return a map of `:out`, the string of stdout, if `:out` was `:string`."
+  [{:keys [cmd out install-tools-fn]}]
+  (install-tools-fn)
+  (*aux-process-fn* {:cmd cmd :out out}))
+
 (def ^:private help-text (delay (str "Version: " @version "
 
 You use the Clojure tools ('clj' or 'clojure') to run Clojure programs
@@ -953,16 +973,15 @@ public class ClojureToolsDownloader {
         proxy-settings (proxy-jvm-opts proxy-opts)
         clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
         config-dir (get-config-dir)
-        tools-cp
-        (or
-         (when (and (.exists tools-jar)
-                    ;; aborted transaction
-                    (not (.exists (io/file libexec-dir "TRANSACTION_START"))))
-           (.getPath tools-jar))
-         (binding [*out* *err*]
-           (warn "Clojure tools not yet in expected location:" (str tools-jar))
-           (clojure-tools-install! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts :config-dir config-dir})
-           tools-jar))
+        tools-cp (.getPath tools-jar) ;; <--- D: the expected path only, nothing installed at startup
+        install-tools! ;; <--- D: the install; run right before a process fn, or handed to *make-classpath-fn*
+        (fn []
+          (when-not (and (.exists tools-jar)
+                         ;; aborted transaction
+                         (not (.exists (io/file libexec-dir "TRANSACTION_START"))))
+            (binding [*out* *err*]
+              (warn "Clojure tools not yet in expected location:" (str tools-jar))
+              (clojure-tools-install! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts :config-dir config-dir}))))
         mode (:mode cli-opts)
         exec? (= :exec mode)
         tool? (= :tool mode)
@@ -1098,19 +1117,20 @@ public class ClojureToolsDownloader {
       (when (and stale (not classpath-not-needed?))
         (when (:verbose cli-opts)
           (warn "Refreshing classpath"))
-        (let [{:keys [out]} (*aux-process-fn* {:cmd (into clj-main-cmd
-                                                          (concat
-                                                           ["-m" "clojure.tools.deps.script.make-classpath2"
-                                                            "--config-user" config-user
-                                                            "--config-project" (relativize config-project)
-                                                            "--basis-file" (relativize basis-file)
-                                                            "--cp-file" (relativize cp-file)
-                                                            "--jvm-file" (relativize jvm-file)
-                                                            "--main-file" (relativize main-file)
-                                                            "--manifest-file" (relativize manifest-file)]
-                                                           tools-args))
-                                               :out (when tree?
-                                                      :string)})]
+        (let [args (into ["--config-user" config-user
+                          "--config-project" (relativize config-project)
+                          "--basis-file" (relativize basis-file)
+                          "--cp-file" (relativize cp-file)
+                          "--jvm-file" (relativize jvm-file)
+                          "--main-file" (relativize main-file)
+                          "--manifest-file" (relativize manifest-file)]
+                         tools-args)
+              {:keys [out]} (*make-classpath-fn* ;; <--- D: the seam; the default installs and calls *aux-process-fn*
+                             {:cmd (into clj-main-cmd (cons "-m" (cons "clojure.tools.deps.script.make-classpath2" args)))
+                              :args args
+                              :out (when tree?
+                                     :string)
+                              :install-tools-fn install-tools!})]
           (when tree?
             (print out) (flush))))
       (let [cp (cond (or classpath-not-needed?
@@ -1123,11 +1143,12 @@ public class ClojureToolsDownloader {
                                       (*exit-fn* {:exit 0}))
               (:prep cli-opts) (*exit-fn* {:exit 0})
               (:pom cli-opts)
-              (*aux-process-fn* {:cmd (into clj-main-cmd
-                                            ["-m" "clojure.tools.deps.script.generate-manifest2"
-                                             "--config-user" config-user
-                                             "--config-project" (relativize config-project)
-                                             "--gen=pom" (str/join " " tools-args)])})
+              (do (install-tools!) ;; <--- D: a process fn call keeps its guarantee, the jar is there
+                  (*aux-process-fn* {:cmd (into clj-main-cmd
+                                                ["-m" "clojure.tools.deps.script.generate-manifest2"
+                                                 "--config-user" config-user
+                                                 "--config-project" (relativize config-project)
+                                                 "--gen=pom" (str/join " " tools-args)])}))
               (:print-classpath cli-opts)
               (println cp)
               (:describe cli-opts)
@@ -1176,6 +1197,7 @@ public class ClojureToolsDownloader {
                                        "clojure.main"]
                                       main-opts)
                     _ (check-java-cmd! main-args)
+                    _ (install-tools!) ;; <--- D: -X and -T need the exec jar from the same install
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args cli-opts))]
                 (when (and (= :repl mode)
