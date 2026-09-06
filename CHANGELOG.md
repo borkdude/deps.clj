@@ -12,7 +12,9 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 ## Unreleased
 
-- Look up `java` when a process starts, not at startup. `--version`, `--help`, `-Sdescribe` and a cached `-Spath` work without it. A rebound `*aux-process-fn*` gets `nil` as the first `:cmd` element when java is missing, `check-java-cmd!` raises the usual error for it.
+- Look up `java` when a process starts, not at startup. `--version`, `--help`, `-Sdescribe` and a cached `-Spath` work without it.
+- Install the Clojure tools when a process needs them, not at startup. `--version`, `--help` and `-Sdescribe` download nothing on a fresh machine.
+- New dynamic var `*make-classpath-fn*`, the step that refreshes the classpath cache. Rebind it to compute the classpath in-process; the default installs the tools and runs make-classpath through `*aux-process-fn*`.
 
 ## 1.12.5.1664
 

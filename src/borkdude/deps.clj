@@ -126,8 +126,8 @@
 
   Called with a map of:
 
-  - `:cmd`: a vector of strings, the java executable first. The first
-    element is nil when no java was found.
+  - `:cmd`: a vector of strings, the java executable first. deps.clj
+    checks that java was found before calling this. ;; <--- D
   - `:out`: if set to `:string`, `:out` key in result must contains stdout
 
   Returns a map of:
@@ -158,15 +158,20 @@
   Called with a map of:
 
   - `:cmd`: the java command that runs `clojure.tools.deps.script.make-classpath2`,
-    a vector of strings, the java executable first.
+    a vector of strings, the java executable first. The first element is
+    nil when no java was found; `check-java-cmd!` raises the usual error.
   - `:args`: the arguments to make-classpath2, a vector of strings.
   - `:out`: as for `*aux-process-fn*`.
   - `:install-tools-fn`: a function of no arguments that installs the
     Clojure tools named in `:cmd` when they are missing. A replacement that
     starts no process can skip it.
 
+  The default checks java, installs the tools and runs the command through
+  `*aux-process-fn*`.
+
   Must return a map of `:out`, the string of stdout, if `:out` was `:string`."
   [{:keys [cmd out install-tools-fn]}]
+  (check-java-cmd! cmd) ;; <--- D: no java, no download, and *aux-process-fn* never sees nil
   (install-tools-fn)
   (*aux-process-fn* {:cmd cmd :out out}))
 
@@ -541,9 +546,10 @@ public class ClojureToolsDownloader {
   `:proxy` options on a `.java` program file, and returns true on
   success. Requires Java 11+ (JEP 330)."
   [{:keys [url dest proxy-opts clj-jvm-opts sha256-url]}]
-  (let [dest-dir (.getCanonicalPath (io/file dest ".."))
+  (let [java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
+        _ (check-java-cmd! java-cmd) ;; <--- D: before writing the downloader file
+        dest-dir (.getCanonicalPath (io/file dest ".."))
         dlr-path (clojure-tools-java-downloader-spit dest-dir)
-        java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
         success?* (atom true)]
     (binding [*exit-fn* (fn [{:keys [exit message]}]
                           (when-not (= 0 exit)
@@ -1143,12 +1149,14 @@ public class ClojureToolsDownloader {
                                       (*exit-fn* {:exit 0}))
               (:prep cli-opts) (*exit-fn* {:exit 0})
               (:pom cli-opts)
-              (do (install-tools!) ;; <--- D: a process fn call keeps its guarantee, the jar is there
-                  (*aux-process-fn* {:cmd (into clj-main-cmd
-                                                ["-m" "clojure.tools.deps.script.generate-manifest2"
-                                                 "--config-user" config-user
-                                                 "--config-project" (relativize config-project)
-                                                 "--gen=pom" (str/join " " tools-args)])}))
+              (let [cmd (into clj-main-cmd
+                              ["-m" "clojure.tools.deps.script.generate-manifest2"
+                               "--config-user" config-user
+                               "--config-project" (relativize config-project)
+                               "--gen=pom" (str/join " " tools-args)])]
+                (check-java-cmd! cmd) ;; <--- D: a process fn call keeps both guarantees: java found, jar there
+                (install-tools!)
+                (*aux-process-fn* {:cmd cmd}))
               (:print-classpath cli-opts)
               (println cp)
               (:describe cli-opts)
