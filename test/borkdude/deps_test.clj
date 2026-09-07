@@ -233,6 +233,21 @@
 (deftest tools-test
   (deps/-main "-Ttools" "list"))
 
+(deftest tool-mode-installs-first-test
+  (testing "-Ttools on a fresh machine installs the tools before the classpath step, even when that step skips the install" ;; <--- D
+    (fs/with-temp-dir
+      [temp-dir {}]
+      (let [tools-dir (fs/file temp-dir "tools")
+            config-dir (fs/file temp-dir "config")]
+        (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str tools-dir)
+                                              "CLJ_CONFIG" (str config-dir)} %)
+                                        (System/getenv %))
+                  ;; a replacement like babashka's: no install of its own
+                  deps/*make-classpath-fn* (fn [{:keys [cmd out]}]
+                                             (deps/*aux-process-fn* {:cmd cmd :out out}))]
+          (deps-main-throw "-Ttools" "list")
+          (is (fs/exists? (fs/file config-dir "tools" "tools.edn"))))))))
+
 (defmacro get-shell-command-args
   "Executes BODY with the given extra ENV-VARS environment variables
   added to the `babashka.deps` scope, presumbably to indirectly invoke

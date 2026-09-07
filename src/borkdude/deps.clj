@@ -1000,6 +1000,10 @@ public class ClojureToolsDownloader {
                      proxy-settings
                      ["-classpath" tools-cp "clojure.main"]))
         java-opts (some-> (*getenv-fn* "JAVA_OPTS") (str/split #" "))]
+    ;; A tool resolves through tools/tools.edn, which the install provides
+    ;; and the copy below seeds. Tool mode runs on the JVM anyway, so the
+    ;; install is the command's own cost, whoever computes the classpath.
+    (when tool? (install-tools!)) ;; <--- D
     ;; If user config directory does not exist, create it
     (let [config-dir (io/file config-dir)]
       (when-not (.exists config-dir)
