@@ -1000,10 +1000,10 @@ public class ClojureToolsDownloader {
                      proxy-settings
                      ["-classpath" tools-cp "clojure.main"]))
         java-opts (some-> (*getenv-fn* "JAVA_OPTS") (str/split #" "))]
-    ;; A tool resolves through tools/tools.edn, which the install provides
-    ;; and the copy below seeds. Tool mode runs on the JVM anyway, so the
-    ;; install is the command's own cost, whoever computes the classpath.
-    (when tool? (install-tools!)) ;; <--- D
+    ;; -X and -T run exec.jar, and -T resolves through tools/tools.edn, which
+    ;; the copy below seeds. Both come from the install, whoever computes the
+    ;; classpath, so those modes install up front.
+    (when (or exec? tool?) (install-tools!)) ;; <--- D
     ;; If user config directory does not exist, create it
     (let [config-dir (io/file config-dir)]
       (when-not (.exists config-dir)
@@ -1209,7 +1209,6 @@ public class ClojureToolsDownloader {
                                        "clojure.main"]
                                       main-opts)
                     _ (check-java-cmd! main-args)
-                    _ (install-tools!) ;; <--- D: -X and -T need the exec jar from the same install
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args cli-opts))]
                 (when (and (= :repl mode)

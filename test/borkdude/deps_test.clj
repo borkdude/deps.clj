@@ -233,20 +233,38 @@
 (deftest tools-test
   (deps/-main "-Ttools" "list"))
 
-(deftest tool-mode-installs-first-test
-  (testing "-Ttools on a fresh machine installs the tools before the classpath step, even when that step skips the install" ;; <--- D
+(defmacro with-fresh-machine
+  "Runs BODY with a fresh tools dir and config dir under TEMP-DIR, and a
+  `*make-classpath-fn*` like babashka's that installs nothing. Binds
+  TOOLS-DIR and CONFIG-DIR." ;; <--- D
+  [[temp-dir tools-dir config-dir] & body]
+  `(let [~tools-dir (fs/file ~temp-dir "tools")
+         ~config-dir (fs/file ~temp-dir "config")]
+     (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str ~tools-dir)
+                                           "CLJ_CONFIG" (str ~config-dir)} %)
+                                     (System/getenv %))
+               deps/*make-classpath-fn* (fn [{:keys [~'cmd ~'out]}]
+                                          (deps/*aux-process-fn* {:cmd ~'cmd :out ~'out}))]
+       ~@body)))
+
+(deftest exec-and-tool-mode-install-first-test
+  (testing "-Ttools on a fresh machine installs before the classpath step, for tools/tools.edn" ;; <--- D
     (fs/with-temp-dir
       [temp-dir {}]
-      (let [tools-dir (fs/file temp-dir "tools")
-            config-dir (fs/file temp-dir "config")]
-        (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str tools-dir)
-                                              "CLJ_CONFIG" (str config-dir)} %)
-                                        (System/getenv %))
-                  ;; a replacement like babashka's: no install of its own
-                  deps/*make-classpath-fn* (fn [{:keys [cmd out]}]
-                                             (deps/*aux-process-fn* {:cmd cmd :out out}))]
-          (deps-main-throw "-Ttools" "list")
-          (is (fs/exists? (fs/file config-dir "tools" "tools.edn"))))))))
+      (with-fresh-machine [temp-dir _tools-dir config-dir]
+        (deps-main-throw "-Ttools" "list")
+        (is (fs/exists? (fs/file config-dir "tools" "tools.edn"))))))
+  (testing "-X on a fresh machine installs before the classpath step, for exec.jar" ;; <--- D
+    (fs/with-temp-dir
+      [temp-dir {}]
+      (with-fresh-machine [temp-dir tools-dir _config-dir]
+        (let [seen (atom nil)]
+          (binding [deps/*clojure-process-fn* (fn [{:keys [cmd]}]
+                                                (reset! seen cmd)
+                                                {:exit 0})]
+            (deps-main-throw "-X" "clojure.core/prn" ":a" "1")
+            (is (fs/exists? (fs/file tools-dir "exec.jar")))
+            (is (some #(str/includes? (str %) "exec.jar") @seen))))))))
 
 (defmacro get-shell-command-args
   "Executes BODY with the given extra ENV-VARS environment variables
