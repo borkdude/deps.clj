@@ -127,7 +127,7 @@
   Called with a map of:
 
   - `:cmd`: a vector of strings, the java executable first. deps.clj
-    checks that java was found before calling this. ;; <--- D
+    checks that java was found before calling this.
   - `:out`: if set to `:string`, `:out` key in result must contains stdout
 
   Returns a map of:
@@ -150,7 +150,6 @@
   [{:keys [cmd]}]
   (internal-shell-command cmd))
 
-;; <--- D: the new var. A seam for the one thing bb replaces: computing the classpath.
 (defn ^:dynamic *make-classpath-fn*
   "Refreshes the classpath cache. May be replaced by rebinding this
   dynamic var, for instance to compute the classpath in-process.
@@ -171,7 +170,7 @@
 
   Must return a map of `:out`, the string of stdout, if `:out` was `:string`."
   [{:keys [cmd out install-tools-fn]}]
-  (check-java-cmd! cmd) ;; <--- D: no java, no download, and *aux-process-fn* never sees nil
+  (check-java-cmd! cmd)
   (install-tools-fn)
   (*aux-process-fn* {:cmd cmd :out out}))
 
@@ -547,7 +546,7 @@ public class ClojureToolsDownloader {
   success. Requires Java 11+ (JEP 330)."
   [{:keys [url dest proxy-opts clj-jvm-opts sha256-url]}]
   (let [java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
-        _ (check-java-cmd! java-cmd) ;; <--- D: before writing the downloader file
+        _ (check-java-cmd! java-cmd)
         dest-dir (.getCanonicalPath (io/file dest ".."))
         dlr-path (clojure-tools-java-downloader-spit dest-dir)
         success?* (atom true)]
@@ -979,8 +978,8 @@ public class ClojureToolsDownloader {
         proxy-settings (proxy-jvm-opts proxy-opts)
         clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
         config-dir (get-config-dir)
-        tools-cp (.getPath tools-jar) ;; <--- D: the expected path only, nothing installed at startup
-        install-tools! ;; <--- D: the install; run right before a process fn, or handed to *make-classpath-fn*
+        tools-cp (.getPath tools-jar)
+        install-tools!
         (fn []
           (when-not (and (.exists tools-jar)
                          ;; aborted transaction
@@ -1003,7 +1002,7 @@ public class ClojureToolsDownloader {
     ;; -X and -T run exec.jar, and -T resolves through tools/tools.edn, which
     ;; the copy below seeds. Both come from the install, whoever computes the
     ;; classpath, so those modes install up front.
-    (when (or exec? tool?) (install-tools!)) ;; <--- D
+    (when (or exec? tool?) (install-tools!))
     ;; If user config directory does not exist, create it
     (let [config-dir (io/file config-dir)]
       (when-not (.exists config-dir)
@@ -1135,7 +1134,7 @@ public class ClojureToolsDownloader {
                           "--main-file" (relativize main-file)
                           "--manifest-file" (relativize manifest-file)]
                          tools-args)
-              {:keys [out]} (*make-classpath-fn* ;; <--- D: the seam; the default installs and calls *aux-process-fn*
+              {:keys [out]} (*make-classpath-fn*
                              {:cmd (into clj-main-cmd (cons "-m" (cons "clojure.tools.deps.script.make-classpath2" args)))
                               :args args
                               :out (when tree?
@@ -1158,7 +1157,7 @@ public class ClojureToolsDownloader {
                                "--config-user" config-user
                                "--config-project" (relativize config-project)
                                "--gen=pom" (str/join " " tools-args)])]
-                (check-java-cmd! cmd) ;; <--- D: a process fn call keeps both guarantees: java found, jar there
+                (check-java-cmd! cmd)
                 (install-tools!)
                 (*aux-process-fn* {:cmd cmd}))
               (:print-classpath cli-opts)
