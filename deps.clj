@@ -129,9 +129,9 @@
 
   Called with a map of:
 
-  - `:cmd`: a vector of strings, the java executable first. deps.clj
-    checks that java was found before calling this.
-  - `:out`: if set to `:string`, `:out` key in result must contains stdout
+  - `:cmd`: a vector of strings with the Java executable first. deps.clj
+    checks that Java is available before calling this.
+  - `:out`: if `:string`, return stdout as the string value of `:out`.
 
   Returns a map of:
 
@@ -146,32 +146,32 @@
 
   Called with a map of:
 
-  - `:cmd`: a vector of strings, the java executable first. deps.clj
-    checks that java was found before calling this.
+  - `:cmd`: a vector of strings with the Java executable first, or the
+    command supplied through `-Scommand`. deps.clj checks Java when used.
 
   Must return a map of `:exit`, the exit code of the process."
   [{:keys [cmd]}]
   (internal-shell-command cmd))
 
 (defn ^:dynamic *make-classpath-fn*
-  "Refreshes the classpath cache. May be replaced by rebinding this
-  dynamic var, for instance to compute the classpath in-process.
+  "Refreshes the classpath cache. Rebind this dynamic var to compute
+  the classpath in-process.
 
   Called with a map of:
 
-  - `:cmd`: the java command that runs `clojure.tools.deps.script.make-classpath2`,
-    a vector of strings, the java executable first. The first element is
+  - `:cmd`: the Java command that runs `clojure.tools.deps.script.make-classpath2`,
+    a vector with the Java executable first. The first element is
     nil when Java is unavailable.
-  - `:args`: the arguments to make-classpath2, a vector of strings.
+  - `:args`: arguments to make-classpath2. The `--config-user` value is nil under `-Srepro`.
   - `:out`: as for `*aux-process-fn*`.
   - `:install-tools-fn`: a function of no arguments that installs the
     Clojure tools named in `:cmd` when they are missing. A replacement that
     starts no process can skip it.
 
-  The default checks java, installs the tools and runs the command through
+  The default checks Java, installs the tools and runs the command through
   `*aux-process-fn*`.
 
-  Must write the cache files specified in `:args`. When `:out` is `:string`,
+  Must produce the cache files requested by `:args`. When `:out` is `:string`,
   return a map with stdout as the string value of `:out`."
   [{:keys [cmd out install-tools-fn]}]
   (check-java-cmd! cmd)
@@ -1003,12 +1003,10 @@ public class ClojureToolsDownloader {
                      proxy-settings
                      ["-classpath" tools-cp "clojure.main"]))
         java-opts (some-> (*getenv-fn* "JAVA_OPTS") (str/split #" "))]
-    ;; -X and -T run exec.jar, and a named tool resolves through
-    ;; tools/tools.edn, which the copy below seeds. Both come from the
-    ;; install, whoever computes the classpath, so those modes install up
-    ;; front. -P runs nothing, so it installs only for a named tool.
-    (when (or (:tool-name cli-opts)
-              (and (or exec? tool?) (not (:prep cli-opts))))
+    ;; A named tool resolves through tools/tools.edn, which the copy below
+    ;; seeds from the install, whoever computes the classpath. exec.jar is
+    ;; installed where it is used, when -X or -T starts clojure.main.
+    (when (:tool-name cli-opts)
       (install-tools!))
     ;; If user config directory does not exist, create it
     (let [config-dir (io/file config-dir)]
@@ -1215,6 +1213,8 @@ public class ClojureToolsDownloader {
                                        "clojure.main"]
                                       main-opts)
                     _ (check-java-cmd! main-args)
+                    ;; -X and -T run exec.jar from the install
+                    _ (when (or exec? tool?) (install-tools!))
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args cli-opts))]
                 (when (and (= :repl mode)

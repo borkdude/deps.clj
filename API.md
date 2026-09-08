@@ -49,9 +49,9 @@ Invokes `java` with arguments to calculate classpath, etc. May be
 
   Called with a map of:
 
-  - `:cmd`: a vector of strings, the java executable first. deps.clj
-    checks that java was found before calling this.
-  - `:out`: if set to `:string`, `:out` key in result must contains stdout
+  - `:cmd`: a vector of strings with the Java executable first. deps.clj
+    checks that Java is available before calling this.
+  - `:out`: if `:string`, return stdout as the string value of `:out`.
 
   Returns a map of:
 
@@ -70,8 +70,8 @@ Invokes `java` with arguments to `clojure.main` to start Clojure. May
 
   Called with a map of:
 
-  - `:cmd`: a vector of strings, the java executable first. deps.clj
-    checks that java was found before calling this.
+  - `:cmd`: a vector of strings with the Java executable first, or the
+    command supplied through `-Scommand`. deps.clj checks Java when used.
 
   Must return a map of `:exit`, the exit code of the process.
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L140-L151">Source</a></sub></p>
@@ -123,24 +123,24 @@ Get ENV'ironment variable, typically used for getting `CLJ_CONFIG`, etc.
 (*make-classpath-fn* {:keys [cmd out install-tools-fn]})
 ```
 
-Refreshes the classpath cache. May be replaced by rebinding this
-  dynamic var, for instance to compute the classpath in-process.
+Refreshes the classpath cache. Rebind this dynamic var to compute
+  the classpath in-process.
 
   Called with a map of:
 
-  - `:cmd`: the java command that runs `clojure.tools.deps.script.make-classpath2`,
-    a vector of strings, the java executable first. The first element is
+  - `:cmd`: the Java command that runs `clojure.tools.deps.script.make-classpath2`,
+    a vector with the Java executable first. The first element is
     nil when Java is unavailable.
-  - `:args`: the arguments to make-classpath2, a vector of strings.
+  - `:args`: arguments to make-classpath2. The `--config-user` value is nil under `-Srepro`.
   - `:out`: as for [[`*aux-process-fn*`](#borkdude.deps/*aux-process-fn*)](#borkdude.deps/*aux-process-fn*).
   - `:install-tools-fn`: a function of no arguments that installs the
     Clojure tools named in `:cmd` when they are missing. A replacement that
     starts no process can skip it.
 
-  The default checks java, installs the tools and runs the command through
+  The default checks Java, installs the tools and runs the command through
   [[`*aux-process-fn*`](#borkdude.deps/*aux-process-fn*)](#borkdude.deps/*aux-process-fn*).
 
-  Must write the cache files specified in `:args`. When `:out` is `:string`,
+  Must produce the cache files requested by `:args`. When `:out` is `:string`,
   return a map with stdout as the string value of `:out`.
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L153-L176">Source</a></sub></p>
 
@@ -166,7 +166,7 @@ See [`help-text`](#borkdude.deps/help-text).
   env variable is set and a succesful attempt is made to download the
   archive by invoking a java subprocess passing the env variable value
   as command line options.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L946-L1220">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L946-L1217">Source</a></sub></p>
 
 ## <a name="borkdude.deps/clojure-tools-download-direct!">`clojure-tools-download-direct!`</a><a name="borkdude.deps/clojure-tools-download-direct!"></a>
 ``` clojure

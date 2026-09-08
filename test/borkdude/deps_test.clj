@@ -272,7 +272,23 @@
       (with-fresh-machine [temp-dir _tools-dir config-dir]
         (deps-main-throw "-P" "-Ttools" "list")
         (is (fs/exists? (fs/file config-dir "tools" "tools.edn"))))))
-  (testing "-X on a fresh machine installs before the classpath step, for exec.jar"
+  (testing "-Spath -X prints the classpath without installing: nothing runs exec.jar"
+    (fs/with-temp-dir
+      [temp-dir {}]
+      (with-fresh-machine [temp-dir tools-dir _config-dir]
+        (with-redefs [deps/clojure-tools-download-java!
+                      (fn [& _] (throw (Exception. "Java downloader should not be called.")))
+                      deps/clojure-tools-download-direct!
+                      (fn [& _] (throw (Exception. "Direct downloader should not be called.")))]
+          ;; a classpath hook that writes the cache file and starts nothing
+          (binding [deps/*make-classpath-fn*
+                    (fn [{:keys [args]}]
+                      (spit (second (drop-while #(not= "--cp-file" %) args)) "the-classpath")
+                      {:out nil})]
+            (is (str/includes? (with-out-str (deps-main-throw "-Spath" "-X" "clojure.core/prn"))
+                               "the-classpath")))
+          (is (not (fs/exists? tools-dir)))))))
+  (testing "-X on a fresh machine installs before clojure.main starts, for exec.jar"
     (fs/with-temp-dir
       [temp-dir {}]
       (with-fresh-machine [temp-dir tools-dir _config-dir]
