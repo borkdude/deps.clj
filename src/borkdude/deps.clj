@@ -77,7 +77,7 @@
   pb)
 
 (defn- check-java-cmd!
-  "Throws when the first element of cmd, the java executable, is nil."
+  "Throws when the Java executable in cmd is nil."
   [cmd]
   (when (nil? (first cmd))
     (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
@@ -160,13 +160,13 @@
     a vector with the Java executable first. The first element is
     nil when Java is unavailable.
   - `:args`: arguments to make-classpath2. The `--config-user` value is nil under `-Srepro`.
-  - `:out`: as for `*aux-process-fn*`.
+  - `:out`: if `:string`, return stdout as the string value of `:out`.
   - `:install-tools-fn`: a function of no arguments that installs the
-    Clojure tools named in `:cmd` when they are missing. A replacement that
-    starts no process can skip it.
+    Clojure tools named in `:cmd` when they are missing. Call it if the
+    replacement needs these tools.
 
   The default checks Java, installs the tools and runs the command through
-  `*aux-process-fn*`.
+  the auxiliary process hook.
 
   Must produce the cache files requested by `:args`. When `:out` is `:string`,
   return a map with stdout as the string value of `:out`."
@@ -304,8 +304,7 @@ For more info, see:
 (def ^:private java-exe (if windows? "java.exe" "java"))
 
 (defn- get-java-cmd
-  "Returns path to java executable to invoke sub commands with, or nil
-  when none is found."
+  "Returns the Java executable path, or nil when unavailable."
   []
   (or (*getenv-fn* "JAVA_CMD")
       (let [java-cmd (which java-exe)]
@@ -1208,7 +1207,7 @@ public class ClojureToolsDownloader {
                                        "clojure.main"]
                                       main-opts)
                     _ (check-java-cmd! main-args)
-                    ;; -X and -T run exec.jar from the install
+                    ;; -X and -T require exec.jar.
                     _ (when (or exec? tool?) (install-tools!))
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args cli-opts))]

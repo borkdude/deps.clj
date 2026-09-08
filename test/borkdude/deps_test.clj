@@ -173,9 +173,6 @@
           (is (empty? (fs/list-dir temp-dir))))))))
 
 (deftest tools-dir-env-test
-  ;; Both versions carry clojure.tools.deps.script.make-classpath2. Tools
-  ;; older than 1.11.1.1200 ship the alpha namespaces and cannot run a
-  ;; process with deps.clj.
   (doseq [version ["1.11.1.1386" "1.12.0.1479"]]
     (fs/delete-tree "tools-dir")
     (try
@@ -191,7 +188,7 @@
                 ((juxt :out :err)))]
         (println err)
         (is (= version (:version (edn/read-string out))))
-        (testing "-Sdescribe starts no process and installs nothing"
+        (testing "-Sdescribe skips tools installation"
           (is (not (str/includes? err "Clojure tools not yet in expected location:")))
           (is (not (fs/exists? tools-jar))))
         (let [{:keys [err]} (-> (process (invoke-deps-cmd "-Sforce -P")
@@ -199,7 +196,7 @@
                                           :err :string
                                           :extra-env env})
                                 check)]
-          (testing "a command that starts a process installs the tools first"
+          (testing "-Sforce -P installs the Clojure tools"
             (is (str/includes? err "Clojure tools not yet in expected location:"))
             (is (fs/exists? tools-jar))
             (is (fs/exists? (fs/file "tools-dir" "example-deps.edn")))
@@ -234,9 +231,8 @@
   (deps/-main "-Ttools" "list"))
 
 (defmacro with-fresh-machine
-  "Runs BODY with a fresh tools dir and config dir under TEMP-DIR, and a
-  `*make-classpath-fn*` like babashka's that installs nothing. Binds
-  TOOLS-DIR and CONFIG-DIR."
+  "Binds TOOLS-DIR and CONFIG-DIR under TEMP-DIR. Runs BODY with
+  a classpath hook that skips installation."
   [[temp-dir tools-dir config-dir] & body]
   `(let [~tools-dir (fs/file ~temp-dir "tools")
          ~config-dir (fs/file ~temp-dir "config")]
@@ -248,7 +244,7 @@
        ~@body)))
 
 (deftest exec-and-tool-mode-install-first-test
-  (testing "-Ttools on a fresh machine installs before the classpath step, for tools/tools.edn"
+  (testing "-Ttools installs the default tools descriptor"
     (fs/with-temp-dir
       [temp-dir {}]
       (with-fresh-machine [temp-dir _tools-dir config-dir]
@@ -262,7 +258,6 @@
                       (fn [& _] (throw (Exception. "Java downloader should not be called.")))
                       deps/clojure-tools-download-direct!
                       (fn [& _] (throw (Exception. "Direct downloader should not be called.")))]
-          ;; no tools jar, so no java either
           (binding [deps/*aux-process-fn* (fn [_] {:exit 0})]
             (deps-main-throw "-P" "-X" "clojure.core/prn"))
           (is (not (fs/exists? tools-dir)))))))
@@ -280,7 +275,6 @@
                       (fn [& _] (throw (Exception. "Java downloader should not be called.")))
                       deps/clojure-tools-download-direct!
                       (fn [& _] (throw (Exception. "Direct downloader should not be called.")))]
-          ;; a classpath hook that writes the cache file and starts nothing
           (binding [deps/*make-classpath-fn*
                     (fn [{:keys [args]}]
                       (spit (second (drop-while #(not= "--cp-file" %) args)) "the-classpath")
@@ -364,9 +358,7 @@
       file)))
 
 (defmacro with-classpath-install-only
-  "Runs BODY with `*make-classpath-fn*` reduced to its install step, so a
-  command that refreshes the classpath installs the Clojure tools and
-  starts no java process."
+  "Runs BODY with a classpath hook that only installs the Clojure tools."
   [& body]
   `(binding [deps/*make-classpath-fn* (fn [{:keys [~'install-tools-fn]}]
                                         (~'install-tools-fn)
@@ -398,7 +390,7 @@
                 (is (fs/exists? dest-zip-file)))))))
 
     (when (>= java-version 11)
-      (testing "java downloader called when a process needs the tools and CLJ_JVM_OPTS is set"
+      (testing "tools installation uses the Java downloader when CLJ_JVM_OPTS is set"
         (fs/with-temp-dir
           [temp-dir {}]
           (let [dest-jar-file (fs/file temp-dir ct-jar-name)]
@@ -424,7 +416,7 @@
           (is (= true (deps/clojure-tools-download-direct! {:url url-str :dest dest-zip-file})))
           (is (fs/exists? dest-zip-file)))))
 
-    (testing "direct downloader called when a process needs the tools (CLJ_JVM_OPTS not set)"
+    (testing "tools installation uses the direct downloader when CLJ_JVM_OPTS is unset"
       (fs/with-temp-dir
         [temp-dir {}]
         (let [dest-jar-file (fs/file temp-dir ct-jar-name)]
