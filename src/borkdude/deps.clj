@@ -158,7 +158,7 @@
 
   - `:cmd`: the java command that runs `clojure.tools.deps.script.make-classpath2`,
     a vector of strings, the java executable first. The first element is
-    nil when no java was found; `check-java-cmd!` raises the usual error.
+    nil when Java is unavailable.
   - `:args`: the arguments to make-classpath2, a vector of strings.
   - `:out`: as for `*aux-process-fn*`.
   - `:install-tools-fn`: a function of no arguments that installs the
@@ -168,7 +168,8 @@
   The default checks java, installs the tools and runs the command through
   `*aux-process-fn*`.
 
-  Must return a map of `:out`, the string of stdout, if `:out` was `:string`."
+  Must write the cache files specified in `:args`. When `:out` is `:string`,
+  return a map with stdout as the string value of `:out`."
   [{:keys [cmd out install-tools-fn]}]
   (check-java-cmd! cmd)
   (install-tools-fn)
