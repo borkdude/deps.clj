@@ -254,7 +254,7 @@
       (with-fresh-machine [temp-dir _tools-dir config-dir]
         (deps-main-throw "-Ttools" "list")
         (is (fs/exists? (fs/file config-dir "tools" "tools.edn"))))))
-  (testing "-P -X prepares without installing: nothing runs exec.jar"
+  (testing "-P -X skips installation with a replacement classpath hook"
     (fs/with-temp-dir
       [temp-dir {}]
       (with-fresh-machine [temp-dir tools-dir _config-dir]
@@ -266,13 +266,13 @@
           (binding [deps/*aux-process-fn* (fn [_] {:exit 0})]
             (deps-main-throw "-P" "-X" "clojure.core/prn"))
           (is (not (fs/exists? tools-dir)))))))
-  (testing "-P -Ttools still installs: the tool resolves through the seeded descriptor"
+  (testing "-P -Ttools installs the default tools descriptor"
     (fs/with-temp-dir
       [temp-dir {}]
       (with-fresh-machine [temp-dir _tools-dir config-dir]
         (deps-main-throw "-P" "-Ttools" "list")
         (is (fs/exists? (fs/file config-dir "tools" "tools.edn"))))))
-  (testing "-Spath -X prints the classpath without installing: nothing runs exec.jar"
+  (testing "-Spath -X skips installation with a replacement classpath hook"
     (fs/with-temp-dir
       [temp-dir {}]
       (with-fresh-machine [temp-dir tools-dir _config-dir]
@@ -288,7 +288,7 @@
             (is (str/includes? (with-out-str (deps-main-throw "-Spath" "-X" "clojure.core/prn"))
                                "the-classpath")))
           (is (not (fs/exists? tools-dir)))))))
-  (testing "-X on a fresh machine installs before clojure.main starts, for exec.jar"
+  (testing "-X installs exec.jar before starting clojure.main"
     (fs/with-temp-dir
       [temp-dir {}]
       (with-fresh-machine [temp-dir tools-dir _config-dir]

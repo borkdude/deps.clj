@@ -1008,9 +1008,7 @@ public class ClojureToolsDownloader {
                      proxy-settings
                      ["-classpath" tools-cp "clojure.main"]))
         java-opts (some-> (*getenv-fn* "JAVA_OPTS") (str/split #" "))]
-    ;; A named tool resolves through tools/tools.edn, which the copy below
-    ;; seeds from the install, whoever computes the classpath. exec.jar is
-    ;; installed where it is used, when -X or -T starts clojure.main.
+    ;; Install the default tools descriptor before resolving named tools.
     (when (:tool-name cli-opts)
       (install-tools!))
     ;; If user config directory does not exist, create it
