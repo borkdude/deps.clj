@@ -254,6 +254,24 @@
       (with-fresh-machine [temp-dir _tools-dir config-dir]
         (deps-main-throw "-Ttools" "list")
         (is (fs/exists? (fs/file config-dir "tools" "tools.edn"))))))
+  (testing "-P -X prepares without installing: nothing runs exec.jar"
+    (fs/with-temp-dir
+      [temp-dir {}]
+      (with-fresh-machine [temp-dir tools-dir _config-dir]
+        (with-redefs [deps/clojure-tools-download-java!
+                      (fn [& _] (throw (Exception. "Java downloader should not be called.")))
+                      deps/clojure-tools-download-direct!
+                      (fn [& _] (throw (Exception. "Direct downloader should not be called.")))]
+          ;; no tools jar, so no java either
+          (binding [deps/*aux-process-fn* (fn [_] {:exit 0})]
+            (deps-main-throw "-P" "-X" "clojure.core/prn"))
+          (is (not (fs/exists? tools-dir)))))))
+  (testing "-P -Ttools still installs: the tool resolves through the seeded descriptor"
+    (fs/with-temp-dir
+      [temp-dir {}]
+      (with-fresh-machine [temp-dir _tools-dir config-dir]
+        (deps-main-throw "-P" "-Ttools" "list")
+        (is (fs/exists? (fs/file config-dir "tools" "tools.edn"))))))
   (testing "-X on a fresh machine installs before the classpath step, for exec.jar"
     (fs/with-temp-dir
       [temp-dir {}]
