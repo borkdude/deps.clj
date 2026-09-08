@@ -1,1 +1,2 @@
-{:lint-as {spartan.test/deftest clojure.test/deftest}}
+{:lint-as {spartan.test/deftest clojure.test/deftest
+           babashka.fs/with-temp-dir clojure.core/let}}

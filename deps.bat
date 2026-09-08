@@ -84,6 +84,12 @@
     (.putAll (as-string-map env)))
   pb)
 
+(defn- check-java-cmd!
+  "Throws when the Java executable in cmd is nil."
+  [cmd]
+  (when (nil? (first cmd))
+    (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+
 (defn- internal-shell-command
   "Executes shell command.
 
@@ -93,6 +99,7 @@
   return it."
   ([args] (internal-shell-command args nil))
   ([args {:keys [out env extra-env]}]
+   (check-java-cmd! args)
    (let [to-string? (= :string out)
          args (mapv str args)
          args (if (and windows? (not (System/getenv "DEPS_CLJ_NO_WINDOWS_FIXES")))
@@ -127,8 +134,9 @@
 
   Called with a map of:
 
-  - `:cmd`: a vector of strings
-  - `:out`: if set to `:string`, `:out` key in result must contains stdout
+  - `:cmd`: a vector of strings with the Java executable first. deps.clj
+    checks that Java is available before calling this.
+  - `:out`: if `:string`, return stdout as the string value of `:out`.
 
   Returns a map of:
 
@@ -143,11 +151,37 @@
 
   Called with a map of:
 
-  - `:cmd`: a vector of strings
+  - `:cmd`: a vector of strings with the Java executable first, or the
+    command supplied through `-Scommand`. deps.clj checks Java when used.
 
   Must return a map of `:exit`, the exit code of the process."
   [{:keys [cmd]}]
   (internal-shell-command cmd))
+
+(defn ^:dynamic *make-classpath-fn*
+  "Refreshes the classpath cache. Rebind this dynamic var to compute
+  the classpath in-process.
+
+  Called with a map of:
+
+  - `:cmd`: the Java command that runs `clojure.tools.deps.script.make-classpath2`,
+    a vector with the Java executable first. The first element is
+    nil when Java is unavailable.
+  - `:args`: arguments to make-classpath2. The `--config-user` value is nil under `-Srepro`.
+  - `:out`: if `:string`, return stdout as the string value of `:out`.
+  - `:install-tools-fn`: a function of no arguments that installs the
+    Clojure tools named in `:cmd` when they are missing. Call it if the
+    replacement needs these tools.
+
+  The default checks Java, installs the tools and runs the command through
+  the auxiliary process hook.
+
+  Must produce the cache files requested by `:args`. When `:out` is `:string`,
+  return a map with stdout as the string value of `:out`."
+  [{:keys [cmd out install-tools-fn]}]
+  (check-java-cmd! cmd)
+  (install-tools-fn)
+  (*aux-process-fn* {:cmd cmd :out out}))
 
 (def ^:private help-text (delay (str "Version: " @version "
 
@@ -278,19 +312,17 @@ For more info, see:
 (def ^:private java-exe (if windows? "java.exe" "java"))
 
 (defn- get-java-cmd
-  "Returns path to java executable to invoke sub commands with."
+  "Returns the Java executable path, or nil when unavailable."
   []
   (or (*getenv-fn* "JAVA_CMD")
       (let [java-cmd (which java-exe)]
         (if (str/blank? java-cmd)
           (let [java-home (*getenv-fn* "JAVA_HOME")]
-            (if-not (str/blank? java-home)
+            (when-not (str/blank? java-home)
               (let [f (io/file java-home "bin" java-exe)]
-                (if (and (.exists f)
-                         (.canExecute f))
-                  (.getPath f)
-                  (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
-              (throw (Exception. "Couldn't find 'java'. Please set JAVA_HOME."))))
+                (when (and (.exists f)
+                           (.canExecute f))
+                  (.getPath f)))))
           java-cmd))))
 
 (def ^:private authenticated-proxy-re #".+:.+@(.+):(\d+).*")
@@ -521,9 +553,10 @@ public class ClojureToolsDownloader {
   `:proxy` options on a `.java` program file, and returns true on
   success. Requires Java 11+ (JEP 330)."
   [{:keys [url dest proxy-opts clj-jvm-opts sha256-url]}]
-  (let [dest-dir (.getCanonicalPath (io/file dest ".."))
+  (let [java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
+        _ (check-java-cmd! java-cmd)
+        dest-dir (.getCanonicalPath (io/file dest ".."))
         dlr-path (clojure-tools-java-downloader-spit dest-dir)
-        java-cmd [(get-java-cmd) "-XX:-OmitStackTraceInFastThrow"]
         success?* (atom true)]
     (binding [*exit-fn* (fn [{:keys [exit message]}]
                           (when-not (= 0 exit)
@@ -953,16 +986,15 @@ public class ClojureToolsDownloader {
         proxy-settings (proxy-jvm-opts proxy-opts)
         clj-jvm-opts (some-> (*getenv-fn* "CLJ_JVM_OPTS") (str/split #" "))
         config-dir (get-config-dir)
-        tools-cp
-        (or
-         (when (and (.exists tools-jar)
-                    ;; aborted transaction
-                    (not (.exists (io/file libexec-dir "TRANSACTION_START"))))
-           (.getPath tools-jar))
-         (binding [*out* *err*]
-           (warn "Clojure tools not yet in expected location:" (str tools-jar))
-           (clojure-tools-install! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts :config-dir config-dir})
-           tools-jar))
+        tools-cp (.getPath tools-jar)
+        install-tools!
+        (fn []
+          (when-not (and (.exists tools-jar)
+                         ;; aborted transaction
+                         (not (.exists (io/file libexec-dir "TRANSACTION_START"))))
+            (binding [*out* *err*]
+              (warn "Clojure tools not yet in expected location:" (str tools-jar))
+              (clojure-tools-install! {:out-dir libexec-dir :debug debug :clj-jvm-opts clj-jvm-opts :proxy-opts proxy-opts :config-dir config-dir}))))
         mode (:mode cli-opts)
         exec? (= :exec mode)
         tool? (= :tool mode)
@@ -975,6 +1007,9 @@ public class ClojureToolsDownloader {
                      proxy-settings
                      ["-classpath" tools-cp "clojure.main"]))
         java-opts (some-> (*getenv-fn* "JAVA_OPTS") (str/split #" "))]
+    ;; Install the default tools descriptor before resolving named tools.
+    (when (:tool-name cli-opts)
+      (install-tools!))
     ;; If user config directory does not exist, create it
     (let [config-dir (io/file config-dir)]
       (when-not (.exists config-dir)
@@ -1098,19 +1133,20 @@ public class ClojureToolsDownloader {
       (when (and stale (not classpath-not-needed?))
         (when (:verbose cli-opts)
           (warn "Refreshing classpath"))
-        (let [{:keys [out]} (*aux-process-fn* {:cmd (into clj-main-cmd
-                                                          (concat
-                                                           ["-m" "clojure.tools.deps.script.make-classpath2"
-                                                            "--config-user" config-user
-                                                            "--config-project" (relativize config-project)
-                                                            "--basis-file" (relativize basis-file)
-                                                            "--cp-file" (relativize cp-file)
-                                                            "--jvm-file" (relativize jvm-file)
-                                                            "--main-file" (relativize main-file)
-                                                            "--manifest-file" (relativize manifest-file)]
-                                                           tools-args))
-                                               :out (when tree?
-                                                      :string)})]
+        (let [args (into ["--config-user" config-user
+                          "--config-project" (relativize config-project)
+                          "--basis-file" (relativize basis-file)
+                          "--cp-file" (relativize cp-file)
+                          "--jvm-file" (relativize jvm-file)
+                          "--main-file" (relativize main-file)
+                          "--manifest-file" (relativize manifest-file)]
+                         tools-args)
+              {:keys [out]} (*make-classpath-fn*
+                             {:cmd (into clj-main-cmd (cons "-m" (cons "clojure.tools.deps.script.make-classpath2" args)))
+                              :args args
+                              :out (when tree?
+                                     :string)
+                              :install-tools-fn install-tools!})]
           (when tree?
             (print out) (flush))))
       (let [cp (cond (or classpath-not-needed?
@@ -1123,11 +1159,14 @@ public class ClojureToolsDownloader {
                                       (*exit-fn* {:exit 0}))
               (:prep cli-opts) (*exit-fn* {:exit 0})
               (:pom cli-opts)
-              (*aux-process-fn* {:cmd (into clj-main-cmd
-                                            ["-m" "clojure.tools.deps.script.generate-manifest2"
-                                             "--config-user" config-user
-                                             "--config-project" (relativize config-project)
-                                             "--gen=pom" (str/join " " tools-args)])})
+              (let [cmd (into clj-main-cmd
+                              ["-m" "clojure.tools.deps.script.generate-manifest2"
+                               "--config-user" config-user
+                               "--config-project" (relativize config-project)
+                               "--gen=pom" (str/join " " tools-args)])]
+                (check-java-cmd! cmd)
+                (install-tools!)
+                (*aux-process-fn* {:cmd cmd}))
               (:print-classpath cli-opts)
               (println cp)
               (:describe cli-opts)
@@ -1175,6 +1214,9 @@ public class ClojureToolsDownloader {
                                        "-classpath" (auto-file-arg cp)
                                        "clojure.main"]
                                       main-opts)
+                    _ (check-java-cmd! main-args)
+                    ;; -X and -T require exec.jar.
+                    _ (when (or exec? tool?) (install-tools!))
                     main-args (filterv some? main-args)
                     main-args (into main-args (:args cli-opts))]
                 (when (and (= :repl mode)

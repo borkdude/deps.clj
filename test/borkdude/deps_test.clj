@@ -158,25 +158,50 @@
                                        (.toURI (fs/file temp-file-path))))
     (is (= ["bar" "quux"] (edn/read-string (slurp temp-file-path))))))
 
+(deftest no-install-without-process-test
+  (testing "--version does not install the Clojure tools"
+    (fs/with-temp-dir
+      [temp-dir {}]
+      (with-redefs [deps/clojure-tools-download-java!
+                    (fn [& _] (throw (Exception. "Java downloader should not be called.")))
+                    deps/clojure-tools-download-direct!
+                    (fn [& _] (throw (Exception. "Direct downloader should not be called.")))]
+        (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)} %)
+                                        (System/getenv %))]
+          (is (str/includes? (with-out-str (deps-main-throw "--version"))
+                             "Clojure CLI version (deps.clj)"))
+          (is (empty? (fs/list-dir temp-dir))))))))
+
 (deftest tools-dir-env-test
-  (doseq [version ["1.10.3.899" "1.11.1.1386"]]
+  (doseq [version ["1.11.1.1386" "1.12.0.1479"]]
     (fs/delete-tree "tools-dir")
     (try
-      (let [[out err]
+      (let [env {"DEPS_CLJ_TOOLS_VERSION" version
+                 "DEPS_CLJ_TOOLS_DIR" "tools-dir"}
+            tools-jar (fs/file "tools-dir" (format "clojure-tools-%s.jar" version))
+            [out err]
             (-> (process (invoke-deps-cmd "-Sdescribe")
                          {:out :string
                           :err :string
-                          :extra-env {"DEPS_CLJ_TOOLS_VERSION" version
-                                      "DEPS_CLJ_TOOLS_DIR" "tools-dir"}})
+                          :extra-env env})
                 check
                 ((juxt :out :err)))]
         (println err)
         (is (= version (:version (edn/read-string out))))
-        (is (str/includes? err "Clojure tools not yet in expected location:"))
-        (is (fs/exists? (fs/file "tools-dir" (format "clojure-tools-%s.jar" version))))
-        (is (fs/exists? (fs/file "tools-dir" "example-deps.edn")))
-        (is (fs/exists? (fs/file "tools-dir" "exec.jar")))
-        (is (fs/exists? (fs/file "tools-dir" "tools.edn"))))
+        (testing "-Sdescribe skips tools installation"
+          (is (not (str/includes? err "Clojure tools not yet in expected location:")))
+          (is (not (fs/exists? tools-jar))))
+        (let [{:keys [err]} (-> (process (invoke-deps-cmd "-Sforce -P")
+                                         {:out :string
+                                          :err :string
+                                          :extra-env env})
+                                check)]
+          (testing "-Sforce -P installs the Clojure tools"
+            (is (str/includes? err "Clojure tools not yet in expected location:"))
+            (is (fs/exists? tools-jar))
+            (is (fs/exists? (fs/file "tools-dir" "example-deps.edn")))
+            (is (fs/exists? (fs/file "tools-dir" "exec.jar")))
+            (is (fs/exists? (fs/file "tools-dir" "tools.edn"))))))
       (finally (fs/delete-tree "tools-dir")))))
 
 (deftest without-cp-file-tests
@@ -204,6 +229,72 @@
 
 (deftest tools-test
   (deps/-main "-Ttools" "list"))
+
+(defmacro with-fresh-machine
+  "Binds TOOLS-DIR and CONFIG-DIR under TEMP-DIR. Runs BODY with
+  a classpath hook that skips installation."
+  {:clj-kondo/macroexpand-hook true}
+  [[temp-dir tools-dir config-dir] & body]
+  `(let [~tools-dir (fs/file ~temp-dir "tools")
+         ~config-dir (fs/file ~temp-dir "config")]
+     (binding [deps/*getenv-fn* (fn [name#]
+                                  (or (get {"DEPS_CLJ_TOOLS_DIR" (str ~tools-dir)
+                                            "CLJ_CONFIG" (str ~config-dir)} name#)
+                                      (System/getenv name#)))
+               deps/*make-classpath-fn* (fn [{:keys [~'cmd ~'out]}]
+                                          (deps/*aux-process-fn* {:cmd ~'cmd :out ~'out}))]
+       ~@body)))
+
+(deftest exec-and-tool-mode-install-first-test
+  (testing "-Ttools installs the default tools descriptor"
+    (fs/with-temp-dir
+      [temp-dir {}]
+      (with-fresh-machine [temp-dir _tools-dir config-dir]
+        (deps-main-throw "-Ttools" "list")
+        (is (fs/exists? (fs/file config-dir "tools" "tools.edn"))))))
+  (testing "-P -X skips installation with a replacement classpath hook"
+    (fs/with-temp-dir
+      [temp-dir {}]
+      (with-fresh-machine [temp-dir tools-dir _config-dir]
+        (with-redefs [deps/clojure-tools-download-java!
+                      (fn [& _] (throw (Exception. "Java downloader should not be called.")))
+                      deps/clojure-tools-download-direct!
+                      (fn [& _] (throw (Exception. "Direct downloader should not be called.")))]
+          (binding [deps/*aux-process-fn* (fn [_] {:exit 0})]
+            (deps-main-throw "-P" "-X" "clojure.core/prn"))
+          (is (not (fs/exists? tools-dir)))))))
+  (testing "-P -Ttools installs the default tools descriptor"
+    (fs/with-temp-dir
+      [temp-dir {}]
+      (with-fresh-machine [temp-dir _tools-dir config-dir]
+        (deps-main-throw "-P" "-Ttools" "list")
+        (is (fs/exists? (fs/file config-dir "tools" "tools.edn"))))))
+  (testing "-Spath -X skips installation with a replacement classpath hook"
+    (fs/with-temp-dir
+      [temp-dir {}]
+      (with-fresh-machine [temp-dir tools-dir _config-dir]
+        (with-redefs [deps/clojure-tools-download-java!
+                      (fn [& _] (throw (Exception. "Java downloader should not be called.")))
+                      deps/clojure-tools-download-direct!
+                      (fn [& _] (throw (Exception. "Direct downloader should not be called.")))]
+          (binding [deps/*make-classpath-fn*
+                    (fn [{:keys [args]}]
+                      (spit (second (drop-while #(not= "--cp-file" %) args)) "the-classpath")
+                      {:out nil})]
+            (is (str/includes? (with-out-str (deps-main-throw "-Spath" "-X" "clojure.core/prn"))
+                               "the-classpath")))
+          (is (not (fs/exists? tools-dir)))))))
+  (testing "-X installs exec.jar before starting clojure.main"
+    (fs/with-temp-dir
+      [temp-dir {}]
+      (with-fresh-machine [temp-dir tools-dir _config-dir]
+        (let [seen (atom nil)]
+          (binding [deps/*clojure-process-fn* (fn [{:keys [cmd]}]
+                                                (reset! seen cmd)
+                                                {:exit 0})]
+            (deps-main-throw "-X" "clojure.core/prn" ":a" "1")
+            (is (fs/exists? (fs/file tools-dir "exec.jar")))
+            (is (some #(str/includes? (str %) "exec.jar") @seen))))))))
 
 (defmacro get-shell-command-args
   "Executes BODY with the given extra ENV-VARS environment variables
@@ -268,6 +359,14 @@
           (.closeEntry)))
       file)))
 
+(defmacro with-classpath-install-only
+  "Runs BODY with a classpath hook that only installs the Clojure tools."
+  [& body]
+  `(binding [deps/*make-classpath-fn* (fn [{:keys [~'install-tools-fn]}]
+                                        (~'install-tools-fn)
+                                        {:out nil})]
+     ~@body))
+
 (deftest clojure-tools-download-test
   ;; Test clojure tools download methods
   ;;
@@ -293,7 +392,7 @@
                 (is (fs/exists? dest-zip-file)))))))
 
     (when (>= java-version 11)
-      (testing "java downloader called from -main when CLJ_JVM_OPTS is set"
+      (testing "tools installation uses the Java downloader when CLJ_JVM_OPTS is set"
         (fs/with-temp-dir
           [temp-dir {}]
           (let [dest-jar-file (fs/file temp-dir ct-jar-name)]
@@ -304,7 +403,8 @@
                     sh-args (get-shell-command-args
                              {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)
                               "CLJ_JVM_OPTS" (str/join " " [xx-pclf xx-gc-threads])}
-                             (deps/-main "--version"))]
+                             (with-classpath-install-only
+                               (deps/-main "-Sforce" "-P")))]
                 (is (some #{xx-pclf} sh-args))
                 ;; second and third args
                 (is (set/subset? #{xx-pclf xx-gc-threads} (->> (rest sh-args) set))))
@@ -318,7 +418,7 @@
           (is (= true (deps/clojure-tools-download-direct! {:url url-str :dest dest-zip-file})))
           (is (fs/exists? dest-zip-file)))))
 
-    (testing "direct downloader called from -main (CLJ_JVM_OPTS not set)"
+    (testing "tools installation uses the direct downloader when CLJ_JVM_OPTS is unset"
       (fs/with-temp-dir
         [temp-dir {}]
         (let [dest-jar-file (fs/file temp-dir ct-jar-name)]
@@ -328,7 +428,8 @@
                                                   "CLJ_JVM_OPTS" nil} %)
                                             (System/getenv %))]
 
-              (deps-main-throw "--version")
+              (with-classpath-install-only
+                (deps-main-throw "-Sforce" "-P"))
               (is (fs/exists? dest-jar-file)))))))
 
     (testing "manual user installation"
@@ -345,7 +446,8 @@
             (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str temp-dir)} %)
                                             (System/getenv %))]
 
-              (deps-main-throw "--version")
+              (with-classpath-install-only
+                (deps-main-throw "-Sforce" "-P"))
               (is (fs/exists? dest-jar-file)))))))
 
     (testing "custom user function"
@@ -369,7 +471,8 @@
                               dest-zip-file (fs/file dest)]
                           (fs/copy tools-zip-file dest-zip-file)
                           true))]
-              (deps-main-throw "--version")
+              (with-classpath-install-only
+                (deps-main-throw "-Sforce" "-P"))
               (is (fs/exists? dest-jar-file)))))))
 
     (testing "prompt for manual user install"
@@ -383,7 +486,8 @@
                                           (System/getenv %))]
 
             (let [exit-data* (atom {})]
-              (try (deps-main-throw "--version")
+              (try (with-classpath-install-only
+                     (deps-main-throw "-Sforce" "-P"))
                    (catch Exception e
                      (reset! exit-data* (ex-data e))))
               (let [exit-data @exit-data*]

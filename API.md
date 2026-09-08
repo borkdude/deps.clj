@@ -1,18 +1,21 @@
 # Table of contents
--  [`borkdude.deps`](#borkdude.deps)  - Port of https://github.com/clojure/brew-install/blob/1.11.1/src/main/resources/clojure/install/clojure in Clojure.
+-  [`borkdude.deps`](#borkdude.deps)  - Port of https://github.com/clojure/brew-install/blob/1.12.2/src/main/resources/clojure/install/clojure in Clojure.
     -  [`*aux-process-fn*`](#borkdude.deps/*aux-process-fn*) - Invokes <code>java</code> with arguments to calculate classpath, etc.
     -  [`*clojure-process-fn*`](#borkdude.deps/*clojure-process-fn*) - Invokes <code>java</code> with arguments to <code>clojure.main</code> to start Clojure.
     -  [`*clojure-tools-download-fn*`](#borkdude.deps/*clojure-tools-download-fn*) - Can be dynamically rebound to customise the download of the Clojure tools.
     -  [`*dir*`](#borkdude.deps/*dir*) - Directory in which deps.clj should be executed.
     -  [`*exit-fn*`](#borkdude.deps/*exit-fn*) - Function that is called on exit with <code>:exit</code> code and <code>:message</code>, an exceptional message when exit is non-zero.
     -  [`*getenv-fn*`](#borkdude.deps/*getenv-fn*) - Get ENV'ironment variable, typically used for getting <code>CLJ_CONFIG</code>, etc.
+    -  [`*make-classpath-fn*`](#borkdude.deps/*make-classpath-fn*) - Refreshes the classpath cache.
     -  [`-main`](#borkdude.deps/-main) - See <code>help-text</code>.
     -  [`clojure-tools-download-direct!`](#borkdude.deps/clojure-tools-download-direct!) - Downloads from <code>:url</code> to <code>:dest</code> file returning true on success.
     -  [`clojure-tools-download-java!`](#borkdude.deps/clojure-tools-download-java!) - Downloads <code>:url</code> zip file to <code>:dest</code> by invoking <code>java</code> with <code>:proxy</code> options on a <code>.java</code> program file, and returns true on success.
     -  [`clojure-tools-install!`](#borkdude.deps/clojure-tools-install!) - Installs clojure tools archive by downloading it in <code>:out-dir</code>, if not already there, and extracting in-place.
+    -  [`current-file`](#borkdude.deps/current-file)
     -  [`deps-clj-version`](#borkdude.deps/deps-clj-version) - The current version of deps.clj.
     -  [`get-basis-file`](#borkdude.deps/get-basis-file) - Returns path to basis file.
     -  [`get-cache-dir`](#borkdude.deps/get-cache-dir) - Returns cache dir (<code>.cpcache</code>) from either local dir, if <code>deps-edn</code> exists, or the user cache dir.
+    -  [`get-cache-dir*`](#borkdude.deps/get-cache-dir*) - Returns <code>:cache-dir</code> (<code>.cpcache</code>) and <code>:cache-dir-key</code> from either local dir, if <code>deps-edn</code> exists, or the user cache dir.
     -  [`get-checksum`](#borkdude.deps/get-checksum) - Returns checksum based on cli-opts (as returned by <code>parse-cli-opts</code>) and config-paths (as returned by <code>get-config-paths</code>).
     -  [`get-config-dir`](#borkdude.deps/get-config-dir) - Retrieves configuration directory.
     -  [`get-config-paths`](#borkdude.deps/get-config-paths) - Returns vec of configuration paths, i.e.
@@ -24,12 +27,13 @@
     -  [`print-help`](#borkdude.deps/print-help) - Print help text.
     -  [`proxy-jvm-opts`](#borkdude.deps/proxy-jvm-opts) - Returns a vector containing the JVM system property arguments to be passed to a new process to set its proxy system properties.
     -  [`set-proxy-system-props!`](#borkdude.deps/set-proxy-system-props!) - Sets the proxy system properties in the current JVM.
+    -  [`zip-invalid-msg`](#borkdude.deps/zip-invalid-msg)
 
 -----
 # <a name="borkdude.deps">borkdude.deps</a>
 
 
-Port of https://github.com/clojure/brew-install/blob/1.11.1/src/main/resources/clojure/install/clojure in Clojure
+Port of https://github.com/clojure/brew-install/blob/1.12.2/src/main/resources/clojure/install/clojure in Clojure
 
 
 
@@ -45,14 +49,15 @@ Invokes `java` with arguments to calculate classpath, etc. May be
 
   Called with a map of:
 
-  - `:cmd`: a vector of strings
-  - `:out`: if set to `:string`, `:out` key in result must contains stdout
+  - `:cmd`: a vector of strings with the Java executable first. deps.clj
+    checks that Java is available before calling this.
+  - `:out`: if `:string`, return stdout as the string value of `:out`.
 
   Returns a map of:
 
   - `:exit`, the exit code of the process
   - `:out`, the string of stdout, if the input `:out` was set to `:string`
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L115-L129">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L123-L138">Source</a></sub></p>
 
 ## <a name="borkdude.deps/*clojure-process-fn*">`*clojure-process-fn*`</a><a name="borkdude.deps/*clojure-process-fn*"></a>
 ``` clojure
@@ -65,10 +70,11 @@ Invokes `java` with arguments to `clojure.main` to start Clojure. May
 
   Called with a map of:
 
-  - `:cmd`: a vector of strings
+  - `:cmd`: a vector of strings with the Java executable first, or the
+    command supplied through `-Scommand`. deps.clj checks Java when used.
 
   Must return a map of `:exit`, the exit code of the process.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L131-L141">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L140-L151">Source</a></sub></p>
 
 ## <a name="borkdude.deps/*clojure-tools-download-fn*">`*clojure-tools-download-fn*`</a><a name="borkdude.deps/*clojure-tools-download-fn*"></a>
 
@@ -83,7 +89,7 @@ Can be dynamically rebound to customise the download of the Clojure tools.
    - `:clj-jvm-opts`: a vector of JVM opts (as passed on the command line).
 
   Should return `true` if the download was successful, or false if not.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L478-L487">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L570-L579">Source</a></sub></p>
 
 ## <a name="borkdude.deps/*dir*">`*dir*`</a><a name="borkdude.deps/*dir*"></a>
 
@@ -91,7 +97,7 @@ Can be dynamically rebound to customise the download of the Clojure tools.
 
 
 Directory in which deps.clj should be executed.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L50-L51">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L51-L52">Source</a></sub></p>
 
 ## <a name="borkdude.deps/*exit-fn*">`*exit-fn*`</a><a name="borkdude.deps/*exit-fn*"></a>
 ``` clojure
@@ -100,7 +106,7 @@ Directory in which deps.clj should be executed.
 ```
 
 Function that is called on exit with `:exit` code and `:message`, an exceptional message when exit is non-zero
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L39-L43">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L40-L44">Source</a></sub></p>
 
 ## <a name="borkdude.deps/*getenv-fn*">`*getenv-fn*`</a><a name="borkdude.deps/*getenv-fn*"></a>
 ``` clojure
@@ -109,7 +115,34 @@ Function that is called on exit with `:exit` code and `:message`, an exceptional
 ```
 
 Get ENV'ironment variable, typically used for getting `CLJ_CONFIG`, etc.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L236-L239">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L272-L275">Source</a></sub></p>
+
+## <a name="borkdude.deps/*make-classpath-fn*">`*make-classpath-fn*`</a><a name="borkdude.deps/*make-classpath-fn*"></a>
+``` clojure
+
+(*make-classpath-fn* {:keys [cmd out install-tools-fn]})
+```
+
+Refreshes the classpath cache. Rebind this dynamic var to compute
+  the classpath in-process.
+
+  Called with a map of:
+
+  - `:cmd`: the Java command that runs `clojure.tools.deps.script.make-classpath2`,
+    a vector with the Java executable first. The first element is
+    nil when Java is unavailable.
+  - `:args`: arguments to make-classpath2. The `--config-user` value is nil under `-Srepro`.
+  - `:out`: if `:string`, return stdout as the string value of `:out`.
+  - `:install-tools-fn`: a function of no arguments that installs the
+    Clojure tools named in `:cmd` when they are missing. Call it if the
+    replacement needs these tools.
+
+  The default checks Java, installs the tools and runs the command through
+  the auxiliary process hook.
+
+  Must produce the cache files requested by `:args`. When `:out` is `:string`,
+  return a map with stdout as the string value of `:out`.
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L153-L176">Source</a></sub></p>
 
 ## <a name="borkdude.deps/-main">`-main`</a><a name="borkdude.deps/-main"></a>
 ``` clojure
@@ -133,7 +166,7 @@ See [`help-text`](#borkdude.deps/help-text).
   env variable is set and a succesful attempt is made to download the
   archive by invoking a java subprocess passing the env variable value
   as command line options.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L772-L1019">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L945-L1217">Source</a></sub></p>
 
 ## <a name="borkdude.deps/clojure-tools-download-direct!">`clojure-tools-download-direct!`</a><a name="borkdude.deps/clojure-tools-download-direct!"></a>
 ``` clojure
@@ -142,23 +175,23 @@ See [`help-text`](#borkdude.deps/help-text).
 ```
 
 Downloads from `:url` to `:dest` file returning true on success.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L339-L355">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L384-L400">Source</a></sub></p>
 
 ## <a name="borkdude.deps/clojure-tools-download-java!">`clojure-tools-download-java!`</a><a name="borkdude.deps/clojure-tools-download-java!"></a>
 ``` clojure
 
-(clojure-tools-download-java! {:keys [url dest proxy-opts clj-jvm-opts]})
+(clojure-tools-download-java! {:keys [url dest proxy-opts clj-jvm-opts sha256-url]})
 ```
 
 Downloads `:url` zip file to `:dest` by invoking `java` with
   `:proxy` options on a `.java` program file, and returns true on
   success. Requires Java 11+ (JEP 330).
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L457-L475">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L543-L567">Source</a></sub></p>
 
 ## <a name="borkdude.deps/clojure-tools-install!">`clojure-tools-install!`</a><a name="borkdude.deps/clojure-tools-install!"></a>
 ``` clojure
 
-(clojure-tools-install! {:keys [out-dir debug proxy-opts clj-jvm-opts]})
+(clojure-tools-install! {:keys [out-dir debug proxy-opts clj-jvm-opts config-dir]})
 ```
 
 Installs clojure tools archive by downloading it in `:out-dir`, if not already there,
@@ -175,7 +208,13 @@ Installs clojure tools archive by downloading it in `:out-dir`, if not already t
 
   It calls [`*exit-fn*`](#borkdude.deps/*exit-fn*) if it cannot download the archive, with
   instructions how to manually download it.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L489-L527">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L584-L665">Source</a></sub></p>
+
+## <a name="borkdude.deps/current-file">`current-file`</a><a name="borkdude.deps/current-file"></a>
+
+
+
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L489-L489">Source</a></sub></p>
 
 ## <a name="borkdude.deps/deps-clj-version">`deps-clj-version`</a><a name="borkdude.deps/deps-clj-version"></a>
 
@@ -183,7 +222,7 @@ Installs clojure tools archive by downloading it in `:out-dir`, if not already t
 
 
 The current version of deps.clj
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L23-L27">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L24-L28">Source</a></sub></p>
 
 ## <a name="borkdude.deps/get-basis-file">`get-basis-file`</a><a name="borkdude.deps/get-basis-file"></a>
 ``` clojure
@@ -195,27 +234,40 @@ Returns path to basis file. Required options:
 
   * - `cache-dir` as returned by [`get-cache-dir`](#borkdude.deps/get-cache-dir)
   * - `checksum` as returned by `get-check-sum`
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L751-L757">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L924-L930">Source</a></sub></p>
 
 ## <a name="borkdude.deps/get-cache-dir">`get-cache-dir`</a><a name="borkdude.deps/get-cache-dir"></a>
 ``` clojure
 
-(get-cache-dir {:keys [deps-edn config-dir]})
+(get-cache-dir m)
 ```
 
 Returns cache dir (`.cpcache`) from either local dir, if `deps-edn`
   exists, or the user cache dir.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L691-L702">Source</a></sub></p>
+  DEPRECATED: use [`get-cache-dir*`](#borkdude.deps/get-cache-dir*) instead.
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L868-L874">Source</a></sub></p>
+
+## <a name="borkdude.deps/get-cache-dir*">`get-cache-dir*`</a><a name="borkdude.deps/get-cache-dir*"></a>
+``` clojure
+
+(get-cache-dir* {:keys [deps-edn config-dir]})
+```
+
+Returns `:cache-dir` (`.cpcache`) and `:cache-dir-key` from either
+  local dir, if `deps-edn` exists, or the user cache dir. The
+  `:cache-dir-key` is used in case the working directory isn't
+  writable and the cache must be stored in the user-cache-dir.
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L849-L866">Source</a></sub></p>
 
 ## <a name="borkdude.deps/get-checksum">`get-checksum`</a><a name="borkdude.deps/get-checksum"></a>
 ``` clojure
 
-(get-checksum {:keys [cli-opts config-paths]})
+(get-checksum {:keys [cli-opts config-paths cache-dir-key]})
 ```
 
 Returns checksum based on cli-opts (as returned by [`parse-cli-opts`](#borkdude.deps/parse-cli-opts))
   and config-paths (as returned by [`get-config-paths`](#borkdude.deps/get-config-paths))
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L721-L739">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L893-L912">Source</a></sub></p>
 
 ## <a name="borkdude.deps/get-config-dir">`get-config-dir`</a><a name="borkdude.deps/get-config-dir"></a>
 ``` clojure
@@ -225,7 +277,7 @@ Returns checksum based on cli-opts (as returned by [`parse-cli-opts`](#borkdude.
 
 Retrieves configuration directory.
   First tries `CLJ_CONFIG` env var, then `$XDG_CONFIG_HOME/clojure`, then ~/.clojure.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L674-L681">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L832-L839">Source</a></sub></p>
 
 ## <a name="borkdude.deps/get-config-paths">`get-config-paths`</a><a name="borkdude.deps/get-config-paths"></a>
 ``` clojure
@@ -237,7 +289,7 @@ Returns vec of configuration paths, i.e. deps.edn from:
   - `:install-dir` as obtained thrhough [`get-install-dir`](#borkdude.deps/get-install-dir)
   - `:config-dir` as obtained through [`get-config-dir`](#borkdude.deps/get-config-dir)
   - `:deps-edn` as obtained through [`get-local-deps-edn`](#borkdude.deps/get-local-deps-edn)
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L704-L719">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L876-L891">Source</a></sub></p>
 
 ## <a name="borkdude.deps/get-help">`get-help`</a><a name="borkdude.deps/get-help"></a>
 ``` clojure
@@ -246,7 +298,7 @@ Returns vec of configuration paths, i.e. deps.edn from:
 ```
 
 Returns help text as string.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L741-L744">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L914-L917">Source</a></sub></p>
 
 ## <a name="borkdude.deps/get-install-dir">`get-install-dir`</a><a name="borkdude.deps/get-install-dir"></a>
 ``` clojure
@@ -256,7 +308,7 @@ Returns help text as string.
 
 Retrieves the install directory where tools jar is located (after download).
   Defaults to ~/.deps.clj/<version>/ClojureTools.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L663-L672">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L821-L830">Source</a></sub></p>
 
 ## <a name="borkdude.deps/get-local-deps-edn">`get-local-deps-edn`</a><a name="borkdude.deps/get-local-deps-edn"></a>
 ``` clojure
@@ -267,7 +319,7 @@ Retrieves the install directory where tools jar is located (after download).
 Returns the path of the `deps.edn` file (as string) in the current directory or as set by `-Sdeps-file`.
   Required options:
   * `:cli-opts`: command line options as parsed by `parse-opts`
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L683-L689">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L841-L847">Source</a></sub></p>
 
 ## <a name="borkdude.deps/get-proxy-info">`get-proxy-info`</a><a name="borkdude.deps/get-proxy-info"></a>
 ``` clojure
@@ -279,7 +331,7 @@ Returns a map with proxy information parsed from env vars. The map
    will contain :http-proxy and :https-proxy entries if the relevant
    env vars are set and parsed correctly. The value for each is a map
    with :host and :port entries.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L314-L326">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L353-L368">Source</a></sub></p>
 
 ## <a name="borkdude.deps/parse-cli-opts">`parse-cli-opts`</a><a name="borkdude.deps/parse-cli-opts"></a>
 ``` clojure
@@ -288,7 +340,7 @@ Returns a map with proxy information parsed from env vars. The map
 ```
 
 Parses the command line options.
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L559-L630">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L697-L768">Source</a></sub></p>
 
 ## <a name="borkdude.deps/print-help">`print-help`</a><a name="borkdude.deps/print-help"></a>
 ``` clojure
@@ -297,25 +349,31 @@ Parses the command line options.
 ```
 
 Print help text
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L746-L749">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L919-L922">Source</a></sub></p>
 
 ## <a name="borkdude.deps/proxy-jvm-opts">`proxy-jvm-opts`</a><a name="borkdude.deps/proxy-jvm-opts"></a>
 ``` clojure
 
-(proxy-jvm-opts {:keys [http-proxy https-proxy]})
+(proxy-jvm-opts {:keys [http-proxy https-proxy no-proxy]})
 ```
 
 Returns a vector containing the JVM system property arguments to be passed to a new process
    to set its proxy system properties.
    proxy-info parameter is as returned from `get-proxy-info.`
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L446-L455">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L530-L541">Source</a></sub></p>
 
 ## <a name="borkdude.deps/set-proxy-system-props!">`set-proxy-system-props!`</a><a name="borkdude.deps/set-proxy-system-props!"></a>
 ``` clojure
 
-(set-proxy-system-props! {:keys [http-proxy https-proxy]})
+(set-proxy-system-props! {:keys [http-proxy https-proxy no-proxy]})
 ```
 
 Sets the proxy system properties in the current JVM.
    proxy-info parameter is as returned from `get-proxy-info.`
-<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L328-L337">Source</a></sub></p>
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L370-L382">Source</a></sub></p>
+
+## <a name="borkdude.deps/zip-invalid-msg">`zip-invalid-msg`</a><a name="borkdude.deps/zip-invalid-msg"></a>
+
+
+
+<p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L440-L444">Source</a></sub></p>

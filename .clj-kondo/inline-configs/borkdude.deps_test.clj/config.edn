@@ -1,0 +1,1 @@
+{:hooks {:macroexpand {borkdude.deps-test/with-fresh-machine clj-kondo.gen-macros.borkdude.deps-test/with-fresh-machine}}}

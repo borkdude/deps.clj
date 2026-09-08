@@ -10,6 +10,13 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 
 [deps.clj](https://github.com/borkdude/deps.clj): a faithful port of the clojure CLI bash script to Clojure
 
+## Unreleased
+
+- Allow `--version`, `--help`, `-Sdescribe` and a cached `-Spath` to run without Java.
+- Skip Clojure tools installation for `--version`, `--help` and `-Sdescribe`.
+- Defer `exec.jar` installation until `-X` or `-T` starts Clojure. Classpath resolution and named tools may still require installation.
+- Add `*make-classpath-fn*` to allow in-process classpath resolution.
+
 ## 1.12.6.1673
 
 - Catch up with Clojure CLI 1.12.6.1673
