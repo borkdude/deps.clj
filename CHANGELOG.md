@@ -16,6 +16,10 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 - Skip Clojure tools installation for `--version`, `--help` and `-Sdescribe`.
 - Add `*make-classpath-fn*` to allow in-process classpath resolution.
 
+## 1.12.6.1673
+
+- Catch up with Clojure CLI 1.12.6.1673
+
 ## 1.12.5.1664
 
 - Catch up with Clojure CLI 1.12.5.1664
