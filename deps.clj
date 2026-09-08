@@ -79,7 +79,7 @@
     (.putAll (as-string-map env)))
   pb)
 
-(defn check-java-cmd!
+(defn- check-java-cmd!
   "Throws when the first element of cmd, the java executable, is nil."
   [cmd]
   (when (nil? (first cmd))
@@ -1003,10 +1003,13 @@ public class ClojureToolsDownloader {
                      proxy-settings
                      ["-classpath" tools-cp "clojure.main"]))
         java-opts (some-> (*getenv-fn* "JAVA_OPTS") (str/split #" "))]
-    ;; -X and -T run exec.jar, and -T resolves through tools/tools.edn, which
-    ;; the copy below seeds. Both come from the install, whoever computes the
-    ;; classpath, so those modes install up front.
-    (when (or exec? tool?) (install-tools!))
+    ;; -X and -T run exec.jar, and a named tool resolves through
+    ;; tools/tools.edn, which the copy below seeds. Both come from the
+    ;; install, whoever computes the classpath, so those modes install up
+    ;; front. -P runs nothing, so it installs only for a named tool.
+    (when (or (:tool-name cli-opts)
+              (and (or exec? tool?) (not (:prep cli-opts))))
+      (install-tools!))
     ;; If user config directory does not exist, create it
     (let [config-dir (io/file config-dir)]
       (when-not (.exists config-dir)

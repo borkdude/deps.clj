@@ -1,1 +1,2 @@
-{:lint-as {spartan.test/deftest clojure.test/deftest}}
+{:lint-as {spartan.test/deftest clojure.test/deftest
+           borkdude.deps-test/with-fresh-machine clj-kondo.lint-as/def-catch-all}}

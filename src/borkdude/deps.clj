@@ -76,7 +76,7 @@
     (.putAll (as-string-map env)))
   pb)
 
-(defn check-java-cmd!
+(defn- check-java-cmd!
   "Throws when the first element of cmd, the java executable, is nil."
   [cmd]
   (when (nil? (first cmd))
