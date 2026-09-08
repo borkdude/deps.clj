@@ -233,12 +233,14 @@
 (defmacro with-fresh-machine
   "Binds TOOLS-DIR and CONFIG-DIR under TEMP-DIR. Runs BODY with
   a classpath hook that skips installation."
+  {:clj-kondo/macroexpand-hook true}
   [[temp-dir tools-dir config-dir] & body]
   `(let [~tools-dir (fs/file ~temp-dir "tools")
          ~config-dir (fs/file ~temp-dir "config")]
-     (binding [deps/*getenv-fn* #(or (get {"DEPS_CLJ_TOOLS_DIR" (str ~tools-dir)
-                                           "CLJ_CONFIG" (str ~config-dir)} %)
-                                     (System/getenv %))
+     (binding [deps/*getenv-fn* (fn [name#]
+                                  (or (get {"DEPS_CLJ_TOOLS_DIR" (str ~tools-dir)
+                                            "CLJ_CONFIG" (str ~config-dir)} name#)
+                                      (System/getenv name#)))
                deps/*make-classpath-fn* (fn [{:keys [~'cmd ~'out]}]
                                           (deps/*aux-process-fn* {:cmd ~'cmd :out ~'out}))]
        ~@body)))

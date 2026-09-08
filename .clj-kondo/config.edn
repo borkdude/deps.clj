@@ -1,3 +1,2 @@
 {:lint-as {spartan.test/deftest clojure.test/deftest
-           babashka.fs/with-temp-dir clojure.core/let}
- :hooks {:analyze-call {borkdude.deps-test/with-fresh-machine hooks.deps-test/with-fresh-machine}}}
+           babashka.fs/with-temp-dir clojure.core/let}}
