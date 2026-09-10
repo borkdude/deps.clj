@@ -73,7 +73,7 @@ Invokes `java` with arguments to `clojure.main` to start Clojure. May
   - `:cmd`: a vector of strings with the Java executable first, or the
     command supplied through `-Scommand`. deps.clj checks Java when used.
 
-  Must return a map of `:exit`, the exit code of the process.
+  Returns a map with `:exit`, the exit code of the process.
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L140-L151">Source</a></sub></p>
 
 ## <a name="borkdude.deps/*clojure-tools-download-fn*">`*clojure-tools-download-fn*`</a><a name="borkdude.deps/*clojure-tools-download-fn*"></a>
@@ -134,14 +134,14 @@ Refreshes the classpath cache. Rebind this dynamic var to compute
   - `:args`: arguments to make-classpath2. The `--config-user` value is nil under `-Srepro`.
   - `:out`: if `:string`, return stdout as the string value of `:out`.
   - `:install-tools-fn`: a function of no arguments that installs the
-    Clojure tools named in `:cmd` when they are missing. Call it if the
-    replacement needs these tools.
+    Clojure tools named in `:cmd` when they are missing. Call it before
+    running `:cmd`.
 
   The default checks Java, installs the tools and runs the command through
   the auxiliary process hook.
 
-  Must produce the cache files requested by `:args`. When `:out` is `:string`,
-  return a map with stdout as the string value of `:out`.
+  Writes the cache files specified by `:args`. When `:out` is `:string`,
+  returns a map with stdout as the string value of `:out`.
 <p><sub><a href="https://github.com/borkdude/deps.clj/blob/master/src/borkdude/deps.clj#L153-L176">Source</a></sub></p>
 
 ## <a name="borkdude.deps/-main">`-main`</a><a name="borkdude.deps/-main"></a>
