@@ -493,6 +493,28 @@
               (let [exit-data @exit-data*]
                 (is (= ct-error-exit-code (:exit-code exit-data)) exit-data)))))))))
 
+(deftest clojure-tools-download-timeout-test
+  (with-open [stalled-server (java.net.ServerSocket. 0)]
+    (let [url (str "http://localhost:" (.getLocalPort stalled-server) "/clojure-tools.zip")
+          download-with-short-timeout (fn [download-fn dest]
+                                        (deref (future
+                                                 (with-bindings {#'deps/*download-connect-timeout-ms* 500
+                                                                 #'deps/*download-read-timeout-ms* 500}
+                                                   (download-fn {:url url :dest dest})))
+                                               30000
+                                               ::hung))]
+      (testing "direct downloader gives up on a server that never responds"
+        (fs/with-temp-dir
+          [temp-dir {}]
+          (is (= false (download-with-short-timeout deps/clojure-tools-download-direct!
+                                                    (fs/file temp-dir "clojure-tools.zip"))))))
+      (when (>= (java-major-version-get) 11)
+        (testing "java downloader gives up on a server that never responds"
+          (fs/with-temp-dir
+            [temp-dir {}]
+            (is (= false (download-with-short-timeout #'deps/clojure-tools-download-java!
+                                                      (fs/file temp-dir "clojure-tools.zip"))))))))))
+
 (deftest clj-jvm-opts+java-opts
   ;; The `CLJ_JVM_OPTS` env var should only apply to -P and -Spom.
   ;; The `JAVA_OPTS` env varshould only apply to everything else.
