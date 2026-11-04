@@ -16,6 +16,7 @@ DEPS_CLJ_TOOLS_VERSION=1.11.1.1165 bb clojure
 - Skip Clojure tools installation for `--version`, `--help` and `-Sdescribe`.
 - Defer `exec.jar` installation until `-X` or `-T` starts Clojure. Classpath resolution and named tools may still require installation.
 - Add `*make-classpath-fn*` to allow in-process classpath resolution.
+- Set connect and read timeouts when downloading the Clojure tools, so a stalled connection fails instead of hanging forever.
 
 ## 1.12.6.1673
 
