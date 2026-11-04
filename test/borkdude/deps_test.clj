@@ -498,7 +498,8 @@
     (let [url (str "http://localhost:" (.getLocalPort stalled-server) "/clojure-tools.zip")
           download-with-short-timeout (fn [download-fn dest]
                                         (deref (future
-                                                 (with-bindings {#'deps/*download-timeout-ms* 500}
+                                                 (with-bindings {#'deps/*download-connect-timeout-ms* 500
+                                                                 #'deps/*download-read-timeout-ms* 500}
                                                    (download-fn {:url url :dest dest})))
                                                30000
                                                ::hung))]

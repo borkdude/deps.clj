@@ -381,7 +381,8 @@ For more info, see:
     (System/setProperty "http.nonProxyHosts" (str/join "|" no-proxy))
     (System/setProperty "https.nonProxyHosts" (str/join "|" no-proxy))))
 
-(def ^:private ^:dynamic *download-timeout-ms* 60000)
+(def ^:private ^:dynamic *download-connect-timeout-ms* 30000)
+(def ^:private ^:dynamic *download-read-timeout-ms* 60000)
 
 (defn clojure-tools-download-direct!
   "Downloads from `:url` to `:dest` file returning true on success."
@@ -391,8 +392,8 @@ For more info, see:
     (let [source (URL. url)
           dest (io/file dest)
           conn ^URLConnection (.openConnection ^URL source)]
-      (.setConnectTimeout conn (int *download-timeout-ms*))
-      (.setReadTimeout conn (int *download-timeout-ms*))
+      (.setConnectTimeout conn (int *download-connect-timeout-ms*))
+      (.setReadTimeout conn (int *download-read-timeout-ms*))
       (when (instance? HttpURLConnection conn)
         (.setInstanceFollowRedirects ^java.net.HttpURLConnection conn true))
       (.connect conn)
@@ -517,8 +518,8 @@ public class ClojureToolsDownloader {
         URL url = new URI(args[0]).toURL();
 //        System.err.println (\":0 \" +args [0]+ \" :1 \"+args [1]);
         URLConnection conn = url.openConnection();
-        conn.setConnectTimeout(" *download-timeout-ms* ");
-        conn.setReadTimeout(" *download-timeout-ms* ");
+        conn.setConnectTimeout(" *download-connect-timeout-ms* ");
+        conn.setReadTimeout(" *download-read-timeout-ms* ");
         if (conn instanceof HttpURLConnection)
            {((HttpURLConnection) conn).setInstanceFollowRedirects(true);}
         ReadableByteChannel readableByteChannel = Channels.newChannel(conn.getInputStream());
