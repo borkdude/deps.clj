@@ -231,19 +231,26 @@
   (deps/-main "-Ttools" "list"))
 
 (defmacro with-fresh-machine
-  "Binds TOOLS-DIR and CONFIG-DIR under TEMP-DIR. Runs BODY with
+  "Binds TOOLS-DIR and CONFIG-DIR under TEMP-DIR. Runs BODY in TEMP-DIR with
   a classpath hook that skips installation."
   {:clj-kondo/macroexpand-hook true}
   [[temp-dir tools-dir config-dir] & body]
   `(let [~tools-dir (fs/file ~temp-dir "tools")
-         ~config-dir (fs/file ~temp-dir "config")]
-     (binding [deps/*getenv-fn* (fn [name#]
+         ~config-dir (fs/file ~temp-dir "config")
+         cache-dir# (fs/create-dirs (fs/file ~temp-dir "cache"))]
+     (binding [deps/*dir* (str ~temp-dir)
+               deps/*getenv-fn* (fn [name#]
                                   (or (get {"DEPS_CLJ_TOOLS_DIR" (str ~tools-dir)
-                                            "CLJ_CONFIG" (str ~config-dir)} name#)
+                                            "CLJ_CONFIG" (str ~config-dir)
+                                            "CLJ_CACHE" (str cache-dir#)} name#)
                                       (System/getenv name#)))
                deps/*make-classpath-fn* (fn [{:keys [~'cmd ~'out]}]
                                           (deps/*aux-process-fn* {:cmd ~'cmd :out ~'out}))]
        ~@body)))
+
+(defn- write-the-classpath [{:keys [args]}]
+  (spit (second (drop-while #(not= "--cp-file" %) args)) "the-classpath")
+  {:out nil})
 
 (deftest exec-and-tool-mode-install-first-test
   (testing "-Ttools installs the default tools descriptor"
@@ -277,10 +284,7 @@
                       (fn [& _] (throw (Exception. "Java downloader should not be called.")))
                       deps/clojure-tools-download-direct!
                       (fn [& _] (throw (Exception. "Direct downloader should not be called.")))]
-          (binding [deps/*make-classpath-fn*
-                    (fn [{:keys [args]}]
-                      (spit (second (drop-while #(not= "--cp-file" %) args)) "the-classpath")
-                      {:out nil})]
+          (binding [deps/*make-classpath-fn* write-the-classpath]
             (is (str/includes? (with-out-str (deps-main-throw "-Spath" "-X" "clojure.core/prn"))
                                "the-classpath")))
           (is (not (fs/exists? tools-dir)))))))
@@ -289,7 +293,8 @@
       [temp-dir {}]
       (with-fresh-machine [temp-dir tools-dir _config-dir]
         (let [seen (atom nil)]
-          (binding [deps/*clojure-process-fn* (fn [{:keys [cmd]}]
+          (binding [deps/*make-classpath-fn* write-the-classpath
+                    deps/*clojure-process-fn* (fn [{:keys [cmd]}]
                                                 (reset! seen cmd)
                                                 {:exit 0})]
             (deps-main-throw "-X" "clojure.core/prn" ":a" "1")
