@@ -135,7 +135,7 @@ jobs:
           destination: release
   mac:
     macos:
-      xcode: "14.3.1"
+      xcode: "15.4.0"
       resource_class: m4pro.medium
     environment:
       GRAALVM_HOME: /Users/distiller/graalvm-21.0.1/Contents/Home
