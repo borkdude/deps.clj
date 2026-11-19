@@ -20,7 +20,7 @@
 ;; see https://github.com/clojure/brew-install/blob/1.12.2/src/main/resources/clojure/install/clojure
 (def ^:private version
   (delay (or (System/getenv "DEPS_CLJ_TOOLS_VERSION")
-             "1.12.6.1673")))
+             "1.12.7.1681")))
 
 (def ^:private cache-version "6")
 
@@ -149,7 +149,7 @@
   - `:cmd`: a vector of strings with the Java executable first, or the
     command supplied through `-Scommand`. deps.clj checks Java when used.
 
-  Must return a map of `:exit`, the exit code of the process."
+  Returns a map with `:exit`, the exit code of the process."
   [{:keys [cmd]}]
   (internal-shell-command cmd))
 
@@ -165,14 +165,14 @@
   - `:args`: arguments to make-classpath2. The `--config-user` value is nil under `-Srepro`.
   - `:out`: if `:string`, return stdout as the string value of `:out`.
   - `:install-tools-fn`: a function of no arguments that installs the
-    Clojure tools named in `:cmd` when they are missing. Call it if the
-    replacement needs these tools.
+    Clojure tools named in `:cmd` when they are missing. Call it before
+    running `:cmd`.
 
   The default checks Java, installs the tools and runs the command through
   the auxiliary process hook.
 
-  Must produce the cache files requested by `:args`. When `:out` is `:string`,
-  return a map with stdout as the string value of `:out`."
+  Writes the cache files specified by `:args`. When `:out` is `:string`,
+  returns a map with stdout as the string value of `:out`."
   [{:keys [cmd out install-tools-fn]}]
   (check-java-cmd! cmd)
   (install-tools-fn)
@@ -384,6 +384,9 @@ For more info, see:
     (System/setProperty "http.nonProxyHosts" (str/join "|" no-proxy))
     (System/setProperty "https.nonProxyHosts" (str/join "|" no-proxy))))
 
+(def ^:private ^:dynamic *download-connect-timeout-ms* 30000)
+(def ^:private ^:dynamic *download-read-timeout-ms* 60000)
+
 (defn clojure-tools-download-direct!
   "Downloads from `:url` to `:dest` file returning true on success."
   [{:keys [url dest]}]
@@ -392,6 +395,8 @@ For more info, see:
     (let [source (URL. url)
           dest (io/file dest)
           conn ^URLConnection (.openConnection ^URL source)]
+      (.setConnectTimeout conn (int *download-connect-timeout-ms*))
+      (.setReadTimeout conn (int *download-read-timeout-ms*))
       (when (instance? HttpURLConnection conn)
         (.setInstanceFollowRedirects ^java.net.HttpURLConnection conn true))
       (.connect conn)
@@ -516,6 +521,8 @@ public class ClojureToolsDownloader {
         URL url = new URI(args[0]).toURL();
 //        System.err.println (\":0 \" +args [0]+ \" :1 \"+args [1]);
         URLConnection conn = url.openConnection();
+        conn.setConnectTimeout(" *download-connect-timeout-ms* ");
+        conn.setReadTimeout(" *download-read-timeout-ms* ");
         if (conn instanceof HttpURLConnection)
            {((HttpURLConnection) conn).setInstanceFollowRedirects(true);}
         ReadableByteChannel readableByteChannel = Channels.newChannel(conn.getInputStream());
